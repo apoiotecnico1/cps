@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>ID GPS</title>
+</head>
+<body>
+<button id='infoOpen'>ℹ</button>
+<div id='infoPanel' style='display:none;border:1px solid #555;padding:10px;'>
+  <p><strong>Sobre este sistema:</strong></p>
+  <ul>
+    <li>Indica o ID mais próximo com base no GPS.</li>
+    <li>Usa lista interna previamente cadastrada.</li>
+    <li>Pode conter itens desatualizados.</li>
+    <li>Apoio ao trabalho de campo.</li>
+  </ul>
+  <button id='infoClose'>Fechar</button>
+</div>
+<script>
+const infoOpen=document.getElementById('infoOpen');
+const infoClose=document.getElementById('infoClose');
+const panel=document.getElementById('infoPanel');
+function openPanel(){panel.style.display='block';}
+function closePanel(){panel.style.display='none';}
+infoOpen.onclick=openPanel;
+infoClose.onclick=closePanel;
+// abre apenas na primeira visita da sessao
+if(!sessionStorage.getItem('bannerShown')){
+    openPanel();
+    sessionStorage.setItem('bannerShown','1');
+}
+</script>
+</body>
+</html>
