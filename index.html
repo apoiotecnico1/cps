@@ -1,0 +1,714 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Acervo de Conhecimento – Clima | Iluminação | Fibra</title>
+<style>
+  :root{
+    --primary:#0b3d91; /* azul escuro padrão */
+    --text:#0b1b34;
+    --soft:#eaf0ff;
+    --card:rgba(255,255,255,.88);
+    --shadow:0 10px 30px rgba(0,0,0,.18);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif;color:var(--text);background:#0a0a0a}
+
+  /* Vídeo de fundo global */
+  .bg-video{position:fixed;inset:0;z-index:-2;overflow:hidden;background:#000}
+  .bg-video video{position:absolute;min-width:100%;min-height:100%;width:auto;height:auto;top:50%;left:50%;transform:translate(-50%,-50%);filter:brightness(.43) saturate(1.05)}
+  .veil{position:fixed;inset:0;background:radial-gradient(1200px 700px at 50% 10%, rgba(0,0,0,.17), rgba(0,0,0,.6));z-index:-1}
+
+  header{background:linear-gradient(135deg,var(--primary),#1a73e8);color:#fff;padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .title{font-size:clamp(18px,2.4vw,24px);font-weight:800;margin:0}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:0;cursor:pointer;border-radius:10px;padding:10px 14px;font-weight:700;background:#ffffff18;color:#fff;backdrop-filter:blur(6px);transition:.2s transform ease,.2s background ease;display:flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-1px);background:#ffffff30}
+  .btn--solid{background:#fff;color:#183153}
+  .btn--solid:hover{background:#eef3ff}
+
+  .topbar{display:flex;gap:10px;align-items:center}
+  .search{display:flex;align-items:center;gap:6px;background:#ffffff25;border-radius:999px;padding:6px 10px}
+  .search input{border:0;outline:0;background:transparent;color:#fff;min-width:240px}
+  .search input::placeholder{color:#e9f1ff}
+
+  .tabs{display:flex;gap:10px;padding:12px 16px;flex-wrap:wrap;background:#ffffffd9;position:sticky;top:0;z-index:5;box-shadow:var(--shadow);backdrop-filter:blur(6px)}
+  .tab{appearance:none;border:0;padding:10px 14px;border-radius:999px;cursor:pointer;background:#eef2fb;color:#183153;font-weight:800;display:flex;align-items:center;gap:10px;transition:.2s ease}
+  .tab.active{background:linear-gradient(135deg,#2563eb,#38bdf8);color:#fff;box-shadow:0 7px 20px rgba(37,99,235,.35)}
+
+  main{padding:16px}
+  .page{display:none;min-height:calc(100vh - 170px)}
+  .page.active{display:block}
+
+  .stack{max-width:1300px;margin:0 auto;display:grid;gap:12px}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;backdrop-filter:blur(5px)}
+  .page h2{margin:0 0 10px}
+
+  /* Barra do setor */
+  .sector-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .select, .input{padding:9px 12px;border-radius:10px;border:1px solid #d9e0f0;background:#fff}
+
+  /* Lista de notas */
+  .notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .note{background:#fff;border:1px solid #e6eaf6;border-radius:12px;padding:12px;display:grid;gap:8px}
+  .note h3{margin:0;font-size:16px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef2fb;color:#334;}
+  .badge{font-size:11px;padding:3px 7px;border-radius:6px;background:#eff6ee;color:#27472c;border:1px solid #cfe6cf}
+  .badge--status{background:#fff4d6;border-color:#ffe7a2;color:#8a5d00}
+  .note .ops{display:flex;gap:6px}
+  .note .ops button{border:0;border-radius:8px;padding:6px 10px;cursor:pointer;background:#eef2fb}
+
+  .hint{font-size:12px;color:#ecf0ff;opacity:.95;margin:10px auto;text-align:center}
+  footer{padding:14px;text-align:center;color:#d7e2ff}
+
+  /* Modal padrão */
+  dialog{border:0;border-radius:16px;box-shadow:var(--shadow);padding:0;max-width:860px;width:96vw}
+  .modal-head{padding:14px 16px;background:#0f172a;color:#fff;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center}
+  .modal-body{padding:16px;display:grid;gap:10px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field input[type="text"], .field input[type="url"], .field input[type="color"], .field select, .field textarea{padding:10px;border-radius:10px;border:1px solid #d9e0f0;background:#fff}
+  .field textarea{min-height:160px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:#eef2fb;border:1px solid #dfe6ff;border-radius:999px;padding:6px 10px;font-size:12px}
+  .actions{display:flex;justify-content:space-between;gap:10px;padding:0 16px 16px}
+
+  /* impressão limpa */
+  @media print{
+    .tabs,.toolbar,.hint,.sector-tools,.ops,footer,header{display:none !important}
+    body{background:#fff}
+    .bg-video,.veil{display:none}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+  <!-- Fundo em vídeo (configurável) -->
+  <div class="bg-video" aria-hidden="true">
+    <video id="bgVid" autoplay muted loop playsinline>
+      <source id="bgSrc" src="https://aemassets.grupoccr.com.br/content/dam/sites-modulares/pt/media/videos/home/CCRtoMotiva.mp4/_jcr_content/renditions/fullhd.mp4" type="video/mp4" />
+      Seu navegador não suporta vídeo em HTML5.
+    </video>
+  </div>
+  <div class="veil" aria-hidden="true"></div>
+
+  <header>
+    <h1 class="title" id="appTitle">Acervo de Conhecimento – Clima | Iluminação | Fibra</h1>
+    <div class="topbar">
+      <div class="search">
+        <span>🔎</span>
+        <input id="qGlobal" type="search" placeholder="Buscar em todos os setores (título, tags, conteúdo)" />
+      </div>
+      <div class="toolbar">
+        <button class="btn btn--solid" id="btnImport">📥 Importar JSON</button>
+        <button class="btn btn--solid" id="btnExport">💾 Exportar JSON</button>
+        <button class="btn" id="btnConfig">⚙️ Configurar</button>
+        <button class="btn" id="btnToggleVideo">⏯️ Pausar vídeo</button>
+        <button class="btn" id="btnHelp">❔ Guia</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+  <main id="pages"></main>
+
+  <div class="hint">Base de conhecimento unificada. Use “Nova Nota” para registrar padrões, decisões, O.S., checklists, lições aprendidas, links do SharePoint e anexos (PDF, imagem, etc.).</div>
+  <footer>Feito para o dia a dia em rodovia: simples, rápido e offline-friendly.</footer>
+
+  <!-- Modal: Nota (criar/editar) -->
+  <dialog id="dlgNota">
+    <div class="modal-head">
+      <strong id="dlgNotaTitle">Nova Nota</strong>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn--solid" id="btnSalvarNota">Salvar</button>
+        <button class="btn" id="btnFecharNota">Fechar</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="ntTitulo" placeholder="Ex.: Checklist de preventiva em quadro de iluminação" />
+        </div>
+        <div class="field">
+          <label>Setor</label>
+          <select id="ntSetor"></select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="ntTipo">
+            <option>Administrativo</option>
+            <option>Técnico</option>
+            <option>Procedimento</option>
+            <option>Incidente</option>
+            <option>FAQ</option>
+            <option>Checklist</option>
+            <option>Treinamento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="ntStatus">
+            <option>Ativo</option>
+            <option>Em revisão</option>
+            <option>Obsoleto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Prioridade</label>
+          <select id="ntPrio">
+            <option>Normal</option>
+            <option>Alta</option>
+            <option>Crítica</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Público-alvo</label>
+          <select id="ntAud">
+            <option>Todos</option>
+            <option>Novatos</option>
+            <option>Experientes</option>
+            <option>Supervisão</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Tags (separe por vírgula)</label>
+        <input type="text" id="ntTags" placeholder="ex.: LED, poste, DR, fibra, OLT" />
+      </div>
+
+      <div class="field">
+        <label>Conteúdo (Markdown simples suportado: **negrito**, *itálico*, listas, links)</label>
+        <textarea id="ntConteudo" placeholder="Descreva o procedimento, etapas, materiais, EPI, medições, fotos..."></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Links (rótulo e URL)</label>
+          <div class="chips" id="ntLinks"></div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input class="input" type="text" id="lkRotulo" placeholder="Rótulo" />
+            <input class="input" type="url" id="lkUrl" placeholder="https://sharepoint..." />
+            <button class="btn" id="btnAddLink">+ Link</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Anexos (PDF, imagens, etc.)</label>
+          <input type="file" id="ntFiles" multiple />
+          <div class="chips" id="ntAnexos"></div>
+          <small style="color:#445">Dica: para manter leve, prefira anexar PDFs otimizados. Arquivos ficam embutidos no JSON como <code>data:</code>.</small>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="btnTemplate">📋 Inserir Template</button>
+          <button class="btn" id="btnDuplicarNota">🧬 Duplicar</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="btnExcluirNota">🗑️ Excluir</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Configurações -->
+  <dialog id="dlgCfg">
+    <div class="modal-head">
+      <strong>Configurações</strong>
+      <button class="btn btn--solid" id="cfgClose">Fechar</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>Título do sistema</label>
+          <input type="text" id="cfgTitulo" />
+        </div>
+        <div class="field">
+          <label>Cor primária</label>
+          <input type="color" id="cfgPrimary" />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>URL do vídeo de fundo</label>
+          <input type="url" id="cfgVideo" />
+        </div>
+        <div class="field">
+          <label>Ação</label>
+          <button class="btn" id="cfgReset">Restaurar padrão</button>
+        </div>
+      </div>
+
+      <hr />
+      <div class="field">
+        <label>Editar Setores</label>
+        <div class="chips" id="cfgSetores"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input class="input" type="text" id="cfgSetorNome" placeholder="Nome" />
+          <input class="input" type="text" id="cfgSetorIcone" placeholder="Emoji" />
+          <button class="btn" id="cfgAddSetor">+ Adicionar setor</button>
+        </div>
+      </div>
+
+      <div class="actions" style="justify-content:flex-end">
+        <button class="btn btn--solid" id="cfgAplicar">Aplicar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Guia/Ajuda -->
+  <dialog id="dlgHelp">
+    <div class="modal-head">
+      <strong>Guia rápido</strong>
+      <button class="btn btn--solid" id="helpClose">Fechar</button>
+    </div>
+    <div class="modal-body">
+      <div class="card" style="box-shadow:none;background:#fff">
+        <h3>Como esta base ajuda novatos e veteranos</h3>
+        <ol>
+          <li><b>Use “Nova Nota”</b> para registrar padrões, decisões e lições aprendidas.</li>
+          <li><b>Classifique</b> por Tipo (Técnico, Procedimento, Incidente, etc.), <b>Status</b> e <b>Tags</b>.</li>
+          <li><b>Anexe</b> PDFs/fotos e cole <b>links do SharePoint</b> para referência.</li>
+          <li><b>Pesquise</b> pelo campo global (título, tags e conteúdo).</li>
+          <li><b>Exportar JSON</b> para backup/compartilhar e <b>Importar JSON</b> para atualizar.</li>
+        </ol>
+      </div>
+      <div class="card" style="box-shadow:none;background:#fff">
+        <h3>Templates úteis</h3>
+        <ul>
+          <li><b>Procedimento padrão</b>: objetivo → EPI → materiais → passos → validação.</li>
+          <li><b>Incidente</b>: descrição → impacto → causa raiz → ação corretiva → preventiva.</li>
+          <li><b>Checklist preventiva</b>: itens → critérios → medições → aceite.</li>
+          <li><b>FAQ</b>: pergunta → resposta breve → referência.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
+
+<script>
+// ============================
+// Modelo de dados
+// ============================
+let data = {
+  meta:{
+    titulo:"Acervo de Conhecimento – Clima | Iluminação | Fibra",
+    primary:"#0b3d91",
+    video:"https://aemassets.grupoccr.com.br/content/dam/sites-modulares/pt/media/videos/home/CCRtoMotiva.mp4/_jcr_content/renditions/fullhd.mp4",
+    lastSaved:null
+  },
+  setores:[
+    { id:"clima", nome:"Climatização", icone:"❄️" },
+    { id:"ilum",  nome:"Iluminação Viária", icone:"💡" },
+    { id:"fibra", nome:"Fibra Óptica", icone:"🧬" }
+  ],
+  notas:[]
+};
+
+// ============================
+// Utilidades
+// ============================
+const $ = (s,ctx=document)=>ctx.querySelector(s);
+const $$ = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
+const uid = ()=> 'n_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+
+function nowISO(){ return new Date().toISOString(); }
+function fmtDate(ts){ const d = new Date(ts); if(isNaN(d)) return ''; return d.toLocaleString(); }
+
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); } }
+
+// ============================
+// Persistência
+// ============================
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'acervo_conhecimento.json'; a.click();
+  data.meta.lastSaved = nowISO();
+}
+
+function importJSON(){
+  const input = document.createElement('input'); input.type='file'; input.accept='.json,application/json';
+  input.onchange = async e => {
+    const f = e.target.files?.[0]; if(!f) return; const txt = await f.text();
+    try{ const obj = JSON.parse(txt);
+      if(!obj || !obj.setores || !Array.isArray(obj.setores)) return alert('JSON inválido: faltam setores');
+      const replace = confirm('Substituir tudo pelo arquivo (OK) ou mesclar (Cancelar)?');
+      if(replace){ data = obj; renderAll(); saveDraft(); return; }
+      // Mescla simples
+      if(obj.meta){ data.meta = { ...data.meta, ...obj.meta }; }
+      const mapSet = new Map(data.setores.map(s=>[s.id,s]));
+      obj.setores.forEach(s=>{ mapSet.set(s.id, { ...mapSet.get(s.id), ...s}); });
+      data.setores = Array.from(mapSet.values());
+      const mapNotas = new Map(data.notas.map(n=>[n.id,n]));
+      (obj.notas||[]).forEach(n=>{ mapNotas.set(n.id, n); });
+      data.notas = Array.from(mapNotas.values());
+      renderAll(); saveDraft();
+    }catch(err){ alert('Falha ao importar: '+err.message); }
+  };
+  input.click();
+}
+
+// Auto-save no navegador
+const saveDraft = debounce(()=>{
+  try{ localStorage.setItem('acervo_draft', JSON.stringify(data)); }catch{}
+}, 500);
+
+function tryLoadDraft(){
+  try{
+    const raw = localStorage.getItem('acervo_draft'); if(!raw) return;
+    const ask = confirm('Encontramos um rascunho local. Deseja restaurar?');
+    if(ask){ data = JSON.parse(raw); }
+  }catch{}
+}
+
+// ============================
+// Renderização geral
+// ============================
+function applyMeta(){
+  $('#appTitle').textContent = data.meta?.titulo || 'Acervo';
+  document.documentElement.style.setProperty('--primary', data.meta?.primary || '#0b3d91');
+  const v = data.meta?.video; if(v){ $('#bgSrc').src = v; $('#bgVid').load(); }
+}
+
+function renderTabs(){
+  const el = $('#tabs'); el.innerHTML = '';
+  data.setores.forEach((s,i)=>{
+    const b = document.createElement('button'); b.className='tab'+(i===0?' active':''); b.dataset.id=s.id;
+    b.innerHTML = `${s.icone||''} <b>${s.nome}</b>`; b.onclick=()=>activate(s.id); el.appendChild(b);
+  });
+}
+
+function renderPages(){
+  const host = $('#pages'); host.innerHTML = '';
+  data.setores.forEach((s,i)=>{
+    const sec = document.createElement('section'); sec.className='page'+(i===0?' active':''); sec.id='pg-'+s.id;
+    const wrap = document.createElement('div'); wrap.className='stack';
+
+    // Card de ferramentas do setor
+    const tools = document.createElement('div'); tools.className='card';
+    tools.innerHTML = `
+      <div class="sector-tools">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn--solid" data-new="${s.id}">+ Nova Nota</button>
+          <button class="btn" data-template="${s.id}">📋 Templates</button>
+        </div>
+        <div class="filters">
+          <input class="input" type="search" placeholder="Buscar neste setor" data-qsetor="${s.id}" />
+          <select class="select" data-filt-tipo="${s.id}">
+            <option value="">Tipo</option>
+            <option>Administrativo</option><option>Técnico</option><option>Procedimento</option><option>Incidente</option><option>FAQ</option><option>Checklist</option><option>Treinamento</option>
+          </select>
+          <select class="select" data-filt-status="${s.id}">
+            <option value="">Status</option>
+            <option>Ativo</option><option>Em revisão</option><option>Obsoleto</option>
+          </select>
+        </div>
+      </div>`;
+
+    // Card: lista de notas
+    const list = document.createElement('div'); list.className='card';
+    list.innerHTML = `<h2>${s.icone||''} ${s.nome} — Notas</h2><div class="notes" id="notes-${s.id}"></div>`;
+
+    wrap.appendChild(tools); wrap.appendChild(list); sec.appendChild(wrap); host.appendChild(sec);
+  });
+
+  // Bind dos botões e filtros
+  $$('[data-new]').forEach(b=> b.addEventListener('click', ()=> openNotaModal({setorId:b.dataset.new}) ));
+  $$('[data-template]').forEach(b=> b.addEventListener('click', ()=> insertTemplateQuick(b.dataset.template)) );
+  $$('[data-qsetor]').forEach(inp=> inp.addEventListener('input', ()=> renderNotes(inp.dataset.qsetor)) );
+  $$('[data-filt-tipo]').forEach(sel=> sel.addEventListener('change', ()=> renderNotes(sel.dataset.filtTipo)) );
+  $$('[data-filt-status]').forEach(sel=> sel.addEventListener('change', ()=> renderNotes(sel.dataset.filtStatus)) );
+}
+
+function renderNotes(setorId){
+  const box = document.getElementById('notes-'+setorId); if(!box) return;
+  const q = document.querySelector(`[data-qsetor="${setorId}"]`).value.toLowerCase();
+  const tipo = document.querySelector(`[data-filt-tipo="${setorId}"]`).value;
+  const status = document.querySelector(`[data-filt-status="${setorId}"]`).value;
+
+  const list = data.notas.filter(n=> n.setorId===setorId)
+    .filter(n=> !tipo || n.tipo===tipo)
+    .filter(n=> !status || n.status===status)
+    .filter(n=> !q || (n.titulo.toLowerCase().includes(q) || (n.conteudo||'').toLowerCase().includes(q) || (n.tags||[]).join(',').toLowerCase().includes(q)) )
+    .sort((a,b)=> new Date(b.atualizadoEm||b.criadoEm||0) - new Date(a.atualizadoEm||a.criadoEm||0));
+
+  box.innerHTML = '';
+  if(list.length===0){ box.innerHTML = '<div style="opacity:.7">Nenhum resultado para os filtros atuais.</div>'; return; }
+
+  list.forEach(n=>{
+    const div = document.createElement('div'); div.className='note';
+    const tags = (n.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join(' ');
+    const links = (n.links||[]).map(l=>`<a href="${l.url}" target="_blank" rel="noopener">🔗 ${l.label||l.url}</a>`).join(' ');
+    const anexos = (n.anexos||[]).map((a,i)=>`<a download="${a.name}" href="${a.dataUrl}">📎 ${a.name}</a>`).join(' ');
+    const dt = fmtDate(n.atualizadoEm||n.criadoEm);
+    div.innerHTML = `
+      <h3>${n.titulo}</h3>
+      <div class="meta">
+        <span class="badge">${n.tipo}</span>
+        <span class="badge badge--status">${n.status}</span>
+        <span class="badge">${n.prioridade}</span>
+        <span class="badge">${n.audiencia}</span>
+        ${tags}
+      </div>
+      <div style="font-size:13px;color:#334">Atualizado: ${dt}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0">${links} ${anexos}</div>
+      <div class="ops">
+        <button data-edit="${n.id}">✏️ Editar</button>
+        <button data-dup="${n.id}">🧬 Duplicar</button>
+        <button data-del="${n.id}">🗑️ Excluir</button>
+      </div>`;
+    box.appendChild(div);
+  });
+
+  $$('[data-edit]').forEach(b=> b.onclick=()=> openNotaModal(data.notas.find(x=>x.id===b.dataset.edit)) );
+  $$('[data-dup]').forEach(b=> b.onclick=()=> duplicateNota(b.dataset.dup) );
+  $$('[data-del]').forEach(b=> b.onclick=()=> deleteNota(b.dataset.del) );
+}
+
+function renderAll(){
+  applyMeta();
+  renderTabs();
+  renderPages();
+  data.setores.forEach(s=> renderNotes(s.id));
+}
+
+function activate(id){
+  $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.id===id));
+  $$('.page').forEach(p=>p.classList.toggle('active', p.id==='pg-'+id));
+}
+
+// ============================
+// CRUD Notas
+// ============================
+let editingId = null;
+
+function openNotaModal(nota){
+  const dlg = $('#dlgNota'); editingId = nota?.id || null;
+  // preencher setores
+  const sel = $('#ntSetor'); sel.innerHTML = data.setores.map(s=>`<option value="${s.id}">${s.icone||''} ${s.nome}</option>`).join('');
+
+  if(nota){
+    $('#dlgNotaTitle').textContent = 'Editar Nota';
+    $('#ntTitulo').value = nota.titulo||'';
+    $('#ntSetor').value = nota.setorId||data.setores[0].id;
+    $('#ntTipo').value = nota.tipo||'Técnico';
+    $('#ntStatus').value = nota.status||'Ativo';
+    $('#ntPrio').value = nota.prioridade||'Normal';
+    $('#ntAud').value = nota.audiencia||'Todos';
+    $('#ntTags').value = (nota.tags||[]).join(', ');
+    $('#ntConteudo').value = nota.conteudo||'';
+    renderLinks(nota.links||[]);
+    renderAnexos(nota.anexos||[]);
+  }else{
+    $('#dlgNotaTitle').textContent = 'Nova Nota';
+    $('#ntTitulo').value = '';
+    $('#ntSetor').value = nota?.setorId || data.setores[0].id;
+    $('#ntTipo').value = 'Técnico';
+    $('#ntStatus').value = 'Ativo';
+    $('#ntPrio').value = 'Normal';
+    $('#ntAud').value = 'Todos';
+    $('#ntTags').value = '';
+    $('#ntConteudo').value = '';
+    renderLinks([]); renderAnexos([]);
+  }
+  dlg.showModal();
+}
+
+function renderLinks(arr){
+  const host = $('#ntLinks'); host.innerHTML='';
+  arr.forEach((l,i)=>{ const el = document.createElement('span'); el.className='chip'; el.textContent = (l.label||l.url); el.title=l.url; el.onclick=()=>{ arr.splice(i,1); renderLinks(arr); }; host.appendChild(el); });
+  host.dataset.json = JSON.stringify(arr);
+}
+
+function renderAnexos(arr){
+  const host = $('#ntAnexos'); host.innerHTML='';
+  arr.forEach((a,i)=>{ const el = document.createElement('span'); el.className='chip'; el.textContent = a.name; el.title=a.type+' '+(a.size||''); el.onclick=()=>{ arr.splice(i,1); renderAnexos(arr); }; host.appendChild(el); });
+  host.dataset.json = JSON.stringify(arr);
+}
+
+async function filesToData(files){
+  const results=[];
+  for(const f of files){
+    const b = await f.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(b)));
+    results.push({ name:f.name, type:f.type, size:f.size, dataUrl:`data:${f.type};base64,${base64}` });
+  }
+  return results;
+}
+
+function saveNota(){
+  const nota = editingId ? data.notas.find(n=>n.id===editingId) : { id:uid(), criadoEm:nowISO() };
+  nota.titulo = $('#ntTitulo').value.trim() || 'Sem título';
+  nota.setorId = $('#ntSetor').value;
+  nota.tipo = $('#ntTipo').value; nota.status = $('#ntStatus').value; nota.prioridade = $('#ntPrio').value; nota.audiencia = $('#ntAud').value;
+  nota.tags = $('#ntTags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  nota.conteudo = $('#ntConteudo').value;
+  nota.links = JSON.parse($('#ntLinks').dataset.json||'[]');
+  nota.anexos = JSON.parse($('#ntAnexos').dataset.json||'[]');
+  nota.atualizadoEm = nowISO();
+  if(!editingId){ data.notas.push(nota); editingId = nota.id; }
+  renderNotes(nota.setorId); saveDraft();
+  $('#dlgNota').close();
+}
+
+function deleteNota(id){
+  const n = data.notas.find(x=>x.id===id); if(!n) return;
+  if(confirm(`Excluir a nota "${n.titulo}"?`)){
+    data.notas = data.notas.filter(x=>x.id!==id); renderNotes(n.setorId); saveDraft();
+  }
+}
+
+function duplicateNota(id){
+  const n = data.notas.find(x=>x.id===id); if(!n) return;
+  const clone = JSON.parse(JSON.stringify(n)); clone.id = uid(); clone.titulo = n.titulo+' (cópia)'; clone.criadoEm = nowISO(); clone.atualizadoEm = nowISO();
+  data.notas.push(clone); renderNotes(clone.setorId); saveDraft();
+}
+
+// ============================
+// Templates rápidos
+// ============================
+const TEMPLATES = {
+  Procedimento: `**Objetivo**\n- \n\n**EPI**\n- \n\n**Materiais**\n- \n\n**Passo a passo**\n1. \n2. \n\n**Validação / Evidências**\n- Foto / Medição / Log` ,
+  Incidente: `**Descrição**\n- \n\n**Impacto**\n- \n\n**Causa raiz**\n- \n\n**Ação corretiva**\n- \n\n**Ação preventiva**\n- `,
+  Checklist: `**Itens de verificação**\n- [ ] \n- [ ] \n\n**Critérios de aceite**\n- \n\n**Medições**\n- `,
+  FAQ: `**Pergunta**\n- \n\n**Resposta**\n- \n\n**Referência**\n- Link: `
+};
+
+function insertTemplateQuick(setorId){
+  openNotaModal({ setorId });
+  $('#ntTipo').value = 'Procedimento';
+  $('#ntConteudo').value = TEMPLATES.Procedimento;
+}
+
+$('#btnTemplate')?.addEventListener('click', ()=>{
+  const tipo = $('#ntTipo').value;
+  $('#ntConteudo').value = TEMPLATES[tipo] || TEMPLATES.Procedimento;
+});
+
+// Links / Anexos no modal
+$('#btnAddLink')?.addEventListener('click', ()=>{
+  const rot = $('#lkRotulo').value.trim(); const url = $('#lkUrl').value.trim(); if(!url) return;
+  const curr = JSON.parse($('#ntLinks').dataset.json||'[]'); curr.push({label: rot||url, url}); renderLinks(curr); $('#lkRotulo').value=''; $('#lkUrl').value='';
+});
+
+$('#ntFiles')?.addEventListener('change', async (e)=>{
+  const files = e.target.files; if(!files?.length) return;
+  const arr = JSON.parse($('#ntAnexos').dataset.json||'[]');
+  const news = await filesToData(files);
+  const totalSize = [...arr,...news].reduce((s,a)=>s+(a.size||0),0);
+  if(totalSize>20*1024*1024) alert('Aviso: total de anexos excede 20MB; considere dividir.');
+  renderAnexos([...arr, ...news]); e.target.value='';
+});
+
+// ============================
+// Configurações
+// ============================
+function openCfg(){
+  $('#cfgTitulo').value = data.meta.titulo || '';
+  $('#cfgPrimary').value = data.meta.primary || '#0b3d91';
+  $('#cfgVideo').value = data.meta.video || '';
+  renderCfgSetores();
+  $('#dlgCfg').showModal();
+}
+
+function renderCfgSetores(){
+  const host = $('#cfgSetores'); host.innerHTML='';
+  data.setores.forEach(s=>{
+    const chip = document.createElement('span'); chip.className='chip'; chip.textContent = `${s.icone||''} ${s.nome}`;
+    chip.title='Clique para renomear / remover';
+    chip.onclick=()=>{
+      const nome = prompt('Nome do setor:', s.nome) || s.nome; const icone = prompt('Emoji do setor:', s.icone||'') || s.icone;
+      if(confirm('Remover este setor? Cancelar para manter.')){
+        data.notas = data.notas.filter(n=>n.setorId!==s.id);
+        data.setores = data.setores.filter(x=>x.id!==s.id);
+      }else{
+        s.nome = nome; s.icone = icone;
+      }
+      renderCfgSetores(); renderAll(); saveDraft();
+    };
+    host.appendChild(chip);
+  });
+}
+
+$('#cfgAddSetor')?.addEventListener('click', ()=>{
+  const nome = $('#cfgSetorNome').value.trim(); if(!nome) return;
+  const icone = $('#cfgSetorIcone').value.trim();
+  const id = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if(data.setores.some(s=>s.id===id)) return alert('Já existe um setor com esse ID (gerado do nome). Tente outro nome.');
+  data.setores.push({ id, nome, icone });
+  $('#cfgSetorNome').value=''; $('#cfgSetorIcone').value='';
+  renderCfgSetores(); renderAll(); saveDraft();
+});
+
+$('#cfgAplicar')?.addEventListener('click', ()=>{
+  data.meta.titulo = $('#cfgTitulo').value || data.meta.titulo;
+  data.meta.primary = $('#cfgPrimary').value || data.meta.primary;
+  const v = $('#cfgVideo').value.trim(); if(v){ data.meta.video = v; }
+  applyMeta(); saveDraft(); $('#dlgCfg').close();
+});
+
+$('#cfgReset')?.addEventListener('click', ()=>{
+  data.meta.video = 'https://aemassets.grupoccr.com.br/content/dam/sites-modulares/pt/media/videos/home/CCRtoMotiva.mp4/_jcr_content/renditions/fullhd.mp4';
+  applyMeta(); saveDraft();
+});
+
+// ============================
+// Busca Global
+// ============================
+$('#qGlobal')?.addEventListener('input', debounce((e)=>{
+  const term = e.target.value.toLowerCase();
+  data.setores.forEach(s=>{
+    const box = document.getElementById('notes-'+s.id); if(!box) return;
+    const qLocal = document.querySelector(`[data-qsetor="${s.id}"]`); if(qLocal){ qLocal.value = term; }
+    renderNotes(s.id);
+  });
+}, 250));
+
+// ============================
+// Vídeo
+// ============================
+function toggleVideo(){
+  const v = $('#bgVid'); if(v.paused){ v.play(); $('#btnToggleVideo').innerText='⏯️ Pausar vídeo'; } else { v.pause(); $('#btnToggleVideo').innerText='▶️ Reproduzir vídeo'; }
+}
+
+// ============================
+// Eventos iniciais
+// ============================
+window.addEventListener('DOMContentLoaded',()=>{
+  tryLoadDraft();
+  renderAll();
+
+  // Header
+  $('#btnExport').addEventListener('click', exportJSON);
+  $('#btnImport').addEventListener('click', importJSON);
+  $('#btnConfig').addEventListener('click', openCfg);
+  $('#btnToggleVideo').addEventListener('click', toggleVideo);
+  $('#btnHelp').addEventListener('click', ()=> $('#dlgHelp').showModal());
+
+  // Modal Nota
+  $('#btnSalvarNota').addEventListener('click', saveNota);
+  $('#btnFecharNota').addEventListener('click', ()=> $('#dlgNota').close());
+  $('#btnExcluirNota').addEventListener('click', ()=>{ if(editingId) deleteNota(editingId); $('#dlgNota').close(); });
+  $('#btnDuplicarNota').addEventListener('click', ()=>{ if(editingId) duplicateNota(editingId); });
+
+  // Auto-save quando nota é alterada
+  ['ntTitulo','ntTipo','ntStatus','ntPrio','ntAud','ntTags','ntConteudo'].forEach(id=>{
+    const el = document.getElementById(id); el?.addEventListener('input', saveDraft);
+  });
+});
+</script>
+</body>
+</html>
