@@ -1,646 +1,712 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ID GPS · IDs Próximos</title>
-<meta name="theme-color" content="#0b1020" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>ID GPS — Inspeção Noturna</title>
 <style>
-  :root{
-    --brand:#5a64ff; --brand2:#00c2c9; --bg:#0b1020; --bg-2:#0f1630; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --btn:#22c55e; --focus:#82a0ff; --shadow:0 12px 28px rgba(2,6,23,.55); --radius:14px; --pill:#0c1f17;
-    --km-bg:#ffffff; --km-fg:#0b1020; --km-border:#1e3a8a; --km-band:#1e3a8a;
-    --info-bg:#0f1630; --info-border:#1e2647; --info-fg:#cdd7f5; --info-icon:#93c5fd; --info-accent:#60a5fa;
-  }
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:radial-gradient(1200px 1200px at 20% -20%, #111b3f 0%, transparent 50%) no-repeat,linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
-  header{background:linear-gradient(90deg,var(--brand),var(--brand2));padding:16px 16px;box-shadow:var(--shadow)}
-  .brand{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px}
-  .dot-logo{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.95}
-  .brand h1{margin:0;font-weight:1000;letter-spacing:.06em;color:#0b1020;font-size:clamp(1rem,1.9vw,1.15rem)}
-
-  #status{max-width:1100px;margin:14px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 16px}
-  .chip,.badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800;box-shadow:var(--shadow)}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .ok .dot{background:var(--ok)}.ok{color:#bbf7d0}
-  .warn .dot{background:var(--warn)}.warn{color:#ffe7b0}
-  .bad .dot{background:var(--bad)}.bad{color:#fecaca}
-  .badge{color:#c7d2fe}
-
-  main{max-width:1100px;margin:14px auto 28px;display:grid;gap:16px;padding:0 16px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .card h2{margin:0 0 12px 0;font-size:clamp(1.05rem,1.8vw,1.1rem);color:#e7ecff}
-  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  button{padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-  button:active{transform:translateY(1px)}button:hover{filter:brightness(1.06)}button:disabled{opacity:.55;cursor:not-allowed;filter:none}
-  #btnSend{background:var(--btn)}
-  .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
-  .opt input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand)}
-  .opt select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer}
-
-  ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-  li{line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;font-size:1.03rem;color:#edf2ff;display:flex;justify-content:space-between;gap:12px;align-items:center;transition:box-shadow .15s ease,border-color .15s ease, background .15s ease}
-  li.nearest{border-color:var(--btn);box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02))}
-  li.nearest .id-badge{display:inline-flex;align-items:center;gap:8px;background:var(--pill);padding:4px 10px;border-radius:999px;outline:1px solid rgba(34,197,94,.3)}
-  li.nearest .id-badge .id-label{font-weight:1000;letter-spacing:.02em;color:#b6ffce;font-size:1.08rem}
-  li.nearest .id-badge .flag{padding:2px 8px;border-radius:999px;background:#22c55e;color:#05220f;font-weight:900;font-size:.72rem}
-  .id-label{font-weight:800}
-  .dist{color:#9fb0d9;opacity:.85;font-size:.78rem;min-width:64px;text-align:right}
-  .skeleton{height:48px;border-radius:12px;background:linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
-  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .col-4{grid-column:span 4}.col-8{grid-column:span 8}.col-12{grid-column:1/-1}
-  @media (max-width:900px){.col-4,.col-8,.col-12{grid-column:1/-1}}
-  button:focus-visible, select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-
-  /* KM placa */
-  .km-sign{margin-left:auto;display:inline-flex;align-items:stretch;gap:0;background:var(--km-bg);color:var(--km-fg);border:4px solid var(--km-border);border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.35);overflow:hidden}
-  .km-band{background:var(--km-band);color:#eaf2ff;width:auto;min-width:18px;padding:6px 10px;display:flex;align-items:center;justify-content:center}
-  .km-body{padding:6px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--km-bg)}
-  .km-body-col{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-  .km-row{display:flex;align-items:baseline;gap:10px}
-  .km-label{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:900;letter-spacing:.06em;font-size:clamp(1rem,1.6vw,1.1rem);opacity:.85}
-  .km-value{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:1000;letter-spacing:.02em;font-size:clamp(1.6rem,3.6vw,2.4rem);line-height:1;color:var(--km-fg);min-width:4ch;text-align:right}
-  .km-subnote{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;font-size:.62rem;line-height:1.1;color:#6f84b8;opacity:.85;text-align:right;max-width:22ch;white-space:normal}
-  @media (max-width:480px){.km-body{padding:6px 10px 8px}.km-value{font-size:clamp(1.5rem,6vw,2rem)}}
-
-  /* Banner informativo */
-  .container{max-width:1100px;margin:0 auto;padding:0 16px}
-  .info-trigger-wrap{max-width:1100px;margin:12px auto 0;padding:0 16px;display:flex;align-items:center}
-  .info-trigger{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(147,197,253,.12);color:var(--info-icon);border:1px solid rgba(147,197,253,.35);cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.35)}
-  .info-trigger:hover{filter:brightness(1.05)}
-  .info-panel{max-width:1100px;margin:10px auto 0;border:1px solid var(--info-border);border-radius:12px;color:var(--info-fg);display:none;box-shadow:0 10px 24px rgba(0,0,0,.35);background:linear-gradient(180deg, rgba(96,165,250,.08), transparent), var(--info-bg)}
-  .info-panel.open{display:block}
-  .info-panel-inner{padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:flex-start;position:relative}
-  .info-panel-inner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#60a5fa,#22c55e);border-top-left-radius:12px;border-bottom-left-radius:12px;opacity:.9}
-  .info-hero{display:flex;align-items:center;gap:10px}
-  .info-hero .icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(147,197,253,.18);color:var(--info-icon);font-size:1rem}
-  .info-title{margin:0;font-weight:900;letter-spacing:.02em;color:#eaf2ff;font-size:clamp(.95rem,1.4vw,1.1rem)}
-  .info-text{margin:6px 0 0 0;font-size:.9rem;line-height:1.45;opacity:.96}
-  .info-text .strong{font-weight:800;color:#e8eeff}
-  .info-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid #26315a;color:#c9d6ff;font-weight:900;cursor:pointer}
-  .info-close:hover{filter:brightness(1.06)}
-  @media (max-width:600px){
-    .info-panel-inner{grid-template-columns:1fr;gap:12px}
-    .info-hero{justify-content:flex-start}
-    .info-close{justify-self=end}
-  }
-
-  /* ====== (ADICIONADO) INSPEÇÃO NOTURNA ====== */
-  .previewWrap{ position:relative; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#000; }
-  #previewCanvas{ width:100%; height:auto; display:block; background:#000; }
-  .overlayMini{ position:absolute; top:8px; left:8px; background:rgba(0,0,0,.55); color:#fff; padding:6px 8px; border-radius:8px; font-size:12px; }
-  .controls{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
-  .controls .btn-sec{ background:#1a244a; color:#dbeafe }
-  .controls .btn-ok{ background:var(--ok); color:#05220f }
-  .controls .btn-stop{ background:#ef4444; color:#fff }
-  .kv{ display:flex; gap:10px; flex-wrap:wrap; font-size:.9rem; color:var(--muted); }
-  .note{ color:var(--muted); font-size:.85rem }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f1e;--card:#111827;--border:#1e2d45;
+  --fg:#dce8ff;--muted:#6b7fa0;--primary:#6366f1;
+  --accent:#00c98d;--danger:#ef4444;--yellow:#f59e0b;--green:#22c55e;
+}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;min-height:100vh;overscroll-behavior:none}
+header{background:linear-gradient(90deg,var(--primary),var(--accent));padding:12px 16px;display:flex;align-items:center;gap:12px}
+header h1{font-weight:900;font-size:1rem;letter-spacing:.1em;color:#fff;flex:1}
+.km-sign{display:inline-flex;align-items:stretch;background:#fff;color:#0b0f1e;border:3px solid #1e3a8a;border-radius:8px;overflow:hidden}
+.km-band{background:#1e3a8a;min-width:12px}
+.km-body{padding:3px 10px;display:flex;align-items:center;gap:6px}
+.km-label{font-weight:900;font-size:.7rem;opacity:.8}
+.km-value{font-weight:900;font-size:1.4rem;line-height:1;min-width:4ch;text-align:right}
+.container{max-width:900px;margin:0 auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.card h2{font-weight:900;font-size:.85rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.gps-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid;font-weight:800;font-size:.8rem}
+.gps-ok{background:rgba(0,201,141,.1);border-color:rgba(0,201,141,.3);color:var(--accent)}
+.gps-warn{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--yellow)}
+.gps-err{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--danger)}
+.dot{width:10px;height:10px;border-radius:50%}
+.tabs{display:flex;gap:4px;background:var(--card);padding:6px;border-radius:12px;border:1px solid var(--border);overflow-x:auto}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-radius:8px;border:none;background:none;color:var(--muted);font-size:.8rem;font-weight:900;cursor:pointer;white-space:nowrap;transition:all .15s}
+.tab.active{background:var(--primary);color:#fff}
+.tab .badge{background:var(--danger);color:#fff;font-size:.65rem;padding:1px 6px;border-radius:999px;font-weight:900;min-width:18px;text-align:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:10px;border:none;font-weight:900;font-size:.8rem;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-accent{background:var(--accent);color:#0b0f1e}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-yellow{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.btn-green{background:#16a34a;color:#fff}
+.btn-outline{background:transparent;color:var(--fg);border:1px solid var(--border)}
+.btn-ghost{background:transparent;color:var(--muted);border:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-sm{padding:7px 13px;font-size:.75rem;border-radius:8px}
+.id-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(17,24,39,.6);font-family:monospace;font-size:.85rem;transition:all .15s}
+.id-item.nearest{border-color:rgba(0,201,141,.4);background:linear-gradient(0deg,rgba(0,201,141,.06),rgba(0,201,141,.02))}
+.nearest-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,201,141,.1);padding:4px 10px;border-radius:999px;border:1px solid rgba(0,201,141,.3)}
+.nearest-tag{background:var(--accent);color:#0b0f1e;font-size:.65rem;font-weight:900;padding:2px 8px;border-radius:999px}
+.nearest-id{font-weight:900;color:var(--accent)}
+.id-dist{color:var(--muted);font-size:.75rem;font-weight:700;min-width:60px;text-align:right}
+.skeleton{height:44px;border-radius:10px;background:linear-gradient(90deg,#111827 25%,#0e1520 40%,#111827 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.form-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.label{font-size:.75rem;font-weight:900;color:var(--muted)}
+.lamp-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:var(--card);color:var(--muted);font-weight:900;font-size:.9rem;cursor:pointer;transition:all .15s}
+.lamp-btn.active{background:var(--danger);border-color:var(--danger);color:#fff;transform:scale(1.1)}
+.side-btn{padding:7px 14px;border-radius:999px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-size:.75rem;font-weight:900;cursor:pointer;transition:all .15s}
+.side-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.info-banner{border:1px solid var(--border);border-radius:12px;padding:14px 14px 14px 18px;background:linear-gradient(0deg,rgba(99,102,241,.04),transparent);position:relative;border-left:4px solid var(--primary);font-size:.78rem;line-height:1.6;color:var(--muted)}
+.info-banner strong{color:var(--fg)}
+.close-info{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:900;font-size:.8rem}
+.event-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(17,24,39,.5);font-size:.75rem}
+.ev-badge{padding:3px 8px;border-radius:999px;font-weight:900;font-size:.7rem}
+.ev-photo{background:rgba(99,102,241,.15);color:var(--primary);border:1px solid rgba(99,102,241,.3)}
+.ev-video{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+#pane-ids,#pane-video,#pane-photo,#pane-events{display:none}
+#pane-ids.active,#pane-video.active,#pane-photo.active,#pane-events.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:700px){.grid2{grid-template-columns:1fr 2fr}}
+video{width:100%;height:auto;display:block;background:#000;border-radius:8px}
+canvas#cam-canvas{width:100%;height:auto;display:block;background:#000;border-radius:8px}
+.vid-container{position:relative;border-radius:12px;overflow:hidden;background:#000;border:1px solid var(--border)}
+.vid-status{position:absolute;top:8px;left:10px;background:rgba(0,0,0,.7);color:#fff;font-size:.7rem;font-weight:900;padding:3px 8px;border-radius:6px}
+.float-controls{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+select{background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.8rem;font-weight:700;cursor:pointer}
+.checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox-row input{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
+.check-label{font-size:.78rem;color:var(--muted);cursor:pointer}
+.preview-img{width:100%;height:auto;border-radius:8px;display:block}
+.gap2{display:flex;flex-wrap:wrap;gap:8px}
+.mt2{margin-top:8px}
+.mt3{margin-top:12px}
+.events-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.text-xs{font-size:.75rem;color:var(--muted);line-height:1.6}
+.text-xs strong{color:var(--fg)}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">
-    <span class="dot-logo" aria-hidden="true"></span>
-    <h1>ID GPS</h1>
-    <div id="kmChip" class="km-sign" aria-live="polite">
-      <div class="km-band" aria-hidden="true"></div>
-      <div class="km-body">
-        <div class="km-row">
-          <span class="km-label">KM</span>
-          <span id="kmValue" class="km-value">—</span>
-        </div>
-        <div class="km-body-col" style="margin-left:auto">
-          <span class="km-subnote">Marco quilométrico em linha reta mais próximo da rodovia em relação à sua posição GPS.</span>
-        </div>
-      </div>
-    </div>
+  <div style="width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.9)"></div>
+  <h1>ID GPS</h1>
+  <div class="km-sign" id="km-sign">
+    <div class="km-band"></div>
+    <div class="km-body"><span class="km-label">KM</span><span class="km-value" id="km-val">—</span></div>
   </div>
 </header>
 
-<!-- Trigger do banner (apenas ícone) -->
-<div class="info-trigger-wrap">
-  <button id="infoOpen" class="info-trigger" title="Leia importante"><span aria-hidden="true">ℹ</span><span class="sr-only">Leia importante</span></button>
-</div>
+<div class="container">
 
-<!-- Painel do banner -->
-<div id="infoPanel" class="info-panel" role="dialog" aria-modal="false" aria-label="Informações importantes">
-  <div class="info-panel-inner container">
-    <div class="info-hero">
-      <span class="icon" aria-hidden="true">ℹ</span>
-      <h2 class="info-title">Informação importante</h2>
-    </div>
-    <div class="info-text">
-      <span class="strong">Atenção:</span> esta ferramenta utiliza uma <span class="strong">lista interna previamente cadastrada</span> para indicar o <span class="strong">ID mais próximo</span> com base na posição GPS do seu dispositivo. Não há integração em tempo real com sistemas corporativos. Como a base é estática, <span class="strong">podem existir equipamentos já removidos em campo</span> que ainda aparecem na listagem. Este recurso foi idealizado <span class="strong">exclusivamente como apoio</span> à localização em campo e ao envio de <span class="strong">solicitações de acionamento</span> ou <span class="strong">relatórios de inspeção</span>.
-    </div>
-    <button id="infoClose" class="info-close" aria-label="Fechar">✕</button>
+  <!-- Info Banner -->
+  <div class="info-banner" id="info-banner">
+    <span class="close-info" id="close-info">✕</span>
+    <strong>Atenção:</strong> esta ferramenta utiliza uma <strong>lista interna previamente cadastrada</strong>
+    para indicar o <strong>ID mais próximo</strong> com base na posição GPS.
+    Como a base é estática, <strong>podem existir equipamentos já removidos</strong>.
+    Recurso exclusivo de <strong>apoio à inspeção noturna</strong>.
   </div>
-</div>
 
-<div id="status" role="region" aria-label="Status do sistema">
-  <div id="gpsChip" class="chip bad" aria-live="polite">
-    <span class="dot"></span><span id="gpsText">GPS: aguardando…</span>
+  <!-- GPS Chip -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <div class="gps-chip gps-err" id="gps-chip">
+      <span class="dot" id="gps-dot" style="background:var(--danger)"></span>
+      <span id="gps-text">GPS: buscando…</span>
+    </div>
+    <span id="events-count-chip" style="display:none;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-size:.75rem;font-weight:900;color:var(--muted)"></span>
   </div>
-  <div id="diag" class="badge" style="display:none" aria-live="polite">—</div>
-</div>
 
-<main>
-  <div class="grid">
-    <section class="card col-4" aria-label="Ações">
-      <h2>Ações</h2>
-      <div class="actions" style="margin-bottom:8px"><button id="btnSend" disabled>Enviar ID por WhatsApp</button></div>
-      <div class="actions" style="gap:16px">
-        <label class="opt" title="Quantidade de IDs a enviar (padrão 10)"><span style="opacity:.9">quantidade</span>
-          <select id="qty"><option value="1">1</option><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-        </label>
-        <label class="opt" title="Adicionar links do Google Maps junto com os IDs"><input type="checkbox" id="chkMaps" /><span>incluir links de mapa</span></label>
-      </div>
-    </section>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ids',this)">📍 IDs</button>
+    <button class="tab" onclick="switchTab('video',this)">🎥 Vídeo</button>
+    <button class="tab" onclick="switchTab('photo',this)">📸 Foto</button>
+    <button class="tab" id="tab-events" onclick="switchTab('events',this)">📋 Eventos</button>
+  </div>
 
-    <section class="card col-8" aria-label="IDs mais próximos">
-      <h2>IDs próximos</h2>
-      <ul id="list" aria-live="polite">
-        <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
-        <li class="skeleton"></li><li class="skeleton"></li>
-      </ul>
-    </section>
+  <!-- PANE: IDs -->
+  <div id="pane-ids" class="active">
+    <div class="grid2">
+      <div class="card">
+        <h2>Ações</h2>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-accent" id="btn-whatsapp-ids" onclick="sendWhatsAppIds()">
+            📲 Enviar IDs por WhatsApp
+          </button>
+          <div class="form-row">
+            <span class="label">Qtd:</span>
+            <select id="qty-select" onchange="renderList()">
+              <option value="1">1</option>
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <label class="checkbox-row">
+              <input type="checkbox" id="chk-maps"/>
+              <span class="check-label">📍 incluir links de mapa</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>IDs próximos</h2>
+        <div id="id-list"><div class="text-xs" style="padding:16px 0;text-align:center">Aguardando GPS…</div></div>
+      </div>
+    </div>
+  </div>
 
-    <!-- ===== (ADICIONADO) INSPEÇÃO NOTURNA ===== -->
-    <section class="card col-12" aria-label="Inspeção Noturna">
-      <h2>📹 Inspeção Noturna (vídeo)</h2>
-      <div class="previewWrap">
-        <canvas id="previewCanvas" width="1280" height="720"></canvas>
-        <div class="overlayMini" id="statusOverlay">Pré-visualização</div>
+  <!-- PANE: Video -->
+  <div id="pane-video">
+    <div class="card">
+      <h2>🎥 Inspeção Noturna (Vídeo)</h2>
+      <div class="vid-container" id="vid-container">
+        <canvas id="cam-canvas" width="1280" height="720"></canvas>
+        <div class="vid-status" id="vid-status">Pré-visualização</div>
+        <div class="float-controls" id="float-controls" style="display:none">
+          <button class="btn btn-yellow btn-sm" onclick="markPoste()">⚠ POSTE APAGADO</button>
+          <button class="btn btn-outline btn-sm" onclick="takeVideoSnapshot()">📸 Foto</button>
+          <button class="btn btn-danger btn-sm" onclick="stopRecording()">⏹ Parar</button>
+          <button class="btn btn-ghost btn-sm" onclick="exitFullscreen()">⤡</button>
+        </div>
       </div>
-      <div class="controls" style="margin-top:10px;">
-        <button id="btnStartCam" class="btn-ok">Iniciar (Câmera)</button>
-        <button id="btnMarkApagado" class="btn-sec" disabled>Marcar POSTE APAGADO</button>
-        <button id="btnExportEventos" class="btn-sec">Exportar eventos</button>
-        <button id="btnTorch" class="btn-sec" disabled>Lanterna</button>
-        <button id="btnStop" class="btn-stop" disabled>Parar & Salvar</button>
+      <div class="gap2 mt3" id="vid-controls">
+        <button class="btn btn-accent" id="btn-start-rec" onclick="startRecording()">▶ Iniciar Gravação</button>
+        <button class="btn btn-danger" id="btn-stop-rec" onclick="stopRecording()" style="display:none">⏹ Parar &amp; Salvar</button>
+        <button class="btn btn-yellow" id="btn-mark-poste" onclick="markPoste()" style="display:none">⚠ POSTE APAGADO</button>
+        <button class="btn btn-outline" id="btn-snap-vid" onclick="takeVideoSnapshot()" style="display:none">📸 Foto durante gravação</button>
+        <button class="btn btn-outline" id="btn-torch" onclick="toggleTorch()" style="display:none">🔦 Lanterna</button>
+        <button class="btn btn-outline" id="btn-fs" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
       </div>
-      <div class="kv" style="margin-top:6px;">
-        <span>GPS: <strong id="gpsInfo">—</strong></span>
-        <span>Velocidade: <strong id="velInfo">—</strong></span>
-        <span>KM (aprox): <strong id="kmInfo">0.000</strong></span>
-        <span>Eventos: <strong id="evtCount">0</strong></span>
-        <span>Codec: <strong id="codecInfo">—</strong></span>
+      <div class="text-xs mt2">
+        O vídeo grava com <strong>KM</strong>, <strong>ID NOX mais próximo</strong>,
+        <strong>GPS</strong>, <strong>Velocidade</strong>, <strong>Data/Hora</strong> e permite
+        <strong style="color:var(--danger)">marcar POSTE APAGADO</strong>.
+        <br>Codec: <span id="codec-info">—</span>
       </div>
-      <p class="note" style="margin:6px 0 0">
-        O vídeo grava com <strong>letras grandes</strong>: <strong>KM (da sua base)</strong>, <strong>ID NOX mais próximo</strong>, <strong>GPS</strong>, <strong>Velocidade</strong>, <strong>Data/Hora</strong> e permite <strong>marcar POSTE APAGADO</strong> (carimbo no vídeo e registro no arquivo de eventos).
+    </div>
+  </div>
+
+  <!-- PANE: Photo -->
+  <div id="pane-photo">
+    <div class="card">
+      <h2>📸 Foto de Inspeção</h2>
+      <p class="text-xs" style="margin-bottom:10px">
+        Foto com carimbo de <strong>KM</strong>, <strong>ID</strong>,
+        <strong style="color:var(--danger)">lâmpadas apagadas</strong> e <strong>lado da rodovia</strong>.
+        Envie direto pelo <strong style="color:var(--green)">WhatsApp</strong>.
       </p>
-    </section>
-    <!-- ===== /INSPEÇÃO NOTURNA ===== -->
 
+      <div id="photo-cam-wrap" style="display:none">
+        <div class="vid-container" style="margin-bottom:10px">
+          <video id="photo-video" playsinline muted autoplay></video>
+          <div style="position:absolute;bottom:56px;left:8px;right:8px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px">
+            <div style="background:rgba(0,0,0,.75);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:6px">
+              <span style="color:#fff;font-size:.75rem;font-weight:900">Lâmpadas:</span>
+              <button class="lamp-btn active" id="lb-1" onclick="setLamp(1)">1</button>
+              <button class="lamp-btn" id="lb-2" onclick="setLamp(2)">2</button>
+              <button class="lamp-btn" id="lb-3" onclick="setLamp(3)">3</button>
+              <button class="lamp-btn" id="lb-4" onclick="setLamp(4)">4</button>
+              <button class="lamp-btn" id="lb-5" onclick="setLamp(5)">5</button>
+            </div>
+            <div style="background:rgba(0,0,0,.75);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:6px">
+              <span style="color:#fff;font-size:.75rem;font-weight:900">Lado:</span>
+              <button class="side-btn active" id="sb-norte" onclick="setSide('norte')">◀ Norte</button>
+              <button class="side-btn" id="sb-sul" onclick="setSide('sul')">Sul ▶</button>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:8px">
+            <button onclick="takePhoto()" style="width:64px;height:64px;border-radius:50%;background:#fff;color:#000;font-size:1.4rem;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.6)">📷</button>
+            <button onclick="stopPhotoCamera()" style="width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:1rem;border:1px solid rgba(255,255,255,.2);cursor:pointer;align-self:center">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="photo-preview-wrap" style="display:none;flex-direction:column;gap:10px">
+        <img id="photo-preview-img" class="preview-img" alt=""/>
+        <div class="form-row">
+          <span class="label">Lâmpadas:</span>
+          <button class="lamp-btn active" id="plb-1" onclick="setLamp(1)">1</button>
+          <button class="lamp-btn" id="plb-2" onclick="setLamp(2)">2</button>
+          <button class="lamp-btn" id="plb-3" onclick="setLamp(3)">3</button>
+          <button class="lamp-btn" id="plb-4" onclick="setLamp(4)">4</button>
+          <button class="lamp-btn" id="plb-5" onclick="setLamp(5)">5</button>
+          <span class="label" style="margin-left:8px">Lado:</span>
+          <button class="side-btn active" id="psb-norte" onclick="setSide('norte')">Norte</button>
+          <button class="side-btn" id="psb-sul" onclick="setSide('sul')">Sul</button>
+        </div>
+        <div class="gap2">
+          <button class="btn btn-accent" onclick="savePhoto()">⬇ Salvar Foto</button>
+          <button class="btn btn-green" onclick="sendPhotoWhatsApp()">📲 Enviar WhatsApp</button>
+          <button class="btn btn-outline" onclick="retakePhoto()">📷 Nova Foto</button>
+          <button class="btn btn-ghost" onclick="discardPhoto()">✕ Descartar</button>
+        </div>
+      </div>
+
+      <div id="photo-start-wrap">
+        <button class="btn btn-primary" onclick="startPhotoCamera()">📷 Abrir Câmera para Foto</button>
+      </div>
+
+      <canvas id="photo-canvas" style="display:none"></canvas>
+    </div>
   </div>
-</main>
+
+  <!-- PANE: Events -->
+  <div id="pane-events">
+    <div class="card">
+      <h2>📋 Eventos da Sessão <span id="events-total-badge" style="background:rgba(0,201,141,.15);color:var(--accent);font-size:.75rem;padding:2px 8px;border-radius:999px;font-weight:900"></span></h2>
+      <div id="events-empty" class="text-xs" style="text-align:center;padding:16px 0">Nenhum evento registrado nesta sessão.</div>
+      <div class="gap2" id="events-actions" style="display:none">
+        <button class="btn btn-outline btn-sm" onclick="exportEvents()">⬇ Exportar JSON/CSV</button>
+        <button class="btn btn-green btn-sm" onclick="sendAllWhatsApp()">📲 Enviar Tudo WhatsApp</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearEvents()" style="color:var(--danger)">🗑 Limpar</button>
+      </div>
+      <div class="events-list" id="events-list"></div>
+    </div>
+  </div>
+
+</div>
 
 <script>
-const ACC_GREEN=10, ACC_YELLOW=25;
-let dataset=[], lastPos=null, lastRender=0;
-const gpsChip=document.getElementById('gpsChip');
-const gpsText=document.getElementById('gpsText');
-const diag=document.getElementById('diag');
-const btnSend=document.getElementById('btnSend');
-const chkMaps=document.getElementById('chkMaps');
-const qtySel=document.getElementById('qty');
-const listEl=document.getElementById('list');
-const kmValue=document.getElementById('kmValue');
-
-// ===== Banner =====
-const infoOpen=document.getElementById('infoOpen');
-const infoClose=document.getElementById('infoClose');
-const infoPanel=document.getElementById('infoPanel');
-function openInfo(){ infoPanel.classList.add('open'); }
-function closeInfo(){ infoPanel.classList.remove('open'); }
-infoOpen.addEventListener('click', openInfo);
-infoClose.addEventListener('click', closeInfo);
-window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && infoPanel.classList.contains('open')) closeInfo(); });
-window.addEventListener('click', (e)=>{ if(!infoPanel.classList.contains('open')) return; const inner = infoPanel.querySelector('.info-panel-inner'); if(inner && !inner.contains(e.target) && e.target !== infoOpen){ closeInfo(); } }, true);
-if(!sessionStorage.getItem('bannerShown')){ openInfo(); sessionStorage.setItem('bannerShown','1'); }
-
-// ===== Helpers =====
-function showDiag(msg){ diag.style.display='inline-flex'; diag.textContent=msg; }
-function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
-function nearestN(lat,lon,n=10){ if(!dataset.length) return []; const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0, Math.min(n,arr.length)); }
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+' m'); }
-function fmtHead(h){ return (h==null||!Number.isFinite(h))? null : Math.round(h)+'°'; }
-function fmtSpd(s){ return (s==null||!Number.isFinite(s))? null : Math.round(s*3.6)+' km/h'; }
-function nowBR(){ return new Date().toLocaleString('pt-BR'); }
-function fmtDistMeters(m){ if(!(Number.isFinite(m))) return '—'; return Math.round(m) + ' m'; }
-
-// ===== Status GPS / Lista
-function updateGpsChip(){
-  if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; }
-  const a=Math.round(lastPos.acc);
-  if(a<=ACC_GREEN){ gpsChip.className='chip ok'; gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; }
-  else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; }
-  else { gpsChip.className='chip bad'; gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
+// ─── HAVERSINE ───
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); }
+function nearestN(lat,lon,ds,n=10){
+  if(!ds.length)return[];
+  return ds.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:haversine(lat,lon,p.lat,p.lon)}))
+    .sort((a,b)=>a.d-b.d).slice(0,Math.min(n,ds.length));
+}
+function nearestKM(lat,lon,ds){
+  if(!ds.length||!isFinite(lat)||!isFinite(lon))return null;
+  let best=null,bd=Infinity;
+  for(const p of ds){const d=haversine(lat,lon,p.lat,p.lon);if(d<bd){bd=d;best=p;}}
+  return best?{km:best.km,d:bd}:null;
+}
+function fmtDist(m){if(!isFinite(m))return'—';if(m<1000)return Math.round(m)+' m';return(m/1e3).toFixed(2)+' km';}
+function fmtAcc(a){return(a==null||!isFinite(a))?'—':'±'+Math.round(a)+' m';}
+function fmtSpeed(s){if(s==null||!isFinite(s))return null;return Math.round(s*3.6)+' km/h';}
 
-async function loadCSV(){
+// ─── DATASETS — substitua pelos seus dados reais ───
+const SAMPLE_IDS=[
+  {id:'NOX-001',lat:-23.5505,lon:-46.6333},{id:'NOX-002',lat:-23.5515,lon:-46.6343},
+  {id:'NOX-003',lat:-23.5525,lon:-46.6323},{id:'NOX-004',lat:-23.5495,lon:-46.6313},
+  {id:'NOX-005',lat:-23.5535,lon:-46.6353},{id:'NOX-006',lat:-23.5485,lon:-46.6363},
+  {id:'NOX-007',lat:-23.5545,lon:-46.6303},{id:'NOX-008',lat:-23.5475,lon:-46.6373},
+  {id:'NOX-009',lat:-23.5555,lon:-46.6293},{id:'NOX-010',lat:-23.5465,lon:-46.6383},
+];
+const SAMPLE_KM=[
+  {km:100.0,lat:-23.5500,lon:-46.6330},{km:100.5,lat:-23.5520,lon:-46.6340},
+  {km:101.0,lat:-23.5540,lon:-46.6350},{km:101.5,lat:-23.5560,lon:-46.6360},
+  {km:102.0,lat:-23.5580,lon:-46.6370},
+];
+let idDataset=SAMPLE_IDS.slice();
+let kmDataset=SAMPLE_KM.slice();
+
+function normalizeStr(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' ');}
+function findCol(headers,cands){
+  const map=headers.map(h=>normalizeStr(h));
+  for(const c of cands){const i=map.indexOf(c);if(i>=0)return i;}
+  for(const c of cands){for(let i=0;i<map.length;i++){if(map[i].includes(c))return i;}}
+  return -1;
+}
+function parsePt(v){if(v==null)return NaN;const s=String(v).trim();return /,\d{1,}$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);}
+
+async function loadCSVs(){
   try{
-    let resp=await fetch('dados.csv?v='+Date.now(), {cache:'no-store'});
-    if(!resp.ok){ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); }
-    if(!resp.ok){ showDiag('❌ CSV não encontrado'); return; }
-    let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ showDiag('❌ CSV vazio'); return; }
-    const head=lines.shift().split(';');
-    const iId=findColumnIndex(head,['id do nox','idnox','id']),
-          iLat=findColumnIndex(head,['latitude','lat']),
-          iLon=findColumnIndex(head,['longitude','lon','long']);
-    if(iId<0||iLat<0||iLon<0){ showDiag('❌ Cabeçalho inválido (ID/Latitude/Longitude)'); return; }
-    dataset=lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
-                 .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-    if(!dataset.length){ showDiag('❌ Sem pontos válidos no CSV'); return; }
-    render(true); updateButtons();
-  }catch(e){ showDiag('❌ Erro ao carregar CSV'); }
+    const r=await fetch('dados.csv?v='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      let t=await r.text();if(t.charCodeAt(0)===0xFEFF)t=t.slice(1);
+      const ls=t.split(/\r?\n/).filter(l=>l.trim());
+      if(ls.length>=2){
+        const h=ls.shift().split(';');
+        const iI=findCol(h,['id do nox','idnox','id']),iLa=findCol(h,['latitude','lat']),iLo=findCol(h,['longitude','lon','long']);
+        if(iI>=0&&iLa>=0&&iLo>=0){
+          const ids=ls.map(l=>{const r=l.split(';');return{id:String(r[iI]||'').trim(),lat:parsePt(r[iLa]),lon:parsePt(r[iLo])};}).filter(p=>p.id&&isFinite(p.lat)&&isFinite(p.lon));
+          if(ids.length)idDataset=ids;
+        }
+      }
+    }
+  }catch(e){}
+  try{
+    const r=await fetch('SNVBR116SPRJ.csv?v='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      let t=await r.text();if(t.charCodeAt(0)===0xFEFF)t=t.slice(1);
+      const ls=t.split(/\r?\n/).filter(l=>l.trim());
+      if(ls.length>=2){
+        const h=ls.shift().split(';');
+        const iK=findCol(h,['km']),iLa=findCol(h,['lat','latitude']),iLo=findCol(h,['lon','long','longitude']);
+        if(iK>=0&&iLa>=0&&iLo>=0){
+          const kms=ls.map(l=>{const r=l.split(';');return{km:parsePt(r[iK]),lat:parsePt(r[iLa]),lon:parsePt(r[iLo])};}).filter(p=>isFinite(p.km)&&isFinite(p.lat)&&isFinite(p.lon));
+          if(kms.length)kmDataset=kms;
+        }
+      }
+    }
+  }catch(e){}
 }
 
-function render(force=false){
-  const now=performance.now(); if(!force && now-lastRender<150) return; lastRender=now;
-  listEl.innerHTML=''; if(!lastPos||!dataset.length) return;
-  const qty = Number(qtySel.value || 10);
-  const items=nearestN(lastPos.lat,lastPos.lon,qty);
-  if(!items.length){ listEl.innerHTML='<li>—</li>'; return; }
+// ─── GPS ───
+let GPS=null;
+function initGPS(){
+  if(!('geolocation' in navigator)){setGpsErr('não suportado');return;}
+  const opts={enableHighAccuracy:true,maximumAge:0,timeout:15000};
+  navigator.geolocation.getCurrentPosition(setGpsPos,()=>setGpsErr('Permita o GPS'),{enableHighAccuracy:true,maximumAge:0,timeout:10000});
+  navigator.geolocation.watchPosition(setGpsPos,()=>{},opts);
+}
+function setGpsPos(pos){
+  GPS={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy,speed:pos.coords.speed,heading:pos.coords.heading};
+  const acc=Math.round(GPS.acc||999);
+  const chip=document.getElementById('gps-chip'),dot=document.getElementById('gps-dot'),txt=document.getElementById('gps-text');
+  chip.className='gps-chip '+(acc<=10?'gps-ok':acc<=25?'gps-warn':'gps-err');
+  dot.style.background=acc<=10?'var(--accent)':acc<=25?'var(--yellow)':'var(--danger)';
+  txt.textContent='GPS: '+(acc<=10?'OK':'ajustando')+' ('+fmtAcc(acc)+')';
+  updateKmSign();renderList();
+}
+function setGpsErr(msg){
+  const chip=document.getElementById('gps-chip'),dot=document.getElementById('gps-dot'),txt=document.getElementById('gps-text');
+  chip.className='gps-chip gps-err';dot.style.background='var(--danger)';txt.textContent='GPS: '+msg;
+}
+function updateKmSign(){
+  if(!GPS||!kmDataset.length)return;
+  const n=nearestKM(GPS.lat,GPS.lon,kmDataset);
+  if(n&&isFinite(n.km))document.getElementById('km-val').textContent=(Math.round(n.km*100)/100).toFixed(2).replace('.',',');
+}
 
-  const frag=document.createDocumentFragment();
-  items.forEach((o,idx)=>{
-    const li=document.createElement('li');
+// ─── TABS ───
+function switchTab(id,btn){
+  document.querySelectorAll('[id^=pane-]').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  btn.classList.add('active');
+}
 
-    const left = document.createElement('span');
-    const idSpan = document.createElement('span');
-    idSpan.className='id-label';
-    idSpan.textContent=o.id;
+// ─── ID LIST ───
+function renderList(){
+  const qty=parseInt(document.getElementById('qty-select').value);
+  const el=document.getElementById('id-list');
+  if(!GPS||!idDataset.length){el.innerHTML='<div class="text-xs" style="text-align:center;padding:16px 0">Aguardando GPS para localizar IDs…</div>';return;}
+  const items=nearestN(GPS.lat,GPS.lon,idDataset,qty);
+  el.innerHTML=items.map((it,i)=>`
+    <div class="id-item ${i===0?'nearest':''}" style="margin-bottom:6px">
+      <div>
+        ${i===0?`<span class="nearest-badge"><span class="nearest-id">${it.id}</span><span class="nearest-tag">PRÓXIMO</span></span>`:`<span style="font-weight:900">${it.id}</span>`}
+      </div>
+      <span class="id-dist">${fmtDist(it.d)}</span>
+    </div>
+  `).join('');
+}
 
-    if(idx===0){
-      li.classList.add('nearest');
-      const pill = document.createElement('span');
-      pill.className='id-badge';
-      const flag = document.createElement('span');
-      flag.className='flag';
-      flag.textContent='PRÓXIMO';
-      pill.appendChild(idSpan); pill.appendChild(flag); left.appendChild(pill);
-    }else{
-      left.appendChild(idSpan);
-    }
+// ─── WHATSAPP IDS ───
+function sendWhatsAppIds(){
+  if(!GPS||!idDataset.length){alert('Aguardando GPS…');return;}
+  const qty=parseInt(document.getElementById('qty-select').value);
+  const maps=document.getElementById('chk-maps').checked;
+  const items=nearestN(GPS.lat,GPS.lon,idDataset,qty);
+  const now=new Date().toLocaleString('pt-BR');
+  let msg=`${now}\nGPS: Lat ${GPS.lat.toFixed(6)}, Lon ${GPS.lon.toFixed(6)} · Precisão ${fmtAcc(GPS.acc)}`;
+  const spd=fmtSpeed(GPS.speed);if(spd)msg+=' · Vel '+spd;
+  msg+='\n\n';
+  items.forEach(o=>msg+=`ID: ${o.id}\n`);
+  if(maps){msg+='\nLinks de mapa:\n';items.forEach(o=>msg+=`ID: ${o.id} → https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);}
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
 
-    const right = document.createElement('span');
-    right.className='dist';
-    right.textContent = fmtDistMeters(o.d);
+// ─── INFO BANNER ───
+document.getElementById('close-info').onclick=()=>{
+  document.getElementById('info-banner').style.display='none';
+  sessionStorage.setItem('infoShown','1');
+};
+if(sessionStorage.getItem('infoShown'))document.getElementById('info-banner').style.display='none';
 
-    li.appendChild(left);
-    li.appendChild(right);
-    frag.appendChild(li);
+// ─── EVENTS ───
+let events=[];
+function addEvent(ev){
+  const timestamp=new Date().toLocaleString('pt-BR');
+  let km=null,nearestId=null,nearDist=null,lat=null,lon=null;
+  if(GPS){
+    lat=GPS.lat;lon=GPS.lon;
+    if(kmDataset.length){const nk=nearestKM(GPS.lat,GPS.lon,kmDataset);if(nk)km=nk.km.toFixed(3);}
+    if(idDataset.length){const n=nearestN(GPS.lat,GPS.lon,idDataset,1)[0];if(n){nearestId=n.id;nearDist=n.d;}}
+  }
+  events.push({...ev,timestamp,km,nearestId,nearDist:nearDist?Math.round(nearDist):null,lat,lon});
+  renderEvents();
+}
+function renderEvents(){
+  const cnt=events.length;
+  const empty=document.getElementById('events-empty');
+  const actions=document.getElementById('events-actions');
+  const list=document.getElementById('events-list');
+  const badge=document.getElementById('events-total-badge');
+  const chip=document.getElementById('events-count-chip');
+  const tabBtn=document.getElementById('tab-events');
+  badge.textContent=cnt||'';
+  if(cnt){
+    empty.style.display='none';actions.style.display='flex';
+    chip.style.display='flex';chip.textContent=cnt+' evento'+(cnt!==1?'s':'');
+    tabBtn.innerHTML='📋 Eventos <span class="badge">'+cnt+'</span>';
+  } else {
+    empty.style.display='';actions.style.display='none';
+    chip.style.display='none';tabBtn.textContent='📋 Eventos';
+  }
+  list.innerHTML=events.map((ev,i)=>`
+    <div class="event-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="ev-badge ${ev.type==='photo'?'ev-photo':'ev-video'}">${ev.type==='photo'?'📸 Foto':'⚠ Poste'}</span>
+        <strong>${ev.nearestId||'—'}</strong>
+        <span style="color:var(--muted)">KM ${ev.km||'—'}</span>
+        ${ev.lampCount?`<span style="color:var(--danger);font-weight:900">${ev.lampCount} lamp.</span>`:''}
+        ${ev.side?`<span style="color:var(--muted)">${ev.side.toUpperCase()}</span>`:''}
+      </div>
+      <span style="color:var(--muted);font-size:.7rem;white-space:nowrap">${ev.timestamp}</span>
+    </div>
+  `).join('');
+}
+function clearEvents(){if(confirm('Limpar todos os eventos?')){events=[];renderEvents();}}
+function exportEvents(){
+  const ts=new Date().toISOString().replace(/[:.]/g,'-');
+  const json=JSON.stringify({geradoEm:new Date().toISOString(),total:events.length,eventos:events},null,2);
+  dlBlob(new Blob([json],{type:'application/json'}),'eventos_insp_'+ts+'.json');
+  const hdr=['tipo','timestamp','km','id','lampadas','lado','lat','lon'];
+  const rows=events.map(e=>[e.type,e.timestamp,e.km||'',e.nearestId||'',e.lampCount||'',e.side||'',e.lat||'',e.lon||'']);
+  dlBlob(new Blob([[hdr,...rows].map(r=>r.join(';')).join('\n')],{type:'text/csv;charset=utf-8'}),'eventos_insp_'+ts+'.csv');
+}
+function sendAllWhatsApp(){
+  let msg=`📋 RELATÓRIO INSPEÇÃO NOTURNA\n${new Date().toLocaleString('pt-BR')}\nTotal: ${events.length} eventos\n\n`;
+  events.forEach((ev,i)=>{
+    msg+=`${i+1}. ${ev.type==='photo'?'📸 FOTO':'⚠ POSTE APAGADO'}\n`;
+    msg+=`   KM: ${ev.km||'—'} · ID: ${ev.nearestId||'—'}\n`;
+    if(ev.lampCount)msg+=`   Lâmpadas: ${ev.lampCount} · Lado: ${ev.side?.toUpperCase()||'—'}\n`;
+    if(ev.lat)msg+=`   GPS: ${ev.lat.toFixed(6)}, ${ev.lon.toFixed(6)}\n`;
+    if(ev.lat)msg+=`   Maps: https://maps.google.com/?q=${ev.lat.toFixed(6)},${ev.lon.toFixed(6)}\n`;
+    msg+=`   ${ev.timestamp}\n\n`;
   });
-  listEl.appendChild(frag);
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
+function dlBlob(blob,name){const a=document.createElement('a');a.href__=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);}
 
-function startGPS(){
-  if(!('geolocation' in navigator)){ showDiag('❌ Sem geolocalização no navegador'); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy,
-                spd:pos.coords.speed, head:pos.coords.heading, ts:Date.now() };
-      updateGpsChip(); updateButtons(); render(true);
-      navigator.geolocation.watchPosition(p=>{
-        lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy,
-                  spd:p.coords.speed, head:p.coords.heading, ts:Date.now() };
-        updateGpsChip(); updateButtons(); render();
-      },err=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
-    },
-    err=>{ showDiag('❗ Permita o GPS para listar os IDs próximos'); },
-    {enableHighAccuracy:true,maximumAge:0,timeout:10000}
-  );
+// ─── VIDEO RECORDER ───
+let vidStream=null,vidRecorder=null,vidChunks=[],vidMime=null,vidTrack=null,vidVideoEl=null;
+let vidDrawHandle=null,vidToast=null,vidToastTimer=null;
+let isRecording=false,torchOn=false;
+
+function getSupportedMime(){
+  const prefs=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+  for(const t of prefs)if(MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))return t;
+  return'video/webm';
 }
-
-btnSend.addEventListener('click', ()=>{
-  if(!lastPos) return;
-  const qty = Number(qtySel.value || 10);
-  const items=nearestN(lastPos.lat,lastPos.lon,qty); if(!items.length) return;
-
-  const accTxt=fmtAcc(lastPos.acc), head=fmtHead(lastPos.head), spd=fmtSpd(lastPos.spd);
-  let tx=`${nowBR()}\nGPS agora: Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)} · Precisão ${accTxt}`;
-  if(spd) tx+=` · Vel ${spd}`; if(head) tx+=` · Curso ${head}`; tx+='\n';
-
-  items.forEach(o=> tx+=`ID: ${o.id}\n`);
-
-  if(chkMaps.checked){
-    tx+='\nLinks de mapa:\n';
-    items.forEach(o=> tx+=`ID: ${o.id} → https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
-  }
-
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
-
-qtySel.addEventListener('change', () => render(true));
-
-// ============================ KM em tempo real (2º CSV) ============================
-let kmDataset = [];   // { km:number, lat:number, lon:number }
-let kmLastUpdate = 0; // throttle do UI do KM
-let kmTimer = null;   // intervalo do loop
-
-async function loadKMCSV(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ console.warn('KM CSV não encontrado (SNVBR116SPRJ.csv)'); return; }
-
-    let text = await resp.text();
-    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if(lines.length < 2){ console.warn('KM CSV vazio'); return; }
-
-    const head = lines.shift().split(';');
-    const iKm  = findColumnIndex(head, ['km']);
-    const iLat = findColumnIndex(head, ['lat','latitude']);
-    const iLon = findColumnIndex(head, ['lon','long','longitude']);
-    if(iKm < 0 || iLat < 0 || iLon < 0){
-      console.warn('Cabeçalho do KM CSV inválido (esperado: KM/LAT/LONG)');
-      return;
-    }
-
-    kmDataset = lines.map(l=>{
-      const r = l.split(';');
-      return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) };
-    }).filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){
-    console.warn('Erro ao carregar KM CSV', e);
-  }
-}
-
-function nearestKM(lat, lon){
-  if(!kmDataset.length || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  let best = null, bd = Infinity;
-  for(const p of kmDataset){
-    const d = hav(lat, lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  return best ? { km: best.km, d: bd } : null;
-}
-
-function updateKMChip(){
-  const now = performance.now();
-  if(now - kmLastUpdate < 500) return; // ~2 fps no topo é suficiente
-  kmLastUpdate = now;
-
-  if(!lastPos){ kmValue.textContent = '—'; return; }
-  if(!kmDataset.length){ kmValue.textContent = '…'; return; }
-
-  const n = nearestKM(lastPos.lat, lastPos.lon);
-  if(!n){ kmValue.textContent = '—'; return; }
-
-  const kmStr = (Math.round(n.km * 100) / 100).toFixed(2).replace('.', ',');
-  kmValue.textContent = kmStr;
-}
-
-function startKMLoop(){ if(kmTimer) return; kmTimer = setInterval(updateKMChip, 600); }
-
-/* ======================= (ADICIONADO) VÍDEO INSPEÇÃO + EVENTOS ======================= */
-let recState={ mode:'idle',kind:null,stream:null,recorder:null,chunks:[],canvas:null,ctx:null,videoEl:null,drawHandle:null,trackVideo:null,torchOn:false,watchId:null,lastGps:null,kmTotal:0,lastPoint:null,mime:null };
-let eventos = []; // {tipo, tsIso, tsLocal, lat, lon, acc, km, id, distId}
-let toastEvent = null; // { text, untilTs }
-
-function getSupportedMime(){ const prefs=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=h264','video/mp4']; for(const t of prefs){ if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; } return 'video/webm'; }
-function kmh(ms){ if (ms==null || isNaN(ms)) return null; return ms*3.6; }
-
 async function startRecording(){
-  if (!('MediaRecorder' in window) || !HTMLCanvasElement.prototype.captureStream){ alert('Este navegador não suporta gravação de vídeo com overlay.'); return; }
-  if(recState.mode==='recording') return;
-
-  eventos = []; document.getElementById('evtCount').textContent = '0';
-  recState.kmTotal = 0; recState.lastPoint = null; recState.lastGps = null;
-  document.getElementById('statusOverlay').textContent='Inicializando...';
-
-  const canvas=document.getElementById('previewCanvas');
-  const ctx=canvas.getContext('2d'); recState.canvas=canvas; recState.ctx=ctx;
-
-  // Captura câmera traseira com fallback
-  let stream=null, trackVideo=null;
-  try{
-    const c1={ video:{ facingMode:{exact:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:true };
-    const c2={ video:{ facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }, audio:true };
-    try{ stream=await navigator.mediaDevices.getUserMedia(c1); }
-    catch(e){ stream=await navigator.mediaDevices.getUserMedia(c2); }
-    trackVideo=stream.getVideoTracks()[0];
-  }catch(err){ alert('Não foi possível iniciar: '+err.message); return; }
-
-  recState.stream=stream; recState.trackVideo=trackVideo;
-  document.getElementById('btnTorch').disabled=!(trackVideo && trackVideo.getCapabilities && trackVideo.getCapabilities().torch);
-
-  const video=document.createElement('video'); video.playsInline=true; video.srcObject=stream; await video.play(); recState.videoEl=video;
-
-  const st=trackVideo.getSettings?trackVideo.getSettings():{}; let vw=st.width||1280, vh=st.height||720;
-  const W=1280, H=Math.round(W*(vh/vw || (720/1280))); canvas.width=W; canvas.height=H;
-
-  // GPS para KM aprox/vel
-  if('geolocation' in navigator){ recState.watchId = navigator.geolocation.watchPosition(onGpsVideo, ()=>{}, { enableHighAccuracy:true, maximumAge:1000, timeout:10000 }); }
-
-  // Loop do overlay (KM grande + ID + GPS + Vel + Data + toast de eventos)
-  function draw(){
-    const {ctx,canvas} = recState; if(!ctx) return;
-    try{ ctx.drawImage(video,0,0,canvas.width,canvas.height); }catch(e){}
-    const pad=22; ctx.save();
-
-    // TOP BAR
-    const TOP_H=150; ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,canvas.width,TOP_H);
-    ctx.fillStyle='#ffffff'; ctx.textBaseline='middle';
-
-    // KM por nearestKM (base CSV de KM)
-    let kmStrTop = '—';
-    if(lastPos){ const nk = nearestKM(lastPos.lat, lastPos.lon); if(nk && Number.isFinite(nk.km)) kmStrTop = nk.km.toFixed(3)+' km'; }
-
-    // Título à esquerda
-    ctx.font='800 30px system-ui,Segoe UI,Roboto'; ctx.textAlign='left'; ctx.fillText('INSPEÇÃO NOTURNA', pad, 34);
-    // KM Centro GRANDE
-    ctx.textAlign='center'; ctx.font='900 56px system-ui,Segoe UI,Roboto'; ctx.fillStyle = '#7CFF9E'; ctx.fillText(`KM: ${kmStrTop}`, canvas.width/2, 54);
-    // Data/hora à direita
-    const nowStr=new Date().toLocaleString(); ctx.textAlign='right'; ctx.font='800 26px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#E6F0FF'; ctx.fillText(nowStr, canvas.width - pad, 34);
-
-    // BOTTOM BAR (ID + GPS + Vel)
-    const BOT_H=140; ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,canvas.height-BOT_H,canvas.width,BOT_H);
-
-    // ID mais próximo (muito grande)
-    let nearStr='—';
-    if(lastPos && dataset.length){
-      const n=nearestN(lastPos.lat,lastPos.lon,1)[0];
-      if(n) nearStr = `${n.id} · ${n.d<1000? Math.round(n.d)+' m' : (n.d/1000).toFixed(2)+' km'}`;
-    }
-    ctx.textAlign='left';
-    ctx.font='900 50px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#eaffee'; ctx.fillText('ID PRÓXIMO:', pad, canvas.height-BOT_H+50);
-    ctx.font='900 62px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#7CFF9E'; ctx.fillText(nearStr, pad, canvas.height-BOT_H+110);
-
-    // GPS + Vel à direita
-    const g=recState.lastGps; const acc=g?.accuracy; const spd=g?.speed!=null? kmh(g.speed):null; const spdStr=spd!=null?(Math.round(spd)+' km/h'):'—';
-    const gpsStr=g? `${g.latitude.toFixed(5)}, ${g.longitude.toFixed(5)} (±${acc? Math.round(acc):'—'} m)`:'GPS —';
-
-    ctx.textAlign='right'; ctx.font='800 40px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#E6F0FF'; ctx.fillText('GPS:', canvas.width-pad, canvas.height-BOT_H+46);
-    ctx.font='900 42px ui-monospace,Consolas,Menlo,monospace'; ctx.fillStyle='#BBD7FF'; ctx.fillText(gpsStr, canvas.width-pad, canvas.height-BOT_H+92);
-    ctx.font='800 30px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#FFE08A'; ctx.fillText('Vel: '+ spdStr, canvas.width-pad, canvas.height-BOT_H+126);
-
-    // Toast de EVENTO (ex: POSTE APAGADO)
-    const nowT = performance.now();
-    if (toastEvent && nowT < toastEvent.untilTs){
-      const txt = toastEvent.text;
-      ctx.textAlign='center';
-      ctx.font='900 54px system-ui,Segoe UI,Roboto';
-      ctx.fillStyle='rgba(239,68,68,0.90)'; // faixa vermelha
-      const boxH = 90; const y = Math.round(canvas.height/2 - boxH/2);
-      ctx.fillRect(Math.round(canvas.width*0.1), y, Math.round(canvas.width*0.8), boxH);
-      ctx.fillStyle='#ffffff';
-      ctx.fillText(txt, canvas.width/2, canvas.height/2);
-    }
-
-    ctx.restore();
-    recState.drawHandle=requestAnimationFrame(draw);
+  const canvas=document.getElementById('cam-canvas');
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:true});}
+  catch{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:true});}
+  catch(e){alert('Câmera não disponível: '+e.message);return;}}
+  vidStream=stream;vidTrack=stream.getVideoTracks()[0];
+  if(vidTrack?.getCapabilities?.()?.torch)document.getElementById('btn-torch').style.display='';
+  const v=document.createElement('video');v.playsInline=true;v.muted=true;v.srcObject=stream;await v.play();vidVideoEl=v;
+  const st=vidTrack.getSettings?.()|| {};
+  const vw=st.width||1280,vh=st.height||720;
+  const W=1280,H=Math.round(W*(vh/vw));canvas.width=W;canvas.height=H;
+  drawFrame();
+  const out=canvas.captureStream(30);
+  const aTracks=stream.getAudioTracks();if(aTracks[0])out.addTrack(aTracks[0]);
+  vidMime=getSupportedMime();document.getElementById('codec-info').textContent=vidMime;
+  vidChunks=[];
+  vidRecorder=new MediaRecorder(out,{mimeType:vidMime,videoBitsPerSecond:4000000});
+  vidRecorder.ondataavailable=e=>{if(e.data?.size>0)vidChunks.push(e.data);};
+  vidRecorder.onstop=saveVideo;
+  vidRecorder.start(1000);
+  isRecording=true;
+  document.getElementById('btn-start-rec').style.display='none';
+  document.getElementById('btn-stop-rec').style.display='';
+  document.getElementById('btn-mark-poste').style.display='';
+  document.getElementById('btn-snap-vid').style.display='';
+  document.getElementById('vid-status').textContent='● Gravando';
+  document.getElementById('float-controls').style.display='flex';
+}
+function stopRecording(){
+  if(!isRecording)return;
+  try{vidRecorder?.stop();}catch(e){}
+  if(vidDrawHandle)cancelAnimationFrame(vidDrawHandle);
+  vidStream?.getTracks().forEach(t=>t.stop());
+  vidVideoEl=null;isRecording=false;torchOn=false;
+  document.getElementById('btn-start-rec').style.display='';
+  document.getElementById('btn-stop-rec').style.display='none';
+  document.getElementById('btn-mark-poste').style.display='none';
+  document.getElementById('btn-snap-vid').style.display='none';
+  document.getElementById('btn-torch').style.display='none';
+  document.getElementById('vid-status').textContent='Pré-visualização';
+  document.getElementById('float-controls').style.display='none';
+}
+function drawFrame(){
+  const canvas=document.getElementById('cam-canvas');
+  if(!canvas||!vidVideoEl)return;
+  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;
+  try{ctx.drawImage(vidVideoEl,0,0,W,H);}catch(e){}
+  const pad=16,pos=GPS;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,120);ctx.textBaseline='middle';
+  let kmStr='—';
+  if(pos&&kmDataset.length){const nk=nearestKM(pos.lat,pos.lon,kmDataset);if(nk&&isFinite(nk.km))kmStr=nk.km.toFixed(3)+' km';}
+  ctx.font='800 24px system-ui';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText('INSPEÇÃO NOTURNA',pad,28);
+  ctx.textAlign='center';ctx.font='900 44px system-ui';ctx.fillStyle='#7CFF9E';ctx.fillText('KM: '+kmStr,W/2,50);
+  const nowStr=new Date().toLocaleString('pt-BR');
+  ctx.textAlign='right';ctx.font='700 20px system-ui';ctx.fillStyle='#E6F0FF';ctx.fillText(nowStr,W-pad,28);
+  const spd=pos?.speed!=null&&isFinite(pos.speed)?Math.round(pos.speed*3.6)+' km/h':'— km/h';
+  ctx.fillText('Vel: '+spd,W-pad,56);
+  ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(W-pad-6,88,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='800 18px system-ui';ctx.fillText('REC',W-pad-28,88);
+  ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,H-110,W,110);
+  let nearStr='—';
+  if(pos&&idDataset.length){const n=nearestN(pos.lat,pos.lon,idDataset,1)[0];if(n)nearStr=n.id+' · '+(n.d<1000?Math.round(n.d)+' m':(n.d/1e3).toFixed(2)+' km');}
+  ctx.textAlign='left';ctx.font='800 22px system-ui';ctx.fillStyle='#eaffee';ctx.fillText('ID PRÓXIMO:',pad,H-80);
+  ctx.font='900 38px system-ui';ctx.fillStyle='#7CFF9E';ctx.fillText(nearStr,pad,H-36);
+  if(pos){ctx.textAlign='right';ctx.font='600 18px monospace';ctx.fillStyle='#BBD7FF';ctx.fillText(`${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)} (±${Math.round(pos.acc||0)}m)`,W-pad,H-60);}
+  if(vidToast){
+    ctx.textAlign='center';ctx.fillStyle='rgba(239,68,68,0.9)';ctx.fillRect(W*.08,H/2-35,W*.84,70);
+    ctx.fillStyle='#fff';ctx.font='900 36px system-ui';ctx.fillText(vidToast,W/2,H/2);
   }
-  draw();
-
-  // Gravação
-  const fps=30; const outStream=canvas.captureStream(fps); const aud=stream.getAudioTracks(); if(aud && aud[0]) outStream.addTrack(aud[0]);
-  const mime=getSupportedMime(); recState.mime=mime; document.getElementById('codecInfo').textContent=mime;
-  const mr=new MediaRecorder(outStream,{ mimeType:mime, videoBitsPerSecond: 4_000_000 }); recState.recorder=mr; recState.chunks=[];
-  mr.ondataavailable=(e)=>{ if(e.data && e.data.size>0) recState.chunks.push(e.data); };
-  mr.onstop=handleSaveVideo;
-  mr.start(1000);
-
-  recState.mode='recording';
-  document.getElementById('statusOverlay').textContent='Gravando...';
-  document.getElementById('btnStartCam').disabled=true;
-  document.getElementById('btnStop').disabled=false;
-  document.getElementById('btnMarkApagado').disabled=false;
+  ctx.restore();
+  vidDrawHandle=requestAnimationFrame(drawFrame);
 }
-
-function onGpsVideo(pos){
-  const c=pos.coords; const point={ latitude:c.latitude, longitude:c.longitude, accuracy:c.accuracy, speed:c.speed };
-  recState.lastGps=point;
-  document.getElementById('gpsInfo').textContent=`${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)} (±${Math.round(c.accuracy)}m)`;
-  const v=kmh(c.speed); document.getElementById('velInfo').textContent= v!=null? (Math.round(v)+' km/h'):'—';
-
-  // KM aprox (referência)
-  if(recState.lastPoint){
-    const okAcc=(recState.lastPoint.accuracy??50)<=50 && (c.accuracy??50)<=50;
-    const d=hav(recState.lastPoint.latitude, recState.lastPoint.longitude, c.latitude, c.longitude)/1000;
-    if(okAcc && d<0.3){ recState.kmTotal+=d; document.getElementById('kmInfo').textContent=recState.kmTotal.toFixed(3); }
-  }
-  recState.lastPoint=point;
-}
-
-async function stopRecording(){
-  if(recState.mode!=='recording') return;
-  document.getElementById('statusOverlay').textContent='Finalizando...';
-  try{ recState.recorder.stop(); }catch(e){}
-  if(recState.drawHandle) cancelAnimationFrame(recState.drawHandle);
-  if(recState.watchId!=null){ try{ navigator.geolocation.clearWatch(recState.watchId);}catch(e){} recState.watchId=null; }
-  if(recState.stream){ try{ recState.stream.getTracks().forEach(t=>t.stop()); }catch(e){} }
-  recState.mode='idle';
-  document.getElementById('btnStartCam').disabled=false;
-  document.getElementById('btnStop').disabled=true;
-  document.getElementById('btnMarkApagado').disabled=true;
-}
-
-async function handleSaveVideo(){
-  const blob=new Blob(recState.chunks, { type: recState.mime || 'video/webm' });
+function saveVideo(){
+  const blob=new Blob(vidChunks,{type:vidMime||'video/webm'});
   const ts=new Date().toISOString().replace(/[:.]/g,'-');
-  const filename=`INSP_NOX_${ts}.webm`;
-
-  // Compartilhar (salvar na galeria em muitos celulares)
-  try{
-    const file=new File([blob], filename, { type: blob.type });
-    if(navigator.canShare && navigator.canShare({ files:[file] })){
-      await navigator.share({ files:[file], title:'Vídeo Inspeção NOX', text:`Eventos: ${eventos.length}` });
-      document.getElementById('statusOverlay').textContent='Compartilhado';
-      return;
-    }
-  }catch(e){ console.warn('Share falhou', e); }
-
-  // Salvar como…
-  if(window.showSaveFilePicker){
-    try{
-      const handle=await showSaveFilePicker({ suggestedName: filename, types:[{ description:'Vídeo', accept: { [blob.type]: ['.webm','.mp4'] } }] });
-      const writable=await handle.createWritable(); await writable.write(blob); await writable.close();
-      document.getElementById('statusOverlay').textContent='Arquivo salvo';
-      return;
-    }catch(e){ console.warn('Save picker cancelado', e); }
-  }
-
-  // Download
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  document.getElementById('statusOverlay').textContent='Download iniciado';
+  const name='INSP_NOX_'+ts+'.webm';
+  const f=new File([blob],name,{type:blob.type});
+  if(navigator.canShare?.({files:[f]})){navigator.share({files:[f],title:'Vídeo Inspeção NOX'}).catch(()=>dlBlob(blob,name));}
+  else dlBlob(blob,name);
 }
-
+function markPoste(){
+  vidToast='⚠ POSTE APAGADO';clearTimeout(vidToastTimer);vidToastTimer=setTimeout(()=>{vidToast=null;},3000);
+  addEvent({type:'video_marker',markerType:'POSTE_APAGADO'});
+}
+function takeVideoSnapshot(){
+  const canvas=document.getElementById('cam-canvas');
+  canvas.toBlob(blob=>{
+    if(!blob)return;
+    const ts=new Date().toISOString().replace(/[:.]/g,'-');
+    const f=new File([blob],'snapshot_'+ts+'.jpg',{type:'image/jpeg'});
+    if(navigator.canShare?.({files:[f]})){navigator.share({files:[f]}).catch(()=>dlBlob(blob,'snapshot_'+ts+'.jpg'));}
+    else dlBlob(blob,'snapshot_'+ts+'.jpg');
+    addEvent({type:'photo',source:'video_snapshot'});
+  },'image/jpeg',0.92);
+}
 function toggleTorch(){
-  try{
-    const t=recState.trackVideo; if(!t) return;
-    const cap=t.getCapabilities && t.getCapabilities(); if(!cap || !cap.torch) return;
-    recState.torchOn=!recState.torchOn; t.applyConstraints({ advanced:[{ torch: recState.torchOn }] });
-  }catch(e){ console.warn('Torch não suportado', e); }
+  if(!vidTrack)return;torchOn=!torchOn;
+  vidTrack.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{});
+  document.getElementById('btn-torch').textContent=torchOn?'🔦 Lanterna ON':'🔦 Lanterna';
 }
-
-// ======= EVENTOS =======
-function marcarEvento(tipo='POSTE_APAGADO'){
-  const now = new Date();
-  const tsIso = now.toISOString();
-  const tsLocal = now.toLocaleString();
-  let lat=null, lon=null, acc=null;
-  if (recState.lastGps){ lat=recState.lastGps.latitude; lon=recState.lastGps.longitude; acc=recState.lastGps.accuracy; }
-  else if (lastPos){ lat=lastPos.lat; lon=lastPos.lon; acc=lastPos.acc; }
-
-  // KM (sua base)
-  let km=null; if(lat!=null && lon!=null){ const nk = nearestKM(lat, lon); if(nk && Number.isFinite(nk.km)) km = nk.km; }
-  // ID mais próximo
-  let id=null, distId=null; if(lat!=null && lon!=null && dataset.length){ const n=nearestN(lat, lon, 1)[0]; if(n){ id=n.id; distId=n.d; } }
-
-  const ev = { tipo, tsIso, tsLocal, lat, lon, acc, km, id, distId };
-  eventos.push(ev);
-  document.getElementById('evtCount').textContent = String(eventos.length);
-
-  const kmTxt = (km!=null && Number.isFinite(km)) ? km.toFixed(3)+' km' : 'KM —';
-  const idTxt = id || 'ID —';
-  toastEvent = { text: `${tipo.replace('_',' ')} • ${idTxt} • ${kmTxt}`, untilTs: performance.now()+2800 };
+function toggleFullscreen(){
+  const el=document.getElementById('vid-container');
+  if(!document.fullscreenElement){
+    el.requestFullscreen?.();
+    try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch(e){}
+  }else{document.exitFullscreen?.();}
 }
+function exitFullscreen(){document.exitFullscreen?.();}
 
-function exportEventos(){
-  if(!eventos.length){ alert('Nenhum evento marcado.'); return; }
+// ─── PHOTO CAPTURE ───
+let photoStream=null,lampCount=1,photoSide='norte',photoBlobRef=null;
+
+function startPhotoCamera(){
+  document.getElementById('photo-start-wrap').style.display='none';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})
+    .catch(()=>navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}))
+    .then(stream=>{
+      photoStream=stream;
+      const v=document.getElementById('photo-video');v.srcObject=stream;v.play();
+      document.getElementById('photo-cam-wrap').style.display='';
+    }).catch(e=>{alert('Câmera não disponível: '+e.message);document.getElementById('photo-start-wrap').style.display='';});
+}
+function stopPhotoCamera(){
+  photoStream?.getTracks().forEach(t=>t.stop());photoStream=null;
+  document.getElementById('photo-cam-wrap').style.display='none';
+  document.getElementById('photo-start-wrap').style.display='';
+}
+function takePhoto(){
+  const v=document.getElementById('photo-video'),c=document.getElementById('photo-canvas');
+  const W=v.videoWidth||1280,H=v.videoHeight||720;c.width=W;c.height=H;
+  const ctx=c.getContext('2d');ctx.drawImage(v,0,0,W,H);
+  const pos=GPS;const pad=20;
+  let kmStr='—',nearId='—',nearDist='—';
+  if(pos){
+    if(kmDataset.length){const nk=nearestKM(pos.lat,pos.lon,kmDataset);if(nk&&isFinite(nk.km))kmStr=nk.km.toFixed(3)+' km';}
+    if(idDataset.length){const n=nearestN(pos.lat,pos.lon,idDataset,1)[0];if(n){nearId=n.id;nearDist=fmtDist(n.d);}}
+  }
+  const now=new Date().toLocaleString('pt-BR');
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,W,100);ctx.textBaseline='middle';
+  ctx.font='900 36px system-ui';ctx.fillStyle='#7CFF9E';ctx.textAlign='center';ctx.fillText('KM: '+kmStr,W/2,36);
+  ctx.font='700 22px system-ui';ctx.fillStyle='#FFE08A';ctx.fillText('ID: '+nearId+' · '+nearDist,W/2,72);
+  ctx.font='600 18px system-ui';ctx.fillStyle='#E6F0FF';ctx.textAlign='left';ctx.fillText(now,pad,36);
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,H-80,W,80);
+  ctx.font='900 30px system-ui';ctx.fillStyle='#ef4444';ctx.textAlign='center';
+  ctx.fillText(lampCount+' LÂMPADA'+(lampCount>1?'S':'')+' APAGADA'+(lampCount>1?'S':'')+' · LADO '+photoSide.toUpperCase(),W/2,H-44);
+  if(pos){ctx.font='500 16px monospace';ctx.fillStyle='#BBD7FF';ctx.textAlign='right';ctx.fillText(`${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}`,W-pad,H-20);}
+  c.toBlob(blob=>{
+    photoBlobRef=blob;
+    document.getElementById('photo-preview-img').src=c.toDataURL('image/jpeg',0.92);
+    document.getElementById('photo-cam-wrap').style.display='none';
+    document.getElementById('photo-preview-wrap').style.display='flex';
+    photoStream?.getTracks().forEach(t=>t.stop());photoStream=null;
+  },'image/jpeg',0.92);
+}
+function setLamp(n){
+  lampCount=n;
+  [1,2,3,4,5].forEach(i=>{
+    const a=document.getElementById('lb-'+i),b=document.getElementById('plb-'+i);
+    if(a)a.className='lamp-btn'+(i===n?' active':'');
+    if(b)b.className='lamp-btn'+(i===n?' active':'');
+  });
+}
+function setSide(s){
+  photoSide=s;
+  ['norte','sul'].forEach(id=>{
+    const a=document.getElementById('sb-'+id),b=document.getElementById('psb-'+id);
+    if(a)a.className='side-btn'+(id===s?' active':'');
+    if(b)b.className='side-btn'+(id===s?' active':'');
+  });
+}
+function getPhotoContext(){
+  const pos=GPS;
+  let kmStr='—',nearId='—',nearDist='—',lat=null,lon=null;
+  if(pos){
+    lat=pos.lat;lon=pos.lon;
+    if(kmDataset.length){const nk=nearestKM(pos.lat,pos.lon,kmDataset);if(nk&&isFinite(nk.km))kmStr=nk.km.toFixed(3)+' km';}
+    if(idDataset.length){const n=nearestN(pos.lat,pos.lon,idDataset,1)[0];if(n){nearId=n.id;nearDist=fmtDist(n.d);}}
+  }
+  return{kmStr,nearId,nearDist,lat,lon};
+}
+function savePhoto(){
+  if(!photoBlobRef)return;
   const ts=new Date().toISOString().replace(/[:.]/g,'-');
-  // JSON
-  const blobJson=new Blob([JSON.stringify({ geradoEm: new Date().toISOString(), total:eventos.length, eventos }, null, 2)], {type:'application/json'});
-  const a1=document.createElement('a'); a1.href=URL.createObjectURL(blobJson); a1.download=`eventos_insp_${ts}.json`; document.body.appendChild(a1); a1.click(); a1.remove(); setTimeout(()=>URL.revokeObjectURL(a1.href),3000);
-  // CSV
-  const header=['tipo','tsIso','tsLocal','lat','lon','acc','km','id','distId'];
-  const rows=eventos.map(e=>[e.tipo,e.tsIso,e.tsLocal,e.lat,e.lon,e.acc,e.km,e.id,e.distId].map(v=> v==null?'':String(v).replace(/"/g,'""')));
-  const csv = header.join(';')+'\n'+rows.map(r=> r.map(v=> /[;"\n]/.test(v)?`"${v}"`:v).join(';')).join('\n');
-  const blobCsv=new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a2=document.createElement('a'); a2.href=URL.createObjectURL(blobCsv); a2.download=`eventos_insp_${ts}.csv`; document.body.appendChild(a2); a2.click(); a2.remove(); setTimeout(()=>URL.revokeObjectURL(a2.href),3000);
+  const name='INSP_FOTO_'+ts+'.jpg';
+  const f=new File([photoBlobRef],name,{type:'image/jpeg'});
+  if(navigator.canShare?.({files:[f]})){navigator.share({files:[f],title:'Inspeção Noturna'}).catch(()=>dlBlob(photoBlobRef,name));}
+  else dlBlob(photoBlobRef,name);
+  addEvent({type:'photo',lampCount,side:photoSide});
+  discardPhoto();
+}
+function sendPhotoWhatsApp(){
+  const info=getPhotoContext();const now=new Date().toLocaleString('pt-BR');
+  let msg=`📸 INSPEÇÃO NOTURNA\n${now}\nKM: ${info.kmStr}\nID: ${info.nearId} (${info.nearDist})\n⚠ ${lampCount} lâmpada${lampCount>1?'s':''} apagada${lampCount>1?'s':''}\nLado: ${photoSide.toUpperCase()}\n`;
+  if(info.lat)msg+=`GPS: ${info.lat.toFixed(6)}, ${info.lon.toFixed(6)}\nMaps: https://maps.google.com/?q=${info.lat.toFixed(6)},${info.lon.toFixed(6)}\n`;
+  savePhoto();window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+function retakePhoto(){discardPhoto();startPhotoCamera();}
+function discardPhoto(){
+  photoBlobRef=null;
+  document.getElementById('photo-preview-wrap').style.display='none';
+  document.getElementById('photo-start-wrap').style.display='';
 }
 
-// Botões do módulo vídeo
-const btnStartCam=document.getElementById('btnStartCam');
-const btnStop=document.getElementById('btnStop');
-const btnTorch=document.getElementById('btnTorch');
-const btnMarkApagado=document.getElementById('btnMarkApagado');
-const btnExportEventos=document.getElementById('btnExportEventos');
-
-btnStartCam.addEventListener('click', startRecording);
-btnStop.addEventListener('click', stopRecording);
-btnTorch.addEventListener('click', toggleTorch);
-btnMarkApagado.addEventListener('click', ()=> marcarEvento('POSTE_APAGADO'));
-btnExportEventos.addEventListener('click', exportEventos);
-
-/* ===================== /VÍDEO INSPEÇÃO ===================== */
-
-(function boot(){
-  loadCSV();
-  startGPS();
-  loadKMCSV();
-  startKMLoop();
-})();
+// ─── INIT ───
+loadCSVs();
+initGPS();
+setInterval(updateKmSign,2000);
 </script>
 </body>
 </html>
