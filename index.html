@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ID GPS · IDs Próximos & Inspeção com Vídeo</title>
+<title>ID GPS · IDs Próximos + Inspeção Noturna</title>
 <meta name="theme-color" content="#0b1020" />
 <style>
   :root{
@@ -35,6 +35,7 @@
   button{padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)}
   button:active{transform:translateY(1px)}button:hover{filter:brightness(1.06)}button:disabled{opacity:.55;cursor:not-allowed;filter:none}
   #btnSend{background:var(--btn)}
+  #btnInspStar{background:var(--brand)}
   .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
   .opt input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand)}
   .opt select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer}
@@ -49,8 +50,8 @@
   .dist{color:#9fb0d9;opacity:.85;font-size:.78rem;min-width:64px;text-align:right}
   .skeleton{height:48px;border-radius:12px;background:linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
   @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .col-4{grid-column:span 4}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-  @media (max-width:900px){.col-4,.col-8,.col-12{grid-column:1/-1}}
+  .col-4{grid-column:span 4}.col-8{grid-column:span 8}
+  @media (max-width:900px){.col-4,.col-8{grid-column:1/-1}}
   button:focus-visible, select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
   /* KM placa */
@@ -64,7 +65,7 @@
   .km-subnote{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;font-size:.62rem;line-height:1.1;color:#6f84b8;opacity:.85;text-align:right;max-width:22ch;white-space:normal}
   @media (max-width:480px){.km-body{padding:6px 10px 8px}.km-value{font-size:clamp(1.5rem,6vw,2rem)}}
 
-  /* Banner informativo */
+  /* Banner informativo: colapsável com layout responsivo e chamativo */
   .container{max-width:1100px;margin:0 auto;padding:0 16px}
   .info-trigger-wrap{max-width:1100px;margin:12px auto 0;padding:0 16px;display:flex;align-items:center}
   .info-trigger{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(147,197,253,.12);color:var(--info-icon);border:1px solid rgba(147,197,253,.35);cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.35)}
@@ -83,41 +84,65 @@
   @media (max-width:600px){
     .info-panel-inner{grid-template-columns:1fr;gap:12px}
     .info-hero{justify-content:flex-start}
-    .info-close{justify-self:end}
+    .info-close{justify-self=end}
   }
 
-  /* ============ VIDEO INSPECTION STYLES ============ */
-  .video-container{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;border:1px solid var(--border)}
-  #videoPreview{width:100%;height:100%;object-fit:cover}
-  .video-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;border-radius:12px}
-  .video-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
-  .timer{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1532;border:1px solid var(--border);border-radius:8px;color:#fff;font-family:ui-monospace;font-weight:900;font-size:.98rem}
-  .timer .dot{width:8px;height:8px;background:#ef4444;animation:pulse 1s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  .btn-primary{background:var(--btn);color:#0b1020}
-  .btn-secondary{background:#1e2647;color:#e6ebff}
-  .btn-danger{background:#ef4444;color:#fff}
-  .btn-warn{background:var(--warn);color:#0b1020}
-  button:disabled{opacity:.55;cursor:not-allowed}
+  /* ===== INSPEÇÃO NOTURNA ===== */
+  .insp-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:9999;flex-direction:column}
+  .insp-modal.open{display:flex}
+  .insp-header{background:linear-gradient(90deg,#1a1f3a,#0f1630);padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .insp-header h3{margin:0;color:#e6ebff;font-size:1.05rem;flex:1}
+  .insp-timer{color:#ff6b6b;font-weight:900;font-family:ui-monospace;font-size:1.05rem}
+  .insp-close{width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#ff6b6b;font-weight:900;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center}
+  .insp-close:hover{background:rgba(239,68,68,.35)}
 
-  .defect-list{margin-top:12px;max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:#0b1433}
-  .defect-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0c1532;border-radius:8px;margin-bottom:6px;font-size:.9rem;color:#edf2ff;border-left:3px solid var(--bad)}
-  .defect-item:last-child{margin-bottom:0}
-  .defect-time{font-family:ui-monospace;font-weight:900;color:#fca5a5;min-width:60px}
-  .defect-info{display:grid;gap:2px;flex:1;margin-left:12px}
-  .defect-close{background:rgba(239,68,68,.2);color:#fca5a5;border:0;padding:4px 8px;border-radius:6px;cursor:pointer;font-weight:900;font-size:.8rem}
-  .defect-close:hover{background:rgba(239,68,68,.4)}
+  .insp-video-container{flex:1;display:flex;flex-direction:column;position:relative;background:#000}
+  #inspVideo{width:100%;height:100%;object-fit:cover;display:block}
+  
+  .insp-canvas-overlay{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair}
+  
+  .insp-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;pointer-events:none;padding:16px;font-family:ui-monospace}
+  .insp-overlay-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .insp-info-block{background:rgba(0,0,0,.8);border:1px solid var(--brand);border-radius:8px;padding:12px;font-size:.85rem;color:#e6ebff}
+  .insp-info-label{opacity:.7;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+  .insp-info-value{font-weight:900;color:#5a64ff;font-size:1.05rem}
 
-  .stats-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
-  .stat{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-  .stat-label{font-size:.8rem;color:var(--muted);font-weight:800}
-  .stat-value{font-size:1.5rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin-top:4px}
+  .insp-marks{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+  .mark-pin{position:absolute;width:20px;height:20px;background:rgba(239,68,68,.9);border:2px solid #ff6b6b;border-radius:50%;transform:translate(-50%,-50%);animation:markPulse .6s ease-out;box-shadow:0 0 12px rgba(239,68,68,.7)}
+  @keyframes markPulse{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
+  
+  .mark-label{position:absolute;background:rgba(239,68,68,.95);color:#fff;padding:6px 10px;border-radius:6px;font-size:.75rem;font-weight:900;white-space:nowrap;pointer-events:auto;margin-top:4px}
 
-  .tab-buttons{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-  .tab-btn{padding:10px 16px;background:#0c1532;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-weight:900;cursor:pointer;transition:all .2s ease}
-  .tab-btn.active{background:var(--brand);color:#0b1020;border-color:var(--brand)}
+  .insp-controls{background:linear-gradient(180deg,rgba(15,22,48,.9),rgba(11,16,32,.95));padding:16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .insp-btn{padding:12px 16px;border:0;border-radius:10px;font-weight:900;cursor:pointer;transition:all .15s ease;font-size:.95rem}
+  #btnMarkPoint{background:rgba(239,68,68,.95);color:#fff}
+  #btnMarkPoint:hover{background:#ef4444;transform:scale(1.05)}
+  #btnFullscreen{background:rgba(90,100,255,.8);color:#e6ebff}
+  #btnFullscreen:hover{background:var(--brand);transform:scale(1.05)}
+  #btnStopRecord{background:rgba(239,68,68,.95);color:#fff}
+  #btnStopRecord:hover{background:#ef4444;transform:scale(1.05)}
+  #btnPauseRecord{background:rgba(245,158,11,.9);color:#fff}
+  #btnPauseRecord:hover{background:var(--warn);transform:scale(1.05)}
 
-  .hidden{display:none !important}
+  .insp-status{flex:1;display:flex;gap:12px;align-items:center;font-size:.9rem;color:#a3b1d1}
+  .insp-status .indicator{width:10px;height:10px;border-radius:50%;background:#22c55e;animation:blink 1s infinite}
+  @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:.3}}
+
+  /* Modal de download */
+  .download-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:10000;align-items:center;justify-content:center;flex-direction:column}
+  .download-modal.open{display:flex}
+  .download-card{background:var(--surface);border:2px solid var(--brand);border-radius:var(--radius);padding:24px;max-width:400px;text-align:center;box-shadow:var(--shadow)}
+  .download-card h3{margin:0 0 12px 0;color:#e6ebff;font-size:1.2rem}
+  .download-card p{margin:0 0 16px 0;color:var(--muted);font-size:.95rem}
+  .download-btn{background:var(--btn);color:#0b1020;padding:14px 20px;border:0;border-radius:12px;font-weight:900;cursor:pointer;font-size:1rem;margin:8px}
+  .download-btn:hover{filter:brightness(1.1)}
+  .download-close{background:#0a122a;color:#e6ebff;margin-top:12px}
+
+  @media (max-width:600px){
+    .insp-overlay-top{flex-direction:column}
+    .insp-controls{padding:12px;gap:8px}
+    .insp-btn{padding:10px 12px;font-size:.85rem}
+  }
 </style>
 </head>
 <body>
@@ -169,18 +194,14 @@
 
 <main>
   <div class="grid">
-    <!-- TAB SWITCHER -->
-    <div class="col-12">
-      <div class="tab-buttons">
-        <button class="tab-btn active" data-tab="finder">🔍 Localizador</button>
-        <button class="tab-btn" data-tab="inspection">🎥 Inspeção com Vídeo</button>
-      </div>
-    </div>
-
-    <!-- ============ TAB: FINDER (ORIGINAL) ============ -->
-    <section id="tab-finder" class="card col-4" aria-label="Ações">
+    <section class="card col-4" aria-label="Ações">
       <h2>Ações</h2>
-      <div class="actions" style="margin-bottom:8px"><button id="btnSend" disabled>Enviar ID por WhatsApp</button></div>
+      <div class="actions" style="margin-bottom:8px">
+        <button id="btnSend" disabled>Enviar ID por WhatsApp</button>
+      </div>
+      <div class="actions" style="margin-bottom:8px">
+        <button id="btnInspStar" disabled>🎬 Inspeção Noturna</button>
+      </div>
       <div class="actions" style="gap:16px">
         <label class="opt" title="Quantidade de IDs a enviar (padrão 10)"><span style="opacity:.9">quantidade</span>
           <select id="qty"><option value="1">1</option><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
@@ -189,80 +210,70 @@
       </div>
     </section>
 
-    <section id="tab-finder" class="card col-8" aria-label="IDs mais próximos">
+    <section class="card col-8" aria-label="IDs mais próximos">
       <h2>IDs próximos</h2>
       <ul id="list" aria-live="polite">
         <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
         <li class="skeleton"></li><li class="skeleton"></li>
       </ul>
     </section>
-
-    <!-- ============ TAB: VIDEO INSPECTION ============ -->
-    <section id="tab-inspection" class="card col-12 hidden" aria-label="Inspeção com Vídeo">
-      <h2>🎥 Inspeção Noturna de Iluminação</h2>
-      <p style="color:var(--muted);font-size:.95rem;margin:0 0 12px 0;line-height:1.4">
-        Grave um vídeo da inspeção e marque os pontos apagados em tempo real. As coordenadas GPS, timestamp e deficiências serão salvos automaticamente para gerar ordem de serviço.
-      </p>
-
-      <!-- Video preview -->
-      <div class="video-container">
-        <video id="videoPreview" playsinline autoplay muted></video>
-      </div>
-
-      <!-- Video controls -->
-      <div class="video-controls">
-        <button id="btnStartRecord" class="btn-primary" style="background:var(--ok)">⚫ Iniciar Gravação</button>
-        <button id="btnPauseRecord" class="btn-warn hidden">⏸ Pausar</button>
-        <button id="btnResumeRecord" class="btn-primary hidden">▶ Retomar</button>
-        <button id="btnStopRecord" class="btn-danger hidden">⏹ Parar Gravação</button>
-        <div class="timer hidden" id="recordTimer">
-          <span class="dot"></span><span id="timerText">00:00</span>
-        </div>
-      </div>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-
-      <!-- Defect marking -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Marcar Deficiência</h3>
-          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Clique no vídeo ou use o botão para marcar um ponto apagado</p>
-          <button id="btnMarkDefect" class="btn-warn" style="width:100%;background:var(--bad);color:#fff" disabled>📍 Marcar Ponto Apagado</button>
-        </div>
-
-        <div>
-          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Status da Gravação</h3>
-          <div class="stats-box" style="gap:8px">
-            <div class="stat">
-              <div class="stat-label">PONTOS</div>
-              <div class="stat-value" id="defectCount">0</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label">PRECISÃO GPS</div>
-              <div class="stat-value" id="gpsAccuracyDisplay" style="font-size:1.1rem">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Defects list -->
-      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Deficiências Marcadas</h3>
-      <ul id="defectList" class="defect-list" aria-live="polite">
-        <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>
-      </ul>
-
-      <!-- Export section -->
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Exportar Relatório</h3>
-      <div class="actions" style="gap:12px">
-        <button id="btnExportJSON" class="btn-secondary" disabled>📋 Salvar Dados (JSON)</button>
-        <button id="btnDownloadVideo" class="btn-secondary" disabled>🎬 Baixar Vídeo</button>
-        <button id="btnNewInspection" class="btn-primary" style="background:#1e2647;color:#e6ebff;display:none">+ Nova Inspeção</button>
-      </div>
-      <div id="exportStatus" style="margin-top:10px;font-size:.9rem;color:var(--muted)"></div>
-    </section>
   </div>
 </main>
+
+<!-- ===== MODAL DE INSPEÇÃO NOTURNA ===== -->
+<div id="inspModal" class="insp-modal">
+  <div class="insp-header">
+    <h3>🎬 Inspeção Noturna - Iluminação</h3>
+    <div class="insp-timer" id="inspTimer">00:00</div>
+    <button id="inspClose" class="insp-close" title="Fechar">✕</button>
+  </div>
+
+  <div class="insp-video-container">
+    <video id="inspVideo" playsinline autoplay muted></video>
+    <canvas id="inspCanvasOverlay" class="insp-canvas-overlay"></canvas>
+    
+    <div class="insp-marks" id="inspMarks"></div>
+    
+    <div class="insp-overlay">
+      <div class="insp-overlay-top">
+        <div class="insp-info-block">
+          <div class="insp-info-label">KM</div>
+          <div class="insp-info-value" id="inspKM">—</div>
+        </div>
+        <div class="insp-info-block">
+          <div class="insp-info-label">ID Próximo</div>
+          <div class="insp-info-value" id="inspID">—</div>
+        </div>
+        <div class="insp-info-block">
+          <div class="insp-info-label">Data/Hora</div>
+          <div class="insp-info-value" id="inspDateTime" style="font-size:.9rem">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insp-controls">
+    <button id="btnMarkPoint" class="insp-btn">📍 Marcar Ponto Apagado</button>
+    <button id="btnFullscreen" class="insp-btn">⛶ Tela Cheia</button>
+    <button id="btnPauseRecord" class="insp-btn">⏸ Pausar</button>
+    <button id="btnStopRecord" class="insp-btn">⏹ Parar e Salvar</button>
+    <div class="insp-status">
+      <div class="indicator"></div>
+      <span id="inspStatus">Gravando...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL DE DOWNLOAD ===== -->
+<div id="downloadModal" class="download-modal">
+  <div class="download-card">
+    <h3>✓ Inspeção Finalizada</h3>
+    <p id="downloadMsg">Vídeo gravado com sucesso! O arquivo contém todos os pontos marcados com georeferência.</p>
+    <button id="btnDownloadVideo" class="download-btn">⬇️ Baixar Vídeo</button>
+    <button id="btnDownloadJSON" class="download-btn">📋 Baixar Dados JSON</button>
+    <button id="btnNewInsp" class="download-btn download-close">Nova Inspeção</button>
+  </div>
+</div>
 
 <script>
 const ACC_GREEN=10, ACC_YELLOW=25;
@@ -275,17 +286,7 @@ const chkMaps=document.getElementById('chkMaps');
 const qtySel=document.getElementById('qty');
 const listEl=document.getElementById('list');
 const kmValue=document.getElementById('kmValue');
-
-// ===== Tab switching =====
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', ()=>{
-    const tab = btn.getAttribute('data-tab');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll(`[id$="${tab}"]`).forEach(el => el.classList.remove('hidden'));
-  });
-});
+const btnInspStar=document.getElementById('btnInspStar');
 
 // ===== Banner: abrir só na primeira visita da sessão =====
 const infoOpen=document.getElementById('infoOpen');
@@ -324,11 +325,10 @@ function fmtHead(h){ return (h==null||!Number.isFinite(h))? null : Math.round(h)
 function fmtSpd(s){ return (s==null||!Number.isFinite(s))? null : Math.round(s*3.6)+' km/h'; }
 function nowBR(){ return new Date().toLocaleString('pt-BR'); }
 function fmtDistMeters(m){ if(!(Number.isFinite(m))) return '—'; return Math.round(m) + ' m'; }
-function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
 
 function updateGpsChip(){ if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; } const a=Math.round(lastPos.acc); if(a<=ACC_GREEN){ gpsChip.className='chip ok'; gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; } else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; } else { gpsChip.className='chip bad'; gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
 }
-function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); }
+function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); btnInspStar.disabled=!posOk; }
 
 async function loadCSV(){ try{ let resp=await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}); if(!resp.ok){ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); } if(!resp.ok){ showDiag('❌ CSV não encontrado'); return; }
     let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
@@ -396,7 +396,7 @@ function startGPS(){
       navigator.geolocation.watchPosition(p=>{
         lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy,
                   spd:p.coords.speed, head:p.coords.heading, ts:Date.now() };
-        updateGpsChip(); updateButtons(); render(); updateVideoGPS();
+        updateGpsChip(); updateButtons(); render();
       },err=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
     },
     err=>{ showDiag('❗ Permita o GPS para listar os IDs próximos'); },
@@ -489,289 +489,226 @@ function startKMLoop(){
   kmTimer = setInterval(updateKMChip, 600);
 }
 
-// ===================== VIDEO INSPECTION MODULE =====================
-const videoPreview = document.getElementById('videoPreview');
-const btnStartRecord = document.getElementById('btnStartRecord');
+// ============================ INSPEÇÃO NOTURNA ============================
+const inspModal = document.getElementById('inspModal');
+const inspClose = document.getElementById('inspClose');
+const inspVideo = document.getElementById('inspVideo');
+const inspCanvasOverlay = document.getElementById('inspCanvasOverlay');
+const inspMarks = document.getElementById('inspMarks');
+const btnMarkPoint = document.getElementById('btnMarkPoint');
+const btnFullscreen = document.getElementById('btnFullscreen');
 const btnPauseRecord = document.getElementById('btnPauseRecord');
-const btnResumeRecord = document.getElementById('btnResumeRecord');
 const btnStopRecord = document.getElementById('btnStopRecord');
-const btnMarkDefect = document.getElementById('btnMarkDefect');
-const btnExportJSON = document.getElementById('btnExportJSON');
-const btnDownloadVideo = document.getElementById('btnDownloadVideo');
-const btnNewInspection = document.getElementById('btnNewInspection');
-const defectList = document.getElementById('defectList');
-const defectCount = document.getElementById('defectCount');
-const recordTimer = document.getElementById('recordTimer');
-const timerText = document.getElementById('timerText');
-const gpsAccuracyDisplay = document.getElementById('gpsAccuracyDisplay');
+const inspKM = document.getElementById('inspKM');
+const inspID = document.getElementById('inspID');
+const inspDateTime = document.getElementById('inspDateTime');
+const inspTimer = document.getElementById('inspTimer');
+const inspStatus = document.getElementById('inspStatus');
 
 let mediaRecorder = null;
 let recordedChunks = [];
-let isRecording = false;
-let recordStartTime = 0;
-let recordedDefects = [];
-let recordingStream = null;
-let timerInterval = null;
+let inspStartTime = 0;
+let inspTimerInterval = null;
+let inspPaused = false;
+let inspMarkedPoints = [];
+let inspStream = null;
 
-async function initVideoCapture(){
-  try{
-    recordedChunks = [];
-    recordedDefects = [];
-    
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    recordingStream = stream;
-    videoPreview.srcObject = stream;
-    btnStartRecord.disabled = false;
-  }catch(e){
-    alert('Erro ao acessar câmera: ' + e.message);
-  }
+function fmtTime(ms){
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
 }
 
-function startRecording(){
-  if(!recordingStream) return;
-  
-  recordedChunks = [];
-  recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
-  defectCount.textContent = '0';
-  
-  const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') ? 'video/mp4;codecs=h264' : 'video/webm';
-  mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
-  
-  mediaRecorder.ondataavailable = (e) => {
-    if(e.data.size > 0) recordedChunks.push(e.data);
-  };
-  
-  mediaRecorder.onstop = () => {
-    const mimeType = mediaRecorder.mimeType || 'video/webm';
-    const blob = new Blob(recordedChunks, { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    videoPreview.srcObject = null;
-    videoPreview.src = url;
-    videoPreview.controls = true;
-    
-    btnDownloadVideo.disabled = false;
-    btnExportJSON.disabled = false;
-    btnNewInspection.style.display = 'inline-block';
-  };
-  
-  mediaRecorder.start();
-  isRecording = true;
-  recordStartTime = Date.now();
-  
-  btnStartRecord.classList.add('hidden');
-  btnPauseRecord.classList.remove('hidden');
-  btnPauseRecord.style.display = 'inline-flex';
-  btnStopRecord.classList.remove('hidden');
-  btnStopRecord.style.display = 'inline-flex';
-  btnMarkDefect.disabled = false;
-  recordTimer.classList.remove('hidden');
-  recordTimer.style.display = 'inline-flex';
-  
-  startTimer();
-  updateVideoGPS();
+function updateInspDateTime(){
+  const now = new Date();
+  inspDateTime.textContent = now.toLocaleString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 
-function pauseRecording(){
-  if(mediaRecorder && isRecording){
-    mediaRecorder.pause();
-    isRecording = false;
-    btnPauseRecord.style.display = 'none';
-    btnResumeRecord.classList.remove('hidden');
-    btnResumeRecord.style.display = 'inline-flex';
-    clearInterval(timerInterval);
-  }
+function updateInspInfo(){
+  if(!lastPos) return;
+  
+  const km = nearestKM(lastPos.lat, lastPos.lon);
+  if(km) inspKM.textContent = (Math.round(km.km * 100) / 100).toFixed(2).replace('.', ',');
+  
+  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
+  if(nearest.length) inspID.textContent = nearest[0].id;
+  
+  updateInspDateTime();
 }
 
-function resumeRecording(){
-  if(mediaRecorder && !isRecording){
-    mediaRecorder.resume();
-    isRecording = true;
-    btnResumeRecord.style.display = 'none';
-    btnPauseRecord.classList.remove('hidden');
-    btnPauseRecord.style.display = 'inline-flex';
-    startTimer();
-  }
-}
-
-function stopRecording(){
-  if(mediaRecorder){
-    mediaRecorder.stop();
-    isRecording = false;
-    clearInterval(timerInterval);
-    
-    btnStartRecord.classList.remove('hidden');
-    btnPauseRecord.classList.add('hidden');
-    btnResumeRecord.classList.add('hidden');
-    btnStopRecord.classList.add('hidden');
-    btnMarkDefect.disabled = true;
-    recordTimer.classList.add('hidden');
-    
-    recordingStream.getTracks().forEach(track => track.stop());
-    recordingStream = null;
-  }
-}
-
-function startTimer(){
-  timerInterval = setInterval(() => {
-    const elapsed = Date.now() - recordStartTime;
-    timerText.textContent = fmtTime(elapsed);
+function startInspTimerUI(){
+  inspTimerInterval = setInterval(() => {
+    if(!inspPaused){
+      const elapsed = Date.now() - inspStartTime;
+      inspTimer.textContent = fmtTime(elapsed);
+    }
   }, 100);
 }
 
-function updateVideoGPS(){
-  if(!lastPos) return;
-  const accValue = Math.round(lastPos.acc);
-  gpsAccuracyDisplay.textContent = accValue + ' m';
-}
-
-function markDefect(){
-  if(!isRecording || !lastPos) return;
-  
-  const now = Date.now();
-  const elapsed = now - recordStartTime;
-  const defect = {
-    timestamp: elapsed,
-    timeStr: fmtTime(elapsed),
-    lat: lastPos.lat,
-    lon: lastPos.lon,
-    accuracy: lastPos.acc,
-    dateTime: nowBR(),
-    km: nearestKM(lastPos.lat, lastPos.lon)
-  };
-  
-  recordedDefects.push(defect);
-  defectCount.textContent = recordedDefects.length;
-  
-  renderDefectItem(defect, recordedDefects.length - 1);
-}
-
-function renderDefectItem(defect, idx){
-  const li = document.createElement('li');
-  li.className = 'defect-item';
-  
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'defect-time';
-  timeSpan.textContent = defect.timeStr;
-  
-  const infoDiv = document.createElement('div');
-  infoDiv.className = 'defect-info';
-  infoDiv.innerHTML = `
-    <span>Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)}</span>
-    <span style="color:#93c5fd">GPS: ±${Math.round(defect.accuracy)}m · ${defect.km ? 'KM ' + (defect.km.km).toFixed(2) : 'KM N/A'}</span>
-  `;
-  
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'defect-close';
-  closeBtn.textContent = '✕';
-  closeBtn.onclick = (e) => { e.preventDefault(); removeDefect(idx); };
-  
-  li.appendChild(timeSpan);
-  li.appendChild(infoDiv);
-  li.appendChild(closeBtn);
-  
-  const placeholder = defectList.querySelector('li');
-  if(placeholder && placeholder.textContent.includes('Nenhuma')){
-    defectList.innerHTML = '';
-  }
-  defectList.appendChild(li);
-}
-
-function removeDefect(idx){
-  recordedDefects.splice(idx, 1);
-  defectCount.textContent = recordedDefects.length;
-  
-  if(recordedDefects.length === 0){
-    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
-  } else {
-    defectList.innerHTML = '';
-    recordedDefects.forEach((d, i) => renderDefectItem(d, i));
-  }
-}
-
-function exportJSON(){
-  if(recordedDefects.length === 0){
-    alert('Nenhuma deficiência marcada para exportar.');
-    return;
-  }
-  
-  const report = {
-    inspeção: {
-      data: nowBR(),
-      tipo: 'Inspeção Noturna - Iluminação Apagada',
-      status: 'Concluída',
-      totalDeficiências: recordedDefects.length,
-      duração: timerText.textContent
-    },
-    posiçãoInicial: {
-      latitude: lastPos.lat,
-      longitude: lastPos.lon,
-      precisão: lastPos.acc + ' m'
-    },
-    deficiências: recordedDefects.map((d, i) => ({
-      id: i + 1,
-      timestamp: d.timestamp + ' ms',
-      horário: d.timeStr,
-      dataHora: d.dateTime,
-      localização: {
-        latitude: d.lat.toFixed(6),
-        longitude: d.lon.toFixed(6),
-        precision: d.accuracy + ' m',
-        mapLink: `https://maps.google.com/?q=${d.lat.toFixed(6)},${d.lon.toFixed(6)}`
-      },
-      quilometro: d.km ? d.km.km.toFixed(2) : 'Não disponível'
-    })),
-    observações: 'Relatório gerado automaticamente pela ferramenta de inspeção com vídeo. Coordenadas coletadas via GPS do dispositivo.'
-  };
-  
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `inspecao_iluminacao_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadVideo(){
-  if(recordedChunks.length === 0) return;
-  const mimeType = mediaRecorder ? mediaRecorder.mimeType : 'video/webm';
-  const blob = new Blob(recordedChunks, { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `inspecao_video_${Date.now()}.mp4`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function resetInspection(){
+function openInspModal(){
+  inspModal.classList.add('open');
+  inspMarkedPoints = [];
+  inspMarks.innerHTML = '';
   recordedChunks = [];
-  recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
-  defectCount.textContent = '0';
-  btnNewInspection.style.display = 'none';
-  btnExportJSON.disabled = true;
-  btnDownloadVideo.disabled = true;
-  videoPreview.src = '';
-  videoPreview.controls = false;
-  initVideoCapture();
+  inspPaused = false;
+  btnPauseRecord.textContent = '⏸ Pausar';
+  inspStatus.textContent = 'Gravando...';
+  
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+    .then(stream => {
+      inspStream = stream;
+      inspVideo.srcObject = stream;
+      
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        inspStream.getTracks().forEach(track => track.stop());
+        handleInspFinish();
+      };
+      
+      inspStartTime = Date.now();
+      mediaRecorder.start();
+      startInspTimerUI();
+      startInspInfoUpdateLoop();
+    })
+    .catch(err => {
+      console.error('Erro ao acessar câmera:', err);
+      alert('Não foi possível acessar a câmera do dispositivo.');
+      closeInspModal();
+    });
 }
 
-btnStartRecord.addEventListener('click', startRecording);
-btnPauseRecord.addEventListener('click', pauseRecording);
-btnResumeRecord.addEventListener('click', resumeRecording);
-btnStopRecord.addEventListener('click', stopRecording);
-btnMarkDefect.addEventListener('click', markDefect);
-btnExportJSON.addEventListener('click', exportJSON);
-btnDownloadVideo.addEventListener('click', downloadVideo);
-btnNewInspection.addEventListener('click', resetInspection);
+function startInspInfoUpdateLoop(){
+  const infoLoop = setInterval(() => {
+    if(!inspModal.classList.contains('open')){
+      clearInterval(infoLoop);
+      return;
+    }
+    updateInspInfo();
+  }, 500);
+}
 
-videoPreview.addEventListener('click', () => {
-  if(isRecording) markDefect();
+function closeInspModal(){
+  if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+    mediaRecorder.stop();
+  }
+  if(inspStream){
+    inspStream.getTracks().forEach(track => track.stop());
+  }
+  if(inspTimerInterval) clearInterval(inspTimerInterval);
+  inspModal.classList.remove('open');
+}
+
+function addMarkPoint(x, y){
+  const rect = inspVideo.getBoundingClientRect();
+  const relX = x - rect.left;
+  const relY = y - rect.top;
+  
+  const mark = {
+    time: Date.now() - inspStartTime,
+    x: (relX / rect.width) * 100,
+    y: (relY / rect.height) * 100,
+    lat: lastPos ? lastPos.lat : null,
+    lon: lastPos ? lastPos.lon : null,
+    km: lastPos ? (nearestKM(lastPos.lat, lastPos.lon)?.km || null) : null,
+    id: lastPos ? (nearestN(lastPos.lat, lastPos.lon, 1)[0]?.id || null) : null,
+    timestamp: new Date().toLocaleString('pt-BR')
+  };
+  
+  inspMarkedPoints.push(mark);
+  
+  const pin = document.createElement('div');
+  pin.className = 'mark-pin';
+  pin.style.left = mark.x + '%';
+  pin.style.top = mark.y + '%';
+  inspMarks.appendChild(pin);
+  
+  const label = document.createElement('div');
+  label.className = 'mark-label';
+  label.style.left = mark.x + '%';
+  label.style.top = (mark.y + 3) + '%';
+  label.textContent = `#${inspMarkedPoints.length}`;
+  inspMarks.appendChild(label);
+  
+  setTimeout(() => pin.remove(), 600);
+  setTimeout(() => label.remove(), 600);
+}
+
+function handleInspFinish(){
+  clearInterval(inspTimerInterval);
+  
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const videoUrl = URL.createObjectURL(blob);
+  
+  showDownloadModal(videoUrl);
+}
+
+function showDownloadModal(videoUrl){
+  const downloadModal = document.getElementById('downloadModal');
+  const btnDownloadVideo = document.getElementById('btnDownloadVideo');
+  const btnDownloadJSON = document.getElementById('btnDownloadJSON');
+  const btnNewInsp = document.getElementById('btnNewInsp');
+  
+  btnDownloadVideo.onclick = () => {
+    const a = document.createElement('a');
+    a.href = videoUrl;
+    a.download = `inspecao_noturna_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;
+    a.click();
+  };
+  
+  btnDownloadJSON.onclick = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      duracaoMs: Date.now() - inspStartTime,
+      posicaoInicial: { lat: lastPos?.lat, lon: lastPos?.lon },
+      pontosMarcados: inspMarkedPoints
+    };
+    
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = `inspecao_noturna_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+    a.click();
+  };
+  
+  btnNewInsp.onclick = () => {
+    downloadModal.classList.remove('open');
+    inspModal.classList.remove('open');
+  };
+  
+  downloadModal.classList.add('open');
+}
+
+btnInspStar.addEventListener('click', () => openInspModal());
+inspClose.addEventListener('click', () => closeInspModal());
+
+btnMarkPoint.addEventListener('click', () => {
+  if(lastPos) addMarkPoint(inspVideo.offsetLeft + inspVideo.offsetWidth / 2, inspVideo.offsetTop + inspVideo.offsetHeight / 2);
+});
+
+inspCanvasOverlay.addEventListener('click', (e) => {
+  addMarkPoint(e.clientX, e.clientY);
+});
+
+btnPauseRecord.addEventListener('click', () => {
+  if(inspPaused){
+    mediaRecorder.resume();
+    inspPaused = false;
+    btnPauseRecord.textContent = '⏸ Pausar';
+    inspStatus.textContent = 'Gravando...';
+  } else {
+    mediaRecorder.pause();
+    inspPaused = true;
+    btnPauseRecord.textContent = '▶ Retomar';
+    inspStatus.textContent = 'Pausado';
+  }
+});
+
+btnStopRecord.addEventListener('click', () => closeInspModal());
+
+btnFullscreen.addEventListener('click', () => {
+  const elem = document.getElementById('inspVideo');
+  if(elem.requestFullscreen) elem.requestFullscreen();
+  else if(elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
 });
 
 (function boot(){
@@ -779,7 +716,6 @@ videoPreview.addEventListener('click', () => {
   startGPS();
   loadKMCSV();
   startKMLoop();
-  initVideoCapture();
 })();
 </script>
 </body>
