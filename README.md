@@ -1,2 +1,0 @@
-# cps
-Projeto Apoio Manutenção
