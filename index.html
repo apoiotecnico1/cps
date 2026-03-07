@@ -3,1084 +3,262 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ID GPS · IDs Próximos & Inspeção com Vídeo</title>
-<meta name="theme-color" content="#0b1020" />
+<title>SIRE - Sistema de Inspeção de Rodovias - Federais</title>
+<meta name="theme-color" content="#003d7a" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-  :root{
-    --brand:#5a64ff; --brand2:#00c2c9; --bg:#0b1020; --bg-2:#0f1630; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --btn:#22c55e; --focus:#82a0ff; --shadow:0 12px 28px rgba(2,6,23,.55); --radius:14px; --pill:#0c1f17;
-    --km-bg:#ffffff; --km-fg:#0b1020; --km-border:#1e3a8a; --km-band:#1e3a8a;
-    --info-bg:#0f1630; --info-border:#1e2647; --info-fg:#cdd7f5; --info-icon:#93c5fd; --info-accent:#60a5fa;
-  }
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:radial-gradient(1200px 1200px at 20% -20%, #111b3f 0%, transparent 50%) no-repeat,linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
-  header{background:linear-gradient(90deg,var(--brand),var(--brand2));padding:16px 16px;box-shadow:var(--shadow)}
-  .brand{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px}
-  .dot-logo{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.95}
-  .brand h1{margin:0;font-weight:1000;letter-spacing:.06em;color:#0b1020;font-size:clamp(1rem,1.9vw,1.15rem)}
-
-  #status{max-width:1100px;margin:14px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 16px}
-  .chip,.badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800;box-shadow:var(--shadow)}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .ok .dot{background:var(--ok)}.ok{color:#bbf7d0}
-  .warn .dot{background:var(--warn)}.warn{color:#ffe7b0}
-  .bad .dot{background:var(--bad)}.bad{color:#fecaca}
-  .badge{color:#c7d2fe}
-
-  main{max-width:1100px;margin:14px auto 28px;display:grid;gap:16px;padding:0 16px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .card h2{margin:0 0 12px 0;font-size:clamp(1.05rem,1.8vw,1.1rem);color:#e7ecff}
-  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  button{padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-  button:active{transform:translateY(1px)}button:hover{filter:brightness(1.06)}button:disabled{opacity:.55;cursor:not-allowed;filter:none}
-  #btnSend{background:var(--btn)}
-  .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
-  .opt input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand)}
-  .opt select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer}
-
-  ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-  li{line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;font-size:1.03rem;color:#edf2ff;display:flex;justify-content:space-between;gap:12px;align-items:center;transition:box-shadow .15s ease,border-color .15s ease, background .15s ease}
-  li.nearest{border-color:var(--btn);box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02))}
-  li.nearest .id-badge{display:inline-flex;align-items:center;gap:8px;background:var(--pill);padding:4px 10px;border-radius:999px;outline:1px solid rgba(34,197,94,.3)}
-  li.nearest .id-badge .id-label{font-weight:1000;letter-spacing:.02em;color:#b6ffce;font-size:1.08rem}
-  li.nearest .id-badge .flag{padding:2px 8px;border-radius:999px;background:#22c55e;color:#05220f;font-weight:900;font-size:.72rem}
-  .id-label{font-weight:800}
-  .dist{color:#9fb0d9;opacity:.85;font-size:.78rem;min-width:64px;text-align:right}
-  .skeleton{height:48px;border-radius:12px;background:linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);background-size:200% 100%;animation:shimmer 1.1s infinite}
-  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  .col-4{grid-column:span 4}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-  @media (max-width:900px){.col-4,.col-8,.col-12{grid-column:1/-1}}
-  button:focus-visible, select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-
-  /* KM placa */
-  .km-sign{margin-left:auto;display:inline-flex;align-items:stretch;gap:0;background:var(--km-bg);color:var(--km-fg);border:4px solid var(--km-border);border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.35);overflow:hidden}
-  .km-band{background:var(--km-band);color:#eaf2ff;width:auto;min-width:18px;padding:6px 10px;display:flex;align-items:center;justify-content:center}
-  .km-body{padding:6px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--km-bg)}
-  .km-body-col{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-  .km-row{display:flex;align-items:baseline;gap:10px}
-  .km-label{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:900;letter-spacing:.06em;font-size:clamp(1rem,1.6vw,1.1rem);opacity:.85}
-  .km-value{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:1000;letter-spacing:.02em;font-size:clamp(1.6rem,3.6vw,2.4rem);line-height:1;color:var(--km-fg);min-width:4ch;text-align:right}
-  .km-subnote{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;font-size:.62rem;line-height:1.1;color:#6f84b8;opacity:.85;text-align:right;max-width:22ch;white-space:normal}
-  @media (max-width:480px){.km-body{padding:6px 10px 8px}.km-value{font-size:clamp(1.5rem,6vw,2rem)}}
-
-  /* Banner informativo */
-  .container{max-width:1100px;margin:0 auto;padding:0 16px}
-  .info-trigger-wrap{max-width:1100px;margin:12px auto 0;padding:0 16px;display:flex;align-items:center}
-  .info-trigger{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:rgba(147,197,253,.12);color:var(--info-icon);border:1px solid rgba(147,197,253,.35);cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.35)}
-  .info-trigger:hover{filter:brightness(1.05)}
-  .info-panel{max-width:1100px;margin:10px auto 0;border:1px solid var(--info-border);border-radius:12px;color:var(--info-fg);display:none;box-shadow:0 10px 24px rgba(0,0,0,.35);background:linear-gradient(180deg, rgba(96,165,250,.08), transparent), var(--info-bg)}
-  .info-panel.open{display:block}
-  .info-panel-inner{padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:flex-start;position:relative}
-  .info-panel-inner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#60a5fa,#22c55e);border-top-left-radius:12px;border-bottom-left-radius:12px;opacity:.9}
-  .info-hero{display:flex;align-items:center;gap:10px}
-  .info-hero .icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(147,197,253,.18);color:var(--info-icon);font-size:1rem}
-  .info-title{margin:0;font-weight:900;letter-spacing:.02em;color:#eaf2ff;font-size:clamp(.95rem,1.4vw,1.1rem)}
-  .info-text{margin:6px 0 0 0;font-size:.9rem;line-height:1.45;opacity:.96}
-  .info-text .strong{font-weight:800;color:#e8eeff}
-  .info-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid #26315a;color:#c9d6ff;font-weight:900;cursor:pointer}
-  .info-close:hover{filter:brightness(1.06)}
-  @media (max-width:600px){
-    .info-panel-inner{grid-template-columns:1fr;gap:12px}
-    .info-hero{justify-content:flex-start}
-    .info-close{justify-self:end}
-  }
-
-  /* ============ VIDEO INSPECTION STYLES ============ */
-  .video-wrapper{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/9;border:1px solid var(--border)}
-  #videoPreview{width:100%;height:100%;object-fit:cover;display:none}
-  #canvasStream{width:100%;height:100%;display:block;background:#000}
-  .video-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;border-radius:12px}
-  .video-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
-  .timer{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1532;border:1px solid var(--border);border-radius:8px;color:#fff;font-family:ui-monospace;font-weight:900;font-size:.98rem}
-  .timer .dot{width:8px;height:8px;background:#ef4444;animation:pulse 1s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  @keyframes defectFlash{0%{background:#ef4444;}50%{background:#ff6b6b;}100%{background:#ef4444;}}
-  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-  @keyframes fadeIn{from{opacity:0;scale:.95}to{opacity:1;scale:1}}
-  .btn-primary{background:var(--btn);color:#0b1020}
-  .btn-secondary{background:#1e2647;color:#e6ebff}
-  .btn-danger{background:#ef4444;color:#fff}
-  .btn-warn{background:var(--warn);color:#0b1020}
-  button:disabled{opacity:.55;cursor:not-allowed}
-
-  .defect-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
-  .stat-box{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-  .stat-box.alert{animation:defectFlash .6s ease-in-out}
-  .stat-label{font-size:.8rem;color:var(--muted);font-weight:800}
-  .stat-value{font-size:1.5rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin-top:4px}
-  .stat-value sup{font-size:.7em;margin-left:2px}
-
-  .defect-list{margin-top:12px;max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:#0b1433}
-  .defect-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0c1532;border-radius:8px;margin-bottom:6px;font-size:.9rem;color:#edf2ff;border-left:3px solid var(--bad);animation:slideIn .3s ease-out}
-  .defect-item:last-child{margin-bottom:0}
-  .defect-time{font-family:ui-monospace;font-weight:900;color:#fca5a5;min-width:60px}
-  .defect-info{display:grid;gap:2px;flex:1;margin-left:12px}
-  .defect-close{background:rgba(239,68,68,.2);color:#fca5a5;border:0;padding:4px 8px;border-radius:6px;cursor:pointer;font-weight:900;font-size:.8rem}
-  .defect-close:hover{background:rgba(239,68,68,.4)}
-
-  .tab-buttons{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-  .tab-btn{padding:10px 16px;background:#0c1532;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-weight:900;cursor:pointer;transition:all .2s ease}
-  .tab-btn.active{background:var(--brand);color:#0b1020;border-color:var(--brand)}
-
-  .hidden{display:none !important}
-
-  /* Melhorias para Video Inspection */
-  .brightness-bar{display:flex;align-items:center;gap:8px;margin-top:6px}
-  .brightness-bar-fill{flex:1;height:20px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);border-radius:6px;overflow:hidden;position:relative}
-  .brightness-bar-progress{height:100%;background:rgba(255,255,255,.3);border-radius:6px;transition:width .2s ease;display:flex;align-items:center;justify-content:flex-end;padding:0 6px}
-  .brightness-percent{font-weight:900;font-size:.75rem;color:#000;mix-blend-mode:lighten;font-family:ui-monospace}
-
-  .inspection-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width:900px){.inspection-layout{grid-template-columns:1fr}}
-
-  .lum-zone{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;position:relative;overflow:hidden}
-  .lum-zone::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(34,197,94,.1),transparent);pointer-events:none}
-  .lum-zone-name{font-size:.85rem;color:var(--muted);margin-bottom:8px;font-weight:800}
-  .lum-zone-value{font-size:2rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin:6px 0}
-  .lum-zone-status{font-size:.75rem;margin-top:6px;font-weight:700}
-  .lum-zone-status.ok{color:#22c55e}
-  .lum-zone-status.warn{color:#f59e0b}
-  .lum-zone-status.bad{color:#ef4444}
-
-  .nearest-pole-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#b6ffce;font-size:.85rem;font-weight:800;margin-bottom:8px;animation:fadeIn .4s ease-out}
-
-  .video-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;font-size:.85rem}
-  .video-info-item{background:rgba(90,100,255,.08);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px}
-  .video-info-label{color:var(--muted);font-weight:700}
-  .video-info-value{color:#e7f0ff;font-weight:900;font-family:ui-monospace}
+  :root{--primary:#003d7a;--secondary:#0066cc;--accent:#ff6b35;--success:#00a676;--warning:#ffc107;--danger:#e63946;--dark:#0b0e1b;--light:#f8f9fa;--muted:#6c757d;--border:#dee2e6;--shadow:0 2px 8px rgba(0,0,0,.15);--shadow-lg:0 8px 24px rgba(0,0,0,.25);--radius:8px}*,*::before,*::after{box-sizing:border-box}html,body{height:100%;margin:0;padding:0}body{background:#f5f7fa;color:#1f2937;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}.container{max-width:1400px;margin:0 auto;padding:0 16px}header{background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);color:#fff;padding:20px 0;box-shadow:var(--shadow-lg);position:sticky;top:0;z-index:1000}header .container{display:flex;align-items:center;justify-content:space-between;gap:24px}.logo{display:flex;align-items:center;gap:12px;font-weight:900;font-size:1.4rem;letter-spacing:.5px}.logo-icon{width:40px;height:40px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem}.header-status{display:flex;gap:16px;align-items:center}.status-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(255,255,255,.15);border-radius:20px;font-size:.9rem;font-weight:600;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2)}.status-dot{width:8px;height:8px;border-radius:50%;background:#00ff88;animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}.nav-tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:2px solid var(--border);padding-bottom:0}.nav-tab{padding:12px 20px;background:0;border:0;border-bottom:3px solid transparent;color:var(--muted);font-weight:600;cursor:pointer;transition:all .3s ease;font-size:.95rem}.nav-tab:hover{color:var(--secondary)}.nav-tab.active{color:var(--primary);border-bottom-color:var(--primary)}main{padding:24px 0;margin-bottom:40px}.tab-content{display:none;animation:fadeIn .3s ease}.tab-content.active{display:block}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:24px}.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;transition:all .3s ease}.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}.card h2{margin:0 0 12px 0;font-size:1.1rem;color:var(--primary);display:flex;align-items:center;gap:10px}.card p{margin:8px 0;color:var(--muted);font-size:.9rem}.stat-value{font-size:2rem;font-weight:900;color:var(--primary);margin:8px 0}.stat-label{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}button{padding:10px 18px;border:0;border-radius:var(--radius);font-weight:600;font-size:.95rem;cursor:pointer;transition:all .3s ease;box-shadow:var(--shadow)}.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:#002a57;transform:translateY(-1px)}.btn-secondary{background:var(--secondary);color:#fff}.btn-secondary:hover{background:#0052a3}.btn-success{background:var(--success);color:#fff}.btn-success:hover{background:#007a5e}.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#d62828}.btn-outline{background:0;color:var(--primary);border:2px solid var(--primary);padding:8px 16px}.btn-outline:hover{background:var(--primary);color:#fff}button:disabled{opacity:.5;cursor:not-allowed}.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.video-section{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}.video-container{position:relative;background:#000;border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;margin-bottom:16px}#videoPreview,#canvasStream{width:100%;height:100%;display:block;object-fit:cover}#videoPreview{display:none}.overlay-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}.info-box{background:linear-gradient(135deg,#f0f4f8,#d9e2ec);padding:12px;border-radius:var(--radius);border-left:4px solid var(--secondary)}.info-label{font-size:.8rem;color:var(--muted);text-transform:uppercase;font-weight:600;margin-bottom:4px}.info-value{font-size:1.3rem;font-weight:900;color:var(--primary);font-family:monospace}.info-status{font-size:.75rem;color:var(--success);margin-top:4px}.brightness-zones{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}.zone{background:#f5f7fa;padding:16px;border-radius:var(--radius);text-align:center;border:2px solid var(--border)}.zone-name{font-size:.9rem;color:var(--muted);font-weight:600;margin-bottom:8px}.zone-value{font-size:2.2rem;font-weight:900;font-family:monospace;margin-bottom:8px}.zone-bar{height:12px;background:linear-gradient(90deg,#e63946,#ffc107,#00a676);border-radius:6px;overflow:hidden;margin-bottom:8px}.zone-progress{height:100%;background:rgba(255,255,255,.4);transition:width .3s ease;border-radius:6px}.zone-status{font-size:.8rem;font-weight:600;margin-top:8px}.defects-container{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-top:24px}.defect-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}.defect-btn{padding:12px 16px;text-align:center;border:2px solid var(--border);background:#fff;border-radius:var(--radius);font-weight:600;cursor:pointer;transition:all .3s ease;font-size:.95rem}.defect-btn.off{border-color:#e63946;color:#e63946}.defect-btn.off:hover,.defect-btn.off.active{background:#e63946;color:#fff}.defect-btn.flicker{border-color:#ffc107;color:#ffc107}.defect-btn.flicker:hover,.defect-btn.flicker.active{background:#ffc107;color:#000}.defect-btn.burn{border-color:#ff6b35;color:#ff6b35}.defect-btn.burn:hover,.defect-btn.burn.active{background:#ff6b35;color:#fff}.defect-btn.damage{border-color:#9c27b0;color:#9c27b0}.defect-btn.damage:hover,.defect-btn.damage.active{background:#9c27b0;color:#fff}.defect-btn:disabled{opacity:.5;cursor:not-allowed}.defects-list{max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:12px}.defect-item{display:flex;justify-content:space-between;align-items:center;padding:12px;background:linear-gradient(135deg,#fff5f5,#ffe0e0);border-left:4px solid #e63946;border-radius:6px;margin-bottom:8px;gap:12px}.defect-item:last-child{margin-bottom:0}.defect-time{font-family:monospace;font-weight:900;color:#e63946;min-width:60px}.defect-info{flex:1;font-size:.85rem}.defect-type{font-weight:600;color:var(--primary)}.defect-coords{color:var(--muted);font-size:.8rem;margin-top:4px}.defect-remove{background:rgba(230,57,70,.2);color:#e63946;border:0;padding:6px 10px;border-radius:4px;cursor:pointer;font-weight:600;font-size:.75rem}.defect-remove:hover{background:rgba(230,57,70,.4)}.session-info{background:linear-gradient(135deg,#e3f2fd,#bbdefb);padding:20px;border-radius:var(--radius);border-left:6px solid var(--secondary);margin-bottom:24px}.session-title{font-size:1.1rem;font-weight:900;color:var(--primary);margin-bottom:12px}.session-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;font-size:.95rem}.session-item{display:flex;flex-direction:column;gap:4px}.session-label{color:var(--muted);font-weight:600;font-size:.85rem;text-transform:uppercase}.session-value{color:var(--primary);font-weight:900;font-family:monospace}.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}.dashboard-card{background:#fff;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);text-align:center;border-top:4px solid var(--primary)}.dashboard-card.success{border-top-color:var(--success)}.dashboard-card.warning{border-top-color:var(--warning)}.dashboard-card.danger{border-top-color:var(--danger)}.reports-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.report-card{background:#fff;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border-left:4px solid var(--secondary)}.report-date{color:var(--muted);font-size:.85rem}.report-title{font-weight:900;color:var(--primary);margin:8px 0;font-size:1.05rem}.report-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-size:.85rem}.report-stat{background:#f5f7fa;padding:8px;border-radius:4px;text-align:center}.report-stat-value{font-weight:900;color:var(--primary)}.report-stat-label{color:var(--muted);font-size:.8rem}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px}::-webkit-scrollbar-thumb{background:#003d7a;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#0066cc}.control-bar{display:flex;gap:12px;flex-wrap:wrap;padding:12px;background:#f5f7fa;border-radius:var(--radius);margin-top:16px}.control-bar button{margin:0}.timer{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;background:var(--danger);color:#fff;font-weight:900;border-radius:var(--radius);font-family:monospace;font-size:1.1rem;animation:pulse-danger 1s infinite}@keyframes pulse-danger{0%,100%{opacity:1}50%{opacity:.6}}.timer-dot{width:10px;height:10px;border-radius:50%;background:#fff;animation:blink .6s infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}.hidden{display:none!important}.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}.modal.active{display:flex}.modal-content{background:#fff;border-radius:var(--radius);padding:32px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}.modal-title{font-size:1.4rem;font-weight:900;color:var(--primary);margin-bottom:20px}.modal-close{position:absolute;top:12px;right:12px;background:0;border:0;font-size:1.5rem;cursor:pointer;color:var(--muted);width:40px;height:40px;display:flex;align-items:center;justify-content:center}.pdf-container{background:#fff;padding:20px;max-width:1200px}.pdf-header{border-bottom:3px solid var(--primary);padding-bottom:12px;margin-bottom:20px;text-align:center}.pdf-title{font-size:1.8rem;font-weight:900;color:var(--primary);margin:0}.pdf-subtitle{color:var(--muted);margin:4px 0 0 0;font-size:.95rem}.pole-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:20px;border:1px solid var(--success);color:var(--success);font-weight:600;font-size:.85rem;margin-bottom:12px;animation:slideInDown .4s ease}@keyframes slideInDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@media (max-width:768px){.grid{grid-template-columns:1fr}.session-details{grid-template-columns:1fr}.brightness-zones{grid-template-columns:1fr}header .container{flex-direction:column;align-items:flex-start;gap:12px}.header-status{flex-wrap:wrap}.nav-tabs{flex-wrap:wrap}}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">
-    <span class="dot-logo" aria-hidden="true"></span>
-    <h1>ID GPS</h1>
-    <div id="kmChip" class="km-sign" aria-live="polite">
-      <div class="km-band" aria-hidden="true"></div>
-      <div class="km-body">
-        <div class="km-row">
-          <span class="km-label">KM</span>
-          <span id="kmValue" class="km-value">—</span>
-        </div>
-        <div class="km-body-col" style="margin-left:auto">
-          <span class="km-subnote">Marco quilométrico em linha reta mais próximo da rodovia em relação à sua posição GPS.</span>
-        </div>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-icon">🛣️</div>
+      <div><div>SIRE</div><div style="font-size:.7rem;font-weight:400;opacity:.9">Sistema de Inspeção de Rodovias</div></div>
+    </div>
+    <div class="header-status">
+      <div class="status-chip">
+        <span class="status-dot"></span>
+        <div><div id="gpsStatus" style="font-size:.75rem">GPS: Buscando...</div></div>
       </div>
+      <div class="status-chip"><div id="kmStatus">KM: —</div></div>
     </div>
   </div>
 </header>
 
-<!-- Trigger do banner (apenas ícone) -->
-<div class="info-trigger-wrap">
-  <button id="infoOpen" class="info-trigger" title="Leia importante"><span aria-hidden="true">ℹ</span><span class="sr-only">Leia importante</span></button>
-</div>
-
-<!-- Painel do banner -->
-<div id="infoPanel" class="info-panel" role="dialog" aria-modal="false" aria-label="Informações importantes">
-  <div class="info-panel-inner container">
-    <div class="info-hero">
-      <span class="icon" aria-hidden="true">ℹ</span>
-      <h2 class="info-title">Informação importante</h2>
-    </div>
-    <div class="info-text">
-      <span class="strong">Atenção:</span> esta ferramenta utiliza uma <span class="strong">lista interna previamente cadastrada</span> para indicar o <span class="strong">ID mais próximo</span> com base na posição GPS do seu dispositivo. Não há integração em tempo real com sistemas corporativos. Como a base é estática, <span class="strong">podem existir equipamentos já removidos em campo</span> que ainda aparecem na listagem.
-    </div>
-    <button id="infoClose" class="info-close" aria-label="Fechar">✕</button>
+<main class="container">
+  
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="inspecao">📹 Inspeção</button>
+    <button class="nav-tab" data-tab="dashboard">📊 Dashboard</button>
+    <button class="nav-tab" data-tab="relatorios">📄 Relatórios</button>
   </div>
-</div>
 
-<div id="status" role="region" aria-label="Status do sistema">
-  <div id="gpsChip" class="chip bad" aria-live="polite">
-    <span class="dot"></span><span id="gpsText">GPS: aguardando…</span>
-  </div>
-  <div id="diag" class="badge" style="display:none" aria-live="polite">—</div>
-</div>
-
-<main>
-  <div class="grid">
-    <!-- TAB SWITCHER -->
-    <div class="col-12">
-      <div class="tab-buttons">
-        <button class="tab-btn active" data-tab="finder">🔍 Localizador</button>
-        <button class="tab-btn" data-tab="inspection">🎥 Inspeção com Vídeo</button>
+  <div id="inspecao" class="tab-content active">
+    
+    <div class="session-info" id="sessionInfo" style="display:none">
+      <div class="session-title">📋 Inspeção Atual</div>
+      <div class="session-details">
+        <div class="session-item"><span class="session-label">Sessão</span><span class="session-value" id="sessionId">—</span></div>
+        <div class="session-item"><span class="session-label">Início</span><span class="session-value" id="sessionStart">—</span></div>
+        <div class="session-item"><span class="session-label">Rodovia</span><span class="session-value">BR-116</span></div>
+        <div class="session-item"><span class="session-label">Estado</span><span class="session-value" id="sessionState">—</span></div>
       </div>
     </div>
 
-    <!-- ============ TAB: FINDER (ORIGINAL) ============ -->
-    <section id="tab-finder" class="card col-4" aria-label="Ações">
-      <h2>Ações</h2>
-      <div class="actions" style="margin-bottom:8px"><button id="btnSend" disabled>Enviar ID por WhatsApp</button></div>
-      <div class="actions" style="gap:16px">
-        <label class="opt" title="Quantidade de IDs a enviar (padrão 10)"><span style="opacity:.9">quantidade</span>
-          <select id="qty"><option value="1">1</option><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-        </label>
-        <label class="opt" title="Adicionar links do Google Maps junto com os IDs"><input type="checkbox" id="chkMaps" /><span>incluir links de mapa</span></label>
-      </div>
-    </section>
-
-    <section id="tab-finder" class="card col-8" aria-label="IDs mais próximos">
-      <h2>IDs próximos</h2>
-      <ul id="list" aria-live="polite">
-        <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
-        <li class="skeleton"></li><li class="skeleton"></li>
-      </ul>
-    </section>
-
-    <!-- ============ TAB: VIDEO INSPECTION ============ -->
-    <section id="tab-inspection" class="card col-12 hidden" aria-label="Inspeção com Vídeo">
-      <h2>🎥 Inspeção de Postes de Iluminação em Rodovia</h2>
-      <p style="color:var(--muted);font-size:.95rem;margin:0 0 12px 0;line-height:1.4">
-        Sistema otimizado para inspeção noturna de iluminação em concessão de rodovia. O vídeo registra GPS, tempo, deficiências e análise de luminosidade. <strong>Todos os dados ficam no vídeo</strong>.
-      </p>
-
-      <!-- Video preview com canvas para overlay -->
-      <div class="video-wrapper">
-        <video id="videoPreview" playsinline autoplay muted style="display:none"></video>
+    <div class="video-section">
+      <h2 style="margin-top:0;color:var(--primary)">🎥 Câmera de Rodoviária</h2>
+      <div class="video-container">
+        <video id="videoPreview" playsinline autoplay muted></video>
         <canvas id="canvasStream"></canvas>
       </div>
 
-      <!-- Video controls -->
-      <div class="video-controls">
-        <button id="btnStartRecord" class="btn-primary" style="background:var(--ok)">⚫ Iniciar Gravação</button>
-        <button id="btnPauseRecord" class="btn-warn hidden">⏸ Pausar</button>
-        <button id="btnResumeRecord" class="btn-primary hidden">▶ Retomar</button>
-        <button id="btnStopRecord" class="btn-danger hidden">⏹ Parar Gravação</button>
-        <div class="timer hidden" id="recordTimer">
-          <span class="dot"></span><span id="timerText">00:00</span>
-        </div>
+      <div class="overlay-info">
+        <div class="info-box"><div class="info-label">Coordenadas</div><div class="info-value" id="coordValue">—</div><div class="info-status" id="coordStatus">—</div></div>
+        <div class="info-box"><div class="info-label">Precisão GPS</div><div class="info-value" id="accValue">—</div><div class="info-status">Métros</div></div>
+        <div class="info-box"><div class="info-label">KM Rodovia</div><div class="info-value" id="kmRecValue">—</div><div class="info-status">Quilômetro</div></div>
+        <div class="info-box"><div class="info-label">Poste Próximo</div><div id="poleInfo"><div class="info-value" id="nearPoleId">—</div><div class="info-status" id="nearPoleDist">—</div></div></div>
       </div>
 
-      <!-- Informações em tempo real durante gravação -->
-      <div class="inspection-layout">
-        <!-- Coluna esquerda: Defeitos e Status -->
-        <div>
-          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">⚠ Classificar Defeito</h3>
-          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Clique durante a gravação para marcar</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button id="btnDefectOff" class="btn-warn" style="background:var(--bad);color:#fff;padding:10px;font-size:.9rem" disabled>⚫ Apagado</button>
-            <button id="btnDefectFlask" class="btn-warn" style="background:#ff8c00;color:#fff;padding:10px;font-size:.9rem" disabled>💡 Piscante</button>
-            <button id="btnDefectBurn" class="btn-warn" style="background:#ffa500;color:#fff;padding:10px;font-size:.9rem" disabled>🔥 Queimado</button>
-            <button id="btnDefectDmg" class="btn-warn" style="background:#9c27b0;color:#fff;padding:10px;font-size:.9rem" disabled>🚨 Danificado</button>
-          </div>
-
-          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">📊 Status</h3>
-          <div class="defect-stats" style="gap:8px">
-            <div class="stat-box">
-              <div class="stat-label">DEFEITOS</div>
-              <div class="stat-value" id="defectCount">0</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">BRILHO AVG</div>
-              <div class="stat-value" id="brightnessValue" style="font-size:1.1rem">—</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Coluna direita: Luminosidade por zona -->
-        <div>
-          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">💡 Luminosidade em Tempo Real</h3>
-          
-          <div id="nearestPoleCard" style="display:none;margin-bottom:12px">
-            <span class="nearest-pole-badge">⚡ Poste <span id="nearestPoleIdBadge">—</span> | <span id="nearestPoleDistBadge">—</span></span>
-          </div>
-
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-            <div class="lum-zone">
-              <div class="lum-zone-name">Esquerda</div>
-              <div class="lum-zone-value" id="lumLeft">—</div>
-              <div class="brightness-bar">
-                <div class="brightness-bar-fill" style="flex:1">
-                  <div class="brightness-bar-progress" id="lumLeftBar" style="width:0%">
-                    <span class="brightness-percent" id="lumLeftPct"></span>
-                  </div>
-                </div>
-              </div>
-              <div class="lum-zone-status" id="lumLeftStatus">—</div>
-            </div>
-
-            <div class="lum-zone">
-              <div class="lum-zone-name">Centro</div>
-              <div class="lum-zone-value" id="lumCenter">—</div>
-              <div class="brightness-bar">
-                <div class="brightness-bar-fill" style="flex:1">
-                  <div class="brightness-bar-progress" id="lumCenterBar" style="width:0%">
-                    <span class="brightness-percent" id="lumCenterPct"></span>
-                  </div>
-                </div>
-              </div>
-              <div class="lum-zone-status" id="lumCenterStatus">—</div>
-            </div>
-
-            <div class="lum-zone">
-              <div class="lum-zone-name">Direita</div>
-              <div class="lum-zone-value" id="lumRight">—</div>
-              <div class="brightness-bar">
-                <div class="brightness-bar-fill" style="flex:1">
-                  <div class="brightness-bar-progress" id="lumRightBar" style="width:0%">
-                    <span class="brightness-percent" id="lumRightPct"></span>
-                  </div>
-                </div>
-              </div>
-              <div class="lum-zone-status" id="lumRightStatus">—</div>
-            </div>
-          </div>
-
-          <!-- Info GPS e KM -->
-          <div class="video-info-grid">
-            <div class="video-info-item">
-              <div class="video-info-label">Coordenadas</div>
-              <div class="video-info-value" id="videoGpsCoord">—</div>
-            </div>
-            <div class="video-info-item">
-              <div class="video-info-label">Precisão</div>
-              <div class="video-info-value" id="videoGpsAcc">—</div>
-            </div>
-            <div class="video-info-item">
-              <div class="video-info-label">KM Atual</div>
-              <div class="video-info-value" id="videoKM">—</div>
-            </div>
-            <div class="video-info-item">
-              <div class="video-info-label">Tempo Gravação</div>
-              <div class="video-info-value" id="videoTime">00:00</div>
-            </div>
-          </div>
-        </div>
+      <h3 style="margin:20px 0 12px 0;color:var(--primary)">💡 Análise de Luminosidade</h3>
+      <div class="brightness-zones">
+        <div class="zone"><div class="zone-name">Esquerda</div><div class="zone-value" id="lumLeft">—</div><div class="zone-bar"><div class="zone-progress" id="lumLeftBar"></div></div><div class="zone-status" id="lumLeftStatus">—</div></div>
+        <div class="zone"><div class="zone-name">Centro</div><div class="zone-value" id="lumCenter">—</div><div class="zone-bar"><div class="zone-progress" id="lumCenterBar"></div></div><div class="zone-status" id="lumCenterStatus">—</div></div>
+        <div class="zone"><div class="zone-name">Direita</div><div class="zone-value" id="lumRight">—</div><div class="zone-bar"><div class="zone-progress" id="lumRightBar"></div></div><div class="zone-status" id="lumRightStatus">—</div></div>
       </div>
 
-      <!-- Defects list -->
-      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">📋 Histórico de Defeitos Detectados</h3>
-      <ul id="defectList" class="defect-list" aria-live="polite">
-        <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>
-      </ul>
-
-      <!-- Export section -->
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">🎬 Baixar Vídeo</h3>
-      <div class="actions" style="gap:12px">
-        <button id="btnDownloadVideo" class="btn-primary" disabled>🎬 Baixar Vídeo Completo</button>
-        <button id="btnNewInspection" class="btn-secondary" style="display:none">+ Nova Inspeção</button>
+      <div class="control-bar">
+        <button class="btn-success" id="btnStartRecord">▶ Iniciar Gravação</button>
+        <button class="btn-primary hidden" id="btnPauseRecord">⏸ Pausar</button>
+        <button class="btn-primary hidden" id="btnResumeRecord">▶ Retomar</button>
+        <button class="btn-danger hidden" id="btnStopRecord">⏹ Parar</button>
+        <div class="timer hidden" id="recordTimer"><span class="timer-dot"></span><span id="timerText">00:00</span></div>
       </div>
-      <div id="exportStatus" style="margin-top:10px;font-size:.9rem;color:var(--muted)"></div>
-    </section>
+    </div>
+
+    <div class="defects-container">
+      <h2 style="margin-top:0;color:var(--primary)">⚠️ Registrar Defeitos</h2>
+      <div class="defect-buttons">
+        <button class="defect-btn off" id="btnDefectOff" disabled>⚫ Apagado</button>
+        <button class="defect-btn flicker" id="btnDefectFlicker" disabled>💡 Piscante</button>
+        <button class="defect-btn burn" id="btnDefectBurn" disabled>🔥 Queimado</button>
+        <button class="defect-btn damage" id="btnDefectDamage" disabled>🚨 Danificado</button>
+      </div>
+
+      <h3 style="margin:16px 0 12px 0;color:var(--primary)">Defeitos Detectados</h3>
+      <div class="defects-list">
+        <div style="text-align:center;color:var(--muted);padding:24px;font-size:.95rem;">Nenhum defeito registrado</div>
+      </div>
+      <div id="defectsEmpty" style="display:none;text-align:center;color:var(--muted);padding:24px;font-size:.95rem;">Nenhum defeito registrado</div>
+      <div id="defectsList" style="display:none"></div>
+
+      <div class="control-bar" style="margin-top:16px">
+        <button class="btn-primary" id="btnCapturePhoto" disabled>📷 Capturar Foto</button>
+        <button class="btn-secondary" id="btnGenerateReport" disabled>📄 Gerar Relatório PDF</button>
+      </div>
+    </div>
+
   </div>
+
+  <div id="dashboard" class="tab-content">
+    <h2 style="color:var(--primary);margin-top:0">📊 Dashboard de Inspeções</h2>
+    <div class="dashboard-grid">
+      <div class="dashboard-card success">
+        <div class="stat-label">Total de Inspeções</div>
+        <div class="stat-value" id="totalInspections">0</div>
+      </div>
+      <div class="dashboard-card">
+        <div class="stat-label">Postes Inspecionados</div>
+        <div class="stat-value" id="totalPoles">0</div>
+      </div>
+      <div class="dashboard-card danger">
+        <div class="stat-label">Total de Defeitos</div>
+        <div class="stat-value" id="totalDefects">0</div>
+      </div>
+      <div class="dashboard-card warning">
+        <div class="stat-label">Taxa de Defects</div>
+        <div class="stat-value" id="defectRate">0%</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><h2>🎬 Última Inspeção</h2><p id="lastInspection" style="color:var(--muted);">Nenhuma inspeção realizada</p></div>
+      <div class="card"><h2>⚠️ Defeitos Mais Comuns</h2><div id="commonDefects" style="display:grid;gap:8px;"><p style="color:var(--muted);">—</p></div></div>
+      <div class="card"><h2>📍 Cobertura de Rodovia</h2><p id="roadCoverage" style="color:var(--muted);">—</p></div>
+    </div>
+
+  </div>
+
+  <div id="relatorios" class="tab-content">
+    <h2 style="color:var(--primary);margin-top:0">📄 Relatórios de Inspeção</h2>
+    <div class="control-bar">
+      <button class="btn-secondary" id="btnExportAll">💾 Exportar Todos (JSON)</button>
+      <button class="btn-secondary" id="btnClearAll">🗑 Limpar Histórico</button>
+    </div>
+
+    <h3 style="color:var(--primary);margin-top:24px;">Inspeções Gravadas</h3>
+    <div class="reports-grid" id="reportsContainer">
+      <div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;font-size:.95rem;">Nenhuma inspeção gravada</div>
+    </div>
+
+  </div>
+
 </main>
+
+<div id="pdfModal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closePdfModal()">✕</button>
+    <div class="modal-title">📄 Relatório Gerado</div>
+    <div style="margin-bottom:16px;color:var(--muted);font-size:.95rem;"><p>Relatório pronto para download ou compartilhamento. Clique no botão abaixo para salvar.</p></div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn-primary" id="btnDownloadPdf" onclick="downloadGeneratedPdf()">⬇️ Baixar PDF</button>
+      <button class="btn-secondary" onclick="closePdfModal()">✕ Fechar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const ACC_GREEN=10, ACC_YELLOW=25;
-let dataset=[], lastPos=null, lastRender=0;
-const gpsChip=document.getElementById('gpsChip');
-const gpsText=document.getElementById('gpsText');
-const diag=document.getElementById('diag');
-const btnSend=document.getElementById('btnSend');
-const chkMaps=document.getElementById('chkMaps');
-const qtySel=document.getElementById('qty');
-const listEl=document.getElementById('list');
-const kmValue=document.getElementById('kmValue');
+let dataset=[],kmDataset=[];
+let lastPos=null;
+let isRecording=false;
+let recordStartTime=0;
+let recordedDefects=[];
+let recordedChunks=[];
+let recordedPhotos=[];
+let recordingSession=null;
+let mediaRecorder=null;
+let timerInterval=null;
+let allSessions=JSON.parse(localStorage.getItem('injecaoSessions')||'[]');
 
-// ===== Tab switching =====
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', ()=>{
-    const tab = btn.getAttribute('data-tab');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll(`[id$="${tab}"]`).forEach(el => el.classList.remove('hidden'));
-  });
-});
+const el={videoPreview:document.getElementById('videoPreview'),canvas:document.getElementById('canvasStream'),canvasCtx:document.getElementById('canvasStream').getContext('2d'),btnStart:document.getElementById('btnStartRecord')};
 
-// ===== Banner: abrir só na primeira visita da sessão =====
-const infoOpen=document.getElementById('infoOpen');
-const infoClose=document.getElementById('infoClose');
-const infoPanel=document.getElementById('infoPanel');
-function openInfo(){ infoPanel.classList.add('open'); }
-function closeInfo(){ infoPanel.classList.remove('open'); }
-infoOpen.addEventListener('click', openInfo);
-infoClose.addEventListener('click', closeInfo);
+function fmtTime(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60;return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`}
+function fmtDist(m){return Number.isFinite(m)?Math.round(m)+' m':'—'}
+function fmtAcc(a){return Number.isFinite(a)?'±'+Math.round(a)+' m':'—'}
+function nowBR(){return new Date().toLocaleString('pt-BR')}
+function uuid(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>((c==='x'?Math.random()*16|0:(Math.random()*16|0&0x3|0x8)).toString(16)))}
+function normalizeStr(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ')}
+function findColumnIndex(headers,candidates){const map=headers.map(h=>normalizeStr(h));for(const c of candidates){const i=map.indexOf(c);if(i>=0)return i}return-1}
+function parsePt(v){if(v==null)return NaN;const s=String(v).trim();return/,\d{1,}$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s)}
+function hav(a,b,c,d){const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))}
+function nearestN(lat,lon,n=10){if(!dataset.length)return[];const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));arr.sort((a,b)=>a.d-b.d);return arr.slice(0,Math.min(n,arr.length))}
+function nearestKM(lat,lon){if(!kmDataset.length)return null;let best=null,bd=Infinity;for(const p of kmDataset){const d=hav(lat,lon,p.lat,p.lon);if(d<bd){bd=d;best=p}}return best?{km:best.km}:null}
 
-// Fechar com ESC
-window.addEventListener('keydown', (e)=>{
-  if(e.key==='Escape' && infoPanel.classList.contains('open')) closeInfo();
-});
-// Fechar ao clicar fora do painel
-window.addEventListener('click', (e)=>{
-  if(!infoPanel.classList.contains('open')) return;
-  const inner = infoPanel.querySelector('.info-panel-inner');
-  if(inner && !inner.contains(e.target) && e.target !== infoOpen){ closeInfo(); }
-}, true);
+async function loadCSV(){try{let resp=await fetch('dados.csv?v='+Date.now());if(!resp.ok)resp=await fetch('Dados_Completos_Grupo_2_all.csv');if(!resp.ok)return;let text=await resp.text();if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);const lines=text.split(/\r?\n/).filter(l=>l.trim()!=='');if(lines.length<2)return;const head=lines.shift().split(';');const iId=findColumnIndex(head,['id','idnox']),iLat=findColumnIndex(head,['latitude','lat']),iLon=findColumnIndex(head,['longitude','lon']);if(iId<0||iLat<0||iLon<0)return;dataset=lines.map(l=>{const r=l.split(';');return{id:String(r[iId]||'').trim(),lat:parsePt(r[iLat]),lon:parsePt(r[iLon])};}).filter(p=>p.id&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));}catch(e){}}
 
-// Abre automaticamente apenas se ainda não abriu nesta sessão
-if(!sessionStorage.getItem('bannerShown')){
-  openInfo();
-  sessionStorage.setItem('bannerShown','1');
-}
+async function loadKMCSV(){try{let resp=await fetch('SNVBR116SPRJ.csv');if(!resp.ok)return;let text=await resp.text();if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);const lines=text.split(/\r?\n/).filter(l=>l.trim()!=='');if(lines.length<2)return;const head=lines.shift().split(';');const iKm=findColumnIndex(head,['km']),iLat=findColumnIndex(head,['lat']),iLon=findColumnIndex(head,['lon']);if(iKm<0||iLat<0||iLon<0)return;kmDataset=lines.map(l=>{const r=l.split(';');return{km:parsePt(r[iKm]),lat:parsePt(r[iLat]),lon:parsePt(r[iLon])};}).filter(p=>Number.isFinite(p.km)&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));}catch(e){}}
 
-function showDiag(msg){ diag.style.display='inline-flex'; diag.textContent=msg; }
-function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
-function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
-function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
-function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
-function nearestN(lat,lon,n=10){ if(!dataset.length) return []; const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0, Math.min(n,arr.length)); }
-function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+' m'); }
-function fmtHead(h){ return (h==null||!Number.isFinite(h))? null : Math.round(h)+'°'; }
-function fmtSpd(s){ return (s==null||!Number.isFinite(s))? null : Math.round(s*3.6)+' km/h'; }
-function nowBR(){ return new Date().toLocaleString('pt-BR'); }
-function fmtDistMeters(m){ if(!(Number.isFinite(m))) return '—'; return Math.round(m) + ' m'; }
-function fmtTime(ms){ const s=Math.floor(ms/1000),m=Math.floor(s/60),sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+function startGPS(){if(!('geolocation' in navigator))return;navigator.geolocation.getCurrentPosition(pos=>{lastPos={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy};updateGpsDisplay();navigator.geolocation.watchPosition(p=>{lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};updateGpsDisplay();if(isRecording)updateVideoInfo();},{},{enableHighAccuracy:true});},{},{enableHighAccuracy:true});}
 
-function updateGpsChip(){ if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; } const a=Math.round(lastPos.acc); if(a<=ACC_GREEN){ gpsChip.className='chip ok'; gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; } else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; } else { gpsChip.className='chip bad'; gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
-}
-function updateButtons(){ const baseOk=dataset.length>0, posOk=!!lastPos; btnSend.disabled=!(baseOk && posOk); }
+function updateGpsDisplay(){if(!lastPos){document.getElementById('gpsStatus').textContent='GPS: Buscando...';return}const acc=Math.round(lastPos.acc);const status=acc<=ACC_GREEN?'OK':acc<=ACC_YELLOW?'Ajustando':'Fraco';document.getElementById('gpsStatus').textContent=`GPS: ${status} (${fmtAcc(lastPos.acc)})`;const km=nearestKM(lastPos.lat,lastPos.lon);if(km)document.getElementById('kmStatus').textContent=`KM: ${km.km.toFixed(2).replace('.',',')}`}
 
-async function loadCSV(){ try{ let resp=await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}); if(!resp.ok){ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); } if(!resp.ok){ showDiag('❌ CSV não encontrado'); return; }
-    let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-    const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ showDiag('❌ CSV vazio'); return; }
-    const head=lines.shift().split(';');
-    const iId=findColumnIndex(head,['id do nox','idnox','id']),
-          iLat=findColumnIndex(head,['latitude','lat']),
-          iLon=findColumnIndex(head,['longitude','lon','long']);
-    if(iId<0||iLat<0||iLon<0){ showDiag('❌ Cabeçalho inválido (ID/Latitude/Longitude)'); return; }
-    dataset=lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
-                 .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-    if(!dataset.length){ showDiag('❌ Sem pontos válidos no CSV'); return; }
-    render(true); updateButtons();
-  }catch(e){ showDiag('❌ Erro ao carregar CSV'); }
-}
+async function initVideoCapture(){try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});el.videoPreview.srcObject=stream;el.videoPreview.onloadedmetadata=()=>{el.canvas.width=el.videoPreview.videoWidth;el.canvas.height=el.videoPreview.videoHeight;drawFrame()};el.btnStart.disabled=false;}catch(e){alert('Erro: '+e.message)}}
 
-function render(force=false){
-  const now=performance.now(); if(!force && now-lastRender<150) return; lastRender=now;
-  listEl.innerHTML=''; if(!lastPos||!dataset.length) return;
-  const qty = Number(qtySel.value || 10);
-  const items=nearestN(lastPos.lat,lastPos.lon,qty);
-  if(!items.length){ listEl.innerHTML='<li>—</li>'; return; }
+function drawFrame(){if(!el.videoPreview.srcObject)return;el.canvasCtx.drawImage(el.videoPreview,0,0,el.canvas.width,el.canvas.height);if(isRecording){updateBrightnessDisplay();drawVideoOverlay()}requestAnimationFrame(drawFrame)}
 
-  const frag=document.createDocumentFragment();
-  items.forEach((o,idx)=>{
-    const li=document.createElement('li');
+function drawVideoOverlay(){const ctx=el.canvasCtx;const w=el.canvas.width,h=el.canvas.height;const p=16;ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(p,p,500,200);ctx.strokeStyle='#0066cc';ctx.lineWidth=3;ctx.strokeRect(p,p,500,200);ctx.fillStyle='#00a676';ctx.fillRect(p,p,500,4);ctx.font='bold 14px monospace';ctx.fillStyle='#fff';let y=p+24;const elapsed=Date.now()-recordStartTime;ctx.fillText(`⏱ ${fmtTime(elapsed)}`,p+12,y);y+=24;if(lastPos){ctx.font='12px monospace';const coordStr=`${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`;ctx.fillText(`📍 ${coordStr}`,p+12,y);y+=20;ctx.fillStyle=lastPos.acc<=ACC_GREEN?'#00ff88':'#ffaa00';ctx.fillText(`Precisão: ${fmtAcc(lastPos.acc)}`,p+12,y);y+=20}const km=lastPos?nearestKM(lastPos.lat,lastPos.lon):null;if(km){ctx.fillStyle='#fff';ctx.fillText(`KM: ${km.km.toFixed(2).replace('.',',')}`,p+12,y);y+=20}ctx.fillStyle=recordedDefects.length>0?'#ff6b6b':'#00ff88';ctx.font='bold 16px monospace';ctx.fillText(`DEFEITOS: ${recordedDefects.length}`,p+12,y);if(lastPos){const nearest=nearestN(lastPos.lat,lastPos.lon,1);if(nearest.length){const dist=nearest[0].d;ctx.fillStyle=dist<200?'#ff6b6b':'#ffaa00';ctx.font='11px monospace';ctx.fillText(`POSTE: ${nearest[0].id} (${fmtDist(dist)})`,p+320,p+24)}}}
 
-    const left = document.createElement('span');
-    const idSpan = document.createElement('span');
-    idSpan.className='id-label';
-    idSpan.textContent=o.id;
+function calculateZoneBrightness(zoneX){if(el.canvas.width===0)return 0;const zoneWidth=Math.floor(el.canvas.width/3);const x=zoneX*zoneWidth;const imageData=el.canvasCtx.getImageData(x,0,zoneWidth,el.canvas.height);const data=imageData.data;let total=0;for(let i=0;i<data.length;i+=4){const r=data[i],g=data[i+1],b=data[i+2];total+=(r*0.299+g*0.587+b*0.114)}return Math.round(total/(zoneWidth*el.canvas.height*255)*100)}
 
-    if(idx===0){
-      li.classList.add('nearest');
-      const pill = document.createElement('span');
-      pill.className='id-badge';
-      const flag = document.createElement('span');
-      flag.className='flag';
-      flag.textContent='PRÓXIMO';
-      pill.appendChild(idSpan);
-      pill.appendChild(flag);
-      left.appendChild(pill);
-    }else{
-      left.appendChild(idSpan);
-    }
+function updateBrightnessDisplay(){const left=calculateZoneBrightness(0);const center=calculateZoneBrightness(1);const right=calculateZoneBrightness(2);const getStatus=val=>val<15?'🔴 APAGADO':val<35?'🟡 FRACO':'🟢 OK';const getColor=val=>val<15?'#e63946':val<35?'#ffc107':'#00a676';document.getElementById('lumLeft').textContent=left+'%';document.getElementById('lumLeft').style.color=getColor(left);document.getElementById('lumLeftStatus').textContent=getStatus(left);document.getElementById('lumLeftBar').style.width=Math.min(100,left*2.5)+'%';document.getElementById('lumCenter').textContent=center+'%';document.getElementById('lumCenter').style.color=getColor(center);document.getElementById('lumCenterStatus').textContent=getStatus(center);document.getElementById('lumCenterBar').style.width=Math.min(100,center*2.5)+'%';document.getElementById('lumRight').textContent=right+'%';document.getElementById('lumRight').style.color=getColor(right);document.getElementById('lumRightStatus').textContent=getStatus(right);document.getElementById('lumRightBar').style.width=Math.min(100,right*2.5)+'%'}
 
-    const right = document.createElement('span');
-    right.className='dist';
-    right.textContent = fmtDistMeters(o.d);
+function updateVideoInfo(){if(!lastPos)return;document.getElementById('coordValue').textContent=`${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`;document.getElementById('accValue').textContent=Math.round(lastPos.acc);const km=nearestKM(lastPos.lat,lastPos.lon);if(km)document.getElementById('kmRecValue').textContent=km.km.toFixed(2).replace('.',',');const nearest=nearestN(lastPos.lat,lastPos.lon,1);if(nearest.length){document.getElementById('nearPoleId').textContent=nearest[0].id;document.getElementById('nearPoleDist').textContent=`${Math.round(nearest[0].d)} m`}}
 
-    li.appendChild(left);
-    li.appendChild(right);
-    frag.appendChild(li);
-  });
-  listEl.appendChild(frag);
-}
+function startRecording(){if(!el.videoPreview.srcObject)return;recordingSession={id:uuid(),startTime:Date.now(),startDate:nowBR(),defects:[],photos:[],gps:lastPos,km:lastPos?nearestKM(lastPos.lat,lastPos.lon):null};recordedChunks=[];recordedDefects=[];recordedPhotos=[];isRecording=true;recordStartTime=Date.now();el.btnStart.classList.add('hidden');document.getElementById('btnPauseRecord').classList.remove('hidden');document.getElementById('btnStopRecord').classList.remove('hidden');document.getElementById('recordTimer').classList.remove('hidden');document.getElementById('btnDefectOff').disabled=false;document.getElementById('btnDefectFlicker').disabled=false;document.getElementById('btnDefectBurn').disabled=false;document.getElementById('btnDefectDamage').disabled=false;document.getElementById('btnCapturePhoto').disabled=false;document.getElementById('sessionInfo').style.display='block';document.getElementById('sessionId').textContent=recordingSession.id;document.getElementById('sessionStart').textContent=recordingSession.startDate;startTimer();updateVideoInfo();try{const capturedStream=el.canvas.captureStream(30);const mimeType=MediaRecorder.isTypeSupported('video/webm')?'video/webm':'video/webm;codecs=vp9';mediaRecorder=new MediaRecorder(capturedStream,{mimeType});mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)};mediaRecorder.start();}catch(e){console.error(e)}}
 
-function startGPS(){
-  if(!('geolocation' in navigator)){ showDiag('❌ Sem geolocalização no navegador'); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy,
-                spd:pos.coords.speed, head:pos.coords.heading, ts:Date.now() };
-      updateGpsChip(); updateButtons(); render(true);
-      navigator.geolocation.watchPosition(p=>{
-        lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy,
-                  spd:p.coords.speed, head:p.coords.heading, ts:Date.now() };
-        updateGpsChip(); updateButtons(); render(); updateVideoGPS();
-      },err=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
-    },
-    err=>{ showDiag('❗ Permita o GPS para listar os IDs próximos'); },
-    {enableHighAccuracy:true,maximumAge:0,timeout:10000}
-  );
-}
+function pauseRecording(){if(mediaRecorder){mediaRecorder.pause();isRecording=false;document.getElementById('btnPauseRecord').classList.add('hidden');document.getElementById('btnResumeRecord').classList.remove('hidden');clearInterval(timerInterval)}}
 
-btnSend.addEventListener('click', ()=>{
-  if(!lastPos) return;
-  const qty = Number(qtySel.value || 10);
-  const items=nearestN(lastPos.lat,lastPos.lon,qty); if(!items.length) return;
+function resumeRecording(){if(mediaRecorder){mediaRecorder.resume();isRecording=true;document.getElementById('btnResumeRecord').classList.add('hidden');document.getElementById('btnPauseRecord').classList.remove('hidden');startTimer()}}
 
-  const accTxt=fmtAcc(lastPos.acc), head=fmtHead(lastPos.head), spd=fmtSpd(lastPos.spd);
-  let tx=`${nowBR()}\nGPS agora: Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)} · Precisão ${accTxt}`;
-  if(spd) tx+=` · Vel ${spd}`; if(head) tx+=` · Curso ${head}`; tx+='\n';
+function stopRecording(){if(mediaRecorder){mediaRecorder.stop();isRecording=false;clearInterval(timerInterval);el.btnStart.classList.remove('hidden');document.getElementById('btnPauseRecord').classList.add('hidden');document.getElementById('btnResumeRecord').classList.add('hidden');document.getElementById('btnStopRecord').classList.add('hidden');document.getElementById('recordTimer').classList.add('hidden');document.getElementById('btnDefectOff').disabled=true;document.getElementById('btnDefectFlicker').disabled=true;document.getElementById('btnDefectBurn').disabled=true;document.getElementById('btnDefectDamage').disabled=true;recordingSession.endTime=Date.now();recordingSession.endDate=nowBR();recordingSession.defects=recordedDefects;recordingSession.photos=recordedPhotos;recordingSession.duration=recordingSession.endTime-recordingSession.startTime;allSessions.push(recordingSession);localStorage.setItem('injecaoSessions',JSON.stringify(allSessions));document.getElementById('btnGenerateReport').disabled=false;updateDashboard()}}
 
-  items.forEach(o=> tx+=`ID: ${o.id}\n`);
+function startTimer(){timerInterval=setInterval(()=>{const elapsed=Date.now()-recordStartTime;document.getElementById('timerText').textContent=fmtTime(elapsed)},100)}
 
-  if(chkMaps.checked){
-    tx+='\nLinks de mapa:\n';
-    items.forEach(o=> tx+=`ID: ${o.id} → https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
-  }
+function markDefect(type){if(!isRecording||!lastPos)return;const elapsed=Date.now()-recordStartTime;const nearest=nearestN(lastPos.lat,lastPos.lon,1);const km=nearestKM(lastPos.lat,lastPos.lon);const defect={timestamp:elapsed,timeStr:fmtTime(elapsed),type,lat:lastPos.lat,lon:lastPos.lon,acc:lastPos.acc,km:km?km.km:null,poleId:nearest.length>0?nearest[0].id:'N/A',poleDist:nearest.length>0?Math.round(nearest[0].d):0};recordedDefects.push(defect);renderDefectsUI()}
 
-  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
-});
+function renderDefectsUI(){const defectsList=document.getElementById('defectsList');const defectsEmpty=document.getElementById('defectsEmpty');if(recordedDefects.length===0){defectsEmpty.style.display='block';defectsList.style.display='none';return}defectsEmpty.style.display='none';defectsList.style.display='block';defectsList.innerHTML=recordedDefects.map((d,i)=>`<div class="defect-item"><span class="defect-time">${d.timeStr}</span><div class="defect-info"><div class="defect-type">${getDefectLabel(d.type)} - Poste ${d.poleId}</div><div class="defect-coords">${d.lat.toFixed(5)}, ${d.lon.toFixed(5)} | KM ${d.km?d.km.toFixed(2):'N/A'}</div></div><button class="defect-remove" onclick="removeDefect(${i})">✕</button></div>`).join('')}
 
-qtySel.addEventListener('change', () => render(true));
+function removeDefect(idx){recordedDefects.splice(idx,1);renderDefectsUI()}
 
-// ============================ KM em tempo real (2º CSV) ============================
-let kmDataset = [];
-let kmLastUpdate = 0;
-let kmTimer = null;
+function getDefectLabel(type){return{off:'⚫ Apagado',flicker:'💡 Piscante',burn:'🔥 Queimado',damage:'🚨 Danificado'}[type]||type}
 
-async function loadKMCSV(){
-  try{
-    let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ console.warn('KM CSV não encontrado'); return; }
+function capturePhoto(){if(!isRecording)return;const photoCanvas=document.createElement('canvas');photoCanvas.width=el.canvas.width;photoCanvas.height=el.canvas.height;const photoCtx=photoCanvas.getContext('2d');photoCtx.drawImage(el.videoPreview,0,0);const p=16;photoCtx.fillStyle='rgba(0,0,0,0.5)';photoCtx.fillRect(p,p,400,120);photoCtx.strokeStyle='#0066cc';photoCtx.lineWidth=2;photoCtx.strokeRect(p,p,400,120);photoCtx.font='bold 12px Arial';photoCtx.fillStyle='#fff';let y=p+20;const elapsed=Date.now()-recordStartTime;photoCtx.fillText(`⏱ ${fmtTime(elapsed)}`,p+10,y);y+=18;if(lastPos){const km=nearestKM(lastPos.lat,lastPos.lon);photoCtx.font='11px monospace';photoCtx.fillText(`KM: ${km?km.km.toFixed(2).replace('.',','):'—'}`,p+10,y);y+=16;const nearest=nearestN(lastPos.lat,lastPos.lon,1);if(nearest.length){photoCtx.fillText(`ID: ${nearest[0].id}`,p+10,y);y+=16;photoCtx.font='10px monospace';photoCtx.fillText(`GPS: ${lastPos.lat.toFixed(4)}, ${lastPos.lon.toFixed(4)}`,p+10,y)}}photoCtx.font='10px monospace';photoCtx.fillText(`Hora: ${nowBR()}`,p+10,p+95);const photoData={imageData:photoCanvas.toDataURL('image/jpeg',0.9),timestamp:Date.now(),timeStr:fmtTime(elapsed),gps:lastPos,km:lastPos?nearestKM(lastPos.lat,lastPos.lon):null};recordedPhotos.push(photoData);alert('✅ Foto capturada com sucesso!')}
 
-    let text = await resp.text();
-    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+function generatePDFReport(){if(!recordingSession)return;const element=document.createElement('div');element.className='pdf-container';element.innerHTML=generatePdfContent();const opt={margin:10,filename:`relatorio_inspecao_${recordingSession.id}.pdf`,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};html2pdf().set(opt).from(element).save();showPdfModal()}
 
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if(lines.length < 2){ console.warn('KM CSV vazio'); return; }
+function generatePdfContent(){const km=recordingSession.km?recordingSession.km.km.toFixed(2):'—';const nearestPole=recordedDefects.length>0?recordedDefects[0].poleId:'—';const duration=recordingSession.duration?fmtTime(recordingSession.duration):'—';let photosHtml='';recordedPhotos.forEach((photo,idx)=>{photosHtml+=`<div style="page-break-inside:avoid;margin:20px 0;border:1px solid #ccc;padding:10px;border-radius:8px;"><h4 style="margin:0 0 10px 0;color:#003d7a;">📷 Foto #${idx+1} - ${photo.timeStr}</h4><img src="${photo.imageData}" style="width:100%;border-radius:6px;margin-bottom:10px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;color:#666;"><div><strong>KM:</strong> ${photo.km?photo.km.km.toFixed(2):'—'}</div><div><strong>GPS Lat:</strong> ${photo.gps?photo.gps.lat.toFixed(5):'—'}</div><div><strong>GPS Lon:</strong> ${photo.gps?photo.gps.lon.toFixed(5):'—'}</div><div><strong>Precisão:</strong> ±${photo.gps?Math.round(photo.gps.acc):'—'} m</div></div></div>`});let defectsHtml='';recordedDefects.forEach((d,idx)=>{defectsHtml+=`<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;border:1px solid #ddd;">${idx+1}</td><td style="padding:8px;border:1px solid #ddd;">${d.timeStr}</td><td style="padding:8px;border:1px solid #ddd;">${getDefectLabel(d.type)}</td><td style="padding:8px;border:1px solid #ddd;">${d.poleId}</td><td style="padding:8px;border:1px solid #ddd;font-family:monospace;font-size:11px;">${d.lat.toFixed(5)}, ${d.lon.toFixed(5)}</td><td style="padding:8px;border:1px solid #ddd;">${d.km?d.km.toFixed(2):'—'}</td></tr>`});return`<div style="font-family:Arial,sans-serif;color:#333;"><div class="pdf-header" style="border-bottom:3px solid #003d7a;padding-bottom:12px;margin-bottom:20px;text-align:center;"><h1 class="pdf-title" style="margin:0;color:#003d7a;font-size:24px;">SIRE - Sistema de Inspeção de Rodovias</h1><p class="pdf-subtitle" style="margin:4px 0 0 0;color:#666;">Relatório de Inspeção - Rodovias Federais Brasileiras</p></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;font-size:11px;"><div><h3 style="margin:0 0 8px 0;color:#003d7a;border-bottom:2px solid #0066cc;padding-bottom:4px;">📋 Informações da Sessão</h3><p><strong>ID Inspeção:</strong> ${recordingSession.id}</p><p><strong>Data/Hora Início:</strong> ${recordingSession.startDate}</p><p><strong>Data/Hora Término:</strong> ${recordingSession.endDate||'—'}</p><p><strong>Duração:</strong> ${duration}</p></div><div><h3 style="margin:0 0 8px 0;color:#003d7a;border-bottom:2px solid #0066cc;padding-bottom:4px;">🛣️ Dados da Rodovia</h3><p><strong>Rodovia:</strong> BR-116</p><p><strong>KM:</strong> ${km}</p><p><strong>Poste Próximo:</strong> ${nearestPole}</p><p><strong>GPS Latitude:</strong> ${recordingSession.gps?recordingSession.gps.lat.toFixed(5):'—'}</p></div></div><div style="margin-bottom:20px;"><h3 style="margin:0 0 12px 0;color:#003d7a;border-bottom:2px solid #0066cc;padding-bottom:4px;">📊 Resumo de Defeitos</h3><p style="font-size:12px;margin:8px 0;"><strong>Total de Defeitos Registrados:</strong> ${recordedDefects.length}</p>${recordedDefects.length>0?`<table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px;"><thead><tr style="background:#003d7a;color:#fff;"><th style="padding:8px;border:1px solid #ddd;text-align:left;">#</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">Tempo</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">Tipo</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">Poste</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">Coordenadas</th><th style="padding:8px;border:1px solid #ddd;text-align:left;">KM</th></tr></thead><tbody>${defectsHtml}</tbody></table>':'<p style="color:#999;font-size:12px;">Nenhum defeito registrado nesta inspeção.</p>'}</div>${recordedPhotos.length>0?`<div style="margin-top:20px;page-break-before:always;"><h3 style="margin:0 0 12px 0;color:#003d7a;border-bottom:2px solid #0066cc;padding-bottom:4px;">📷 Fotos Capturadas</h3>${photosHtml}</div>`:<div style="margin-top:40px;padding-top:20px;border-top:2px solid #ddd;color:#666;font-size:10px;text-align:center;"><p>Relatório gerado automaticamente pelo SIRE em ${nowBR()}</p><p>Sistema de Inspeção de Rodovias Federais Brasileiras</p></div>}</div>`}
 
-    const head = lines.shift().split(';');
-    const iKm  = findColumnIndex(head, ['km']);
-    const iLat = findColumnIndex(head, ['lat','latitude']);
-    const iLon = findColumnIndex(head, ['lon','long','longitude']);
-    if(iKm < 0 || iLat < 0 || iLon < 0){ console.warn('Cabeçalho do KM CSV inválido'); return; }
+function showPdfModal(){document.getElementById('pdfModal').classList.add('active')}
+function closePdfModal(){document.getElementById('pdfModal').classList.remove('active')}
+function downloadGeneratedPdf(){const element=document.createElement('div');element.innerHTML=generatePdfContent();const opt={margin:10,filename:`relatorio_inspecao_${recordingSession.id}.pdf`,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};html2pdf().set(opt).from(element).save();closePdfModal()}
 
-    kmDataset = lines.map(l=>{
-      const r = l.split(';');
-      return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) };
-    }).filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){
-    console.warn('Erro ao carregar KM CSV', e);
-  }
-}
+function updateDashboard(){const totalInspections=allSessions.length;const totalDefects=allSessions.reduce((sum,s)=>sum+s.defects.length,0);const uniquePoles=new Set();const defectTypes={};allSessions.forEach(session=>{session.defects.forEach(d=>{uniquePoles.add(d.poleId);defectTypes[d.type]=(defectTypes[d.type]||0)+1})});document.getElementById('totalInspections').textContent=totalInspections;document.getElementById('totalPoles').textContent=uniquePoles.size;document.getElementById('totalDefects').textContent=totalDefects;const rate=totalInspections>0?Math.round((totalDefects/(totalInspections*10))*100):0;document.getElementById('defectRate').textContent=rate+'%';if(allSessions.length>0){const lastSession=allSessions[allSessions.length-1];document.getElementById('lastInspection').textContent=lastSession.endDate||lastSession.startDate}const commonDefectsHtml=Object.entries(defectTypes).sort((a,b)=>b[1]-a[1]).map(([type,count])=>`<div>${getDefectLabel(type)}: ${count}</div>`).join('');document.getElementById('commonDefects').innerHTML=commonDefectsHtml||'<p>—</p>';updateReportsTab()}
 
-function nearestKM(lat, lon){
-  if(!kmDataset.length || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  let best = null, bd = Infinity;
-  for(const p of kmDataset){
-    const d = hav(lat, lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  return best ? { km: best.km, d: bd } : null;
-}
+function updateReportsTab(){const container=document.getElementById('reportsContainer');if(allSessions.length===0){container.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;font-size:.95rem;">Nenhuma inspeção gravada</div>';return}container.innerHTML=allSessions.map(session=>`<div class="report-card"><div class="report-date">${session.startDate}</div><div class="report-title">Inspeção #${session.id.substring(0,8)}</div><div class="report-stats"><div class="report-stat"><div class="report-stat-value">${session.defects.length}</div><div class="report-stat-label">Defeitos</div></div><div class="report-stat"><div class="report-stat-value">${session.photos.length}</div><div class="report-stat-label">Fotos</div></div></div><div class="control-bar" style="margin-top:12px;padding:0;"><button class="btn-secondary" style="padding:6px 12px;font-size:.85rem;flex:1;" onclick="generateSessionPdf('${session.id}')">📄 PDF</button><button class="btn-outline" style="padding:6px 12px;font-size:.85rem;flex:1;" onclick="deleteSession('${session.id}')">🗑 Deletar</button></div></div>`).join('')}
 
-function updateKMChip(){
-  const now = performance.now();
-  if(now - kmLastUpdate < 500) return;
-  kmLastUpdate = now;
+function generateSessionPdf(sessionId){const session=allSessions.find(s=>s.id===sessionId);if(!session)return;recordingSession=session;recordedDefects=session.defects;recordedPhotos=session.photos;generatePDFReport()}
 
-  if(!lastPos){ kmValue.textContent = '—'; return; }
-  if(!kmDataset.length){ kmValue.textContent = '…'; return; }
+function deleteSession(sessionId){if(!confirm('Deletar cette inspeção?'))return;allSessions=allSessions.filter(s=>s.id!==sessionId);localStorage.setItem('injecaoSessions',JSON.stringify(allSessions));updateDashboard()}
 
-  const n = nearestKM(lastPos.lat, lastPos.lon);
-  if(!n){ kmValue.textContent = '—'; return; }
+document.querySelectorAll('.nav-tab').forEach(btn=>{btn.addEventListener('click',()=>{const tabName=btn.getAttribute('data-tab');document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.getElementById(tabName).classList.add('active');if(tabName==='dashboard')updateDashboard()})});
 
-  const kmStr = (Math.round(n.km * 100) / 100).toFixed(2).replace('.', ',');
-  kmValue.textContent = kmStr;
-}
+el.btnStart.addEventListener('click',startRecording);
+document.getElementById('btnPauseRecord').addEventListener('click',pauseRecording);
+document.getElementById('btnResumeRecord').addEventListener('click',resumeRecording);
+document.getElementById('btnStopRecord').addEventListener('click',stopRecording);
+document.getElementById('btnDefectOff').addEventListener('click',()=>markDefect('off'));
+document.getElementById('btnDefectFlicker').addEventListener('click',()=>markDefect('flicker'));
+document.getElementById('btnDefectBurn').addEventListener('click',()=>markDefect('burn'));
+document.getElementById('btnDefectDamage').addEventListener('click',()=>markDefect('damage'));
+document.getElementById('btnCapturePhoto').addEventListener('click',capturePhoto);
+document.getElementById('btnGenerateReport').addEventListener('click',generatePDFReport);
+document.getElementById('btnExportAll').addEventListener('click',()=>{const json=JSON.stringify(allSessions,null,2);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`inspecoes_${Date.now()}.json`;a.click();URL.revokeObjectURL(url)});
+document.getElementById('btnClearAll').addEventListener('click',()=>{if(!confirm('Deletar TODO o histórico?'))return;if(!confirm('Tem certeza?'))return;allSessions=[];localStorage.removeItem('injecaoSessions');updateDashboard();alert('✅ Histórico limpo')});
 
-function startKMLoop(){
-  if(kmTimer) return;
-  kmTimer = setInterval(updateKMChip, 600);
-}
-
-// ===================== VIDEO INSPECTION MODULE =====================
-const videoPreview = document.getElementById('videoPreview');
-const canvasStream = document.getElementById('canvasStream');
-const canvasCtx = canvasStream.getContext('2d');
-const btnStartRecord = document.getElementById('btnStartRecord');
-const btnPauseRecord = document.getElementById('btnPauseRecord');
-const btnResumeRecord = document.getElementById('btnResumeRecord');
-const btnStopRecord = document.getElementById('btnStopRecord');
-const btnDefectOff = document.getElementById('btnDefectOff');
-const btnDefectFlask = document.getElementById('btnDefectFlask');
-const btnDefectBurn = document.getElementById('btnDefectBurn');
-const btnDefectDmg = document.getElementById('btnDefectDmg');
-const btnDownloadVideo = document.getElementById('btnDownloadVideo');
-const btnNewInspection = document.getElementById('btnNewInspection');
-const defectList = document.getElementById('defectList');
-const defectCount = document.getElementById('defectCount');
-const recordTimer = document.getElementById('recordTimer');
-const timerText = document.getElementById('timerText');
-const brightnessValue = document.getElementById('brightnessValue');
-const lumLeft = document.getElementById('lumLeft');
-const lumCenter = document.getElementById('lumCenter');
-const lumRight = document.getElementById('lumRight');
-const lumLeftStatus = document.getElementById('lumLeftStatus');
-const lumCenterStatus = document.getElementById('lumCenterStatus');
-const lumRightStatus = document.getElementById('lumRightStatus');
-const nearestPoleCard = document.getElementById('nearestPoleCard');
-
-let mediaRecorder = null;
-let recordedChunks = [];
-let isRecording = false;
-let recordStartTime = 0;
-let recordedDefects = [];
-let recordingStream = null;
-let timerInterval = null;
-let canvasDrawInterval = null;
-let videoWidth = 0, videoHeight = 0;
-let currentBrightness = 0;
-let lastBrightnessUpdate = 0;
-
-async function initVideoCapture(){
-  try{
-    recordedChunks = [];
-    recordedDefects = [];
-    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
-    defectCount.textContent = '0';
-    
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    recordingStream = stream;
-    videoPreview.srcObject = stream;
-    
-    videoPreview.onloadedmetadata = () => {
-      videoWidth = videoPreview.videoWidth;
-      videoHeight = videoPreview.videoHeight;
-      canvasStream.width = videoWidth;
-      canvasStream.height = videoHeight;
-      drawCanvasFrame();
-    };
-    
-    btnStartRecord.disabled = false;
-  }catch(e){
-    alert('Erro ao acessar câmera: ' + e.message);
-  }
-}
-
-function drawCanvasFrame(){
-  if(!recordingStream || !videoPreview.srcObject) return;
-  
-  canvasCtx.drawImage(videoPreview, 0, 0, videoWidth, videoHeight);
-  
-  if(isRecording){
-    updateBrightnessDisplay();
-    updateNearestPole();
-    drawOverlay();
-  }
-  
-  if(canvasDrawInterval || isRecording){
-    requestAnimationFrame(drawCanvasFrame);
-  }
-}
-
-function drawOverlay(){
-  const padding = 12;
-  const lineHeight = 20;
-  let y = padding;
-  
-  // Fundo semitransparente para o texto
-  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-  canvasCtx.fillRect(padding, padding, 450, 160);
-  
-  // Borda
-  canvasCtx.strokeStyle = currentBrightness < 30 ? '#ff6b6b' : '#5a64ff';
-  canvasCtx.lineWidth = 2;
-  canvasCtx.strokeRect(padding, padding, 450, 160);
-  
-  // Linha superior colorida
-  canvasCtx.fillStyle = currentBrightness < 30 ? '#ff6b6b' : '#22c55e';
-  canvasCtx.fillRect(padding, padding, 450, 3);
-  
-  // Configurar fonte
-  canvasCtx.font = 'bold 16px monospace';
-  canvasCtx.fillStyle = '#e6ebff';
-  
-  // Timestamp
-  const elapsed = Date.now() - recordStartTime;
-  const timeStr = fmtTime(elapsed);
-  canvasCtx.fillText(`⏱ ${timeStr}`, padding + 12, y + lineHeight);
-  y += lineHeight + 6;
-  
-  // GPS e Precisão
-  if(lastPos){
-    canvasCtx.font = '13px monospace';
-    const accStr = Math.round(lastPos.acc) + 'm';
-    canvasCtx.fillText(`📍 ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`, padding + 12, y + lineHeight);
-    y += lineHeight + 2;
-    canvasCtx.fillStyle = lastPos.acc <= ACC_GREEN ? '#22c55e' : (lastPos.acc <= ACC_YELLOW ? '#f59e0b' : '#ff6b6b');
-    canvasCtx.fillText(`Precisão: ±${accStr}`, padding + 12, y + lineHeight);
-    canvasCtx.fillStyle = '#e6ebff';
-    y += lineHeight + 2;
-  }
-  
-  // KM
-  const kmInfo = nearestKM(lastPos?.lat, lastPos?.lon);
-  if(kmInfo){
-    canvasCtx.font = '13px monospace';
-    canvasCtx.fillText(`KM: ${kmInfo.km.toFixed(2).replace('.', ',')}`, padding + 12, y + lineHeight);
-    y += lineHeight + 6;
-  }
-  
-  // Brilho
-  canvasCtx.font = 'bold 14px monospace';
-  canvasCtx.fillStyle = currentBrightness < 15 ? '#ef4444' : (currentBrightness < 35 ? '#f59e0b' : '#22c55e');
-  canvasCtx.fillText(`Brilho: ${Math.round(currentBrightness)}%`, padding + 12, y + lineHeight);
-  
-  // Defeitos
-  canvasCtx.fillStyle = recordedDefects.length > 0 ? '#fca5a5' : '#b6ffce';
-  canvasCtx.fillText(`DEFEITOS: ${recordedDefects.length}`, padding + 220, y + lineHeight);
-}
-
-function calculateBrightness(){
-  if(videoWidth === 0 || videoHeight === 0) return 0;
-  
-  const imageData = canvasCtx.getImageData(0, 0, videoWidth, videoHeight);
-  const data = imageData.data;
-  let total = 0;
-  
-  for(let i = 0; i < data.length; i += 4){
-    const r = data[i], g = data[i+1], b = data[i+2];
-    total += (r * 0.299 + g * 0.587 + b * 0.114);
-  }
-  
-  return Math.round(total / (videoWidth * videoHeight * 255) * 100);
-}
-
-function calculateZoneBrightness(zoneX){
-  if(videoWidth === 0 || videoHeight === 0) return 0;
-  
-  const zoneWidth = Math.floor(videoWidth / 3);
-  const x = zoneX * zoneWidth;
-  const imageData = canvasCtx.getImageData(x, 0, zoneWidth, videoHeight);
-  const data = imageData.data;
-  let total = 0;
-  
-  for(let i = 0; i < data.length; i += 4){
-    const r = data[i], g = data[i+1], b = data[i+2];
-    total += (r * 0.299 + g * 0.587 + b * 0.114);
-  }
-  
-  return Math.round(total / (zoneWidth * videoHeight * 255) * 100);
-}
-
-function updateBrightnessDisplay(){
-  const now = performance.now();
-  if(now - lastBrightnessUpdate < 300) return;
-  lastBrightnessUpdate = now;
-
-  const left = calculateZoneBrightness(0);
-  const center = calculateZoneBrightness(1);
-  const right = calculateZoneBrightness(2);
-  const avg = Math.round((left + center + right) / 3);
-  
-  currentBrightness = avg;
-  brightnessValue.textContent = avg + '%';
-  
-  const getStatus = (val) => val < 15 ? '🔴 Apagado' : val < 35 ? '🟡 Fraco' : '🟢 OK';
-  const getColor = (val) => val < 15 ? '#ef4444' : val < 35 ? '#f59e0b' : '#22c55e';
-  
-  // Esquerda
-  lumLeft.textContent = left + '%';
-  lumLeft.style.color = getColor(left);
-  lumLeftStatus.textContent = getStatus(left);
-  const leftPercent = Math.min(100, left * 2.5);
-  document.getElementById('lumLeftBar').style.width = leftPercent + '%';
-  
-  // Centro
-  lumCenter.textContent = center + '%';
-  lumCenter.style.color = getColor(center);
-  lumCenterStatus.textContent = getStatus(center);
-  const centerPercent = Math.min(100, center * 2.5);
-  document.getElementById('lumCenterBar').style.width = centerPercent + '%';
-  
-  // Direita
-  lumRight.textContent = right + '%';
-  lumRight.style.color = getColor(right);
-  lumRightStatus.textContent = getStatus(right);
-  const rightPercent = Math.min(100, right * 2.5);
-  document.getElementById('lumRightBar').style.width = rightPercent + '%';
-}
-
-function updateVideoGPS(){
-  if(!lastPos) return;
-  
-  const coordText = `${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`;
-  const accText = Math.round(lastPos.acc) + ' m';
-  
-  document.getElementById('videoGpsCoord').textContent = coordText;
-  document.getElementById('videoGpsAcc').textContent = accText;
-  
-  const kmInfo = nearestKM(lastPos.lat, lastPos.lon);
-  if(kmInfo){
-    document.getElementById('videoKM').textContent = kmInfo.km.toFixed(2).replace('.', ',');
-  }
-}
-
-function updateNearestPole(){
-  if(!lastPos) return;
-  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
-  if(!nearest.length) return;
-  
-  const pole = nearest[0];
-  
-  if(pole.d < 200){
-    nearestPoleCard.style.display = 'block';
-    document.getElementById('nearestPoleIdBadge').textContent = pole.id;
-    document.getElementById('nearestPoleDistBadge').textContent = Math.round(pole.d) + ' m';
-  } else {
-    nearestPoleCard.style.display = 'none';
-  }
-}
-
-function startRecording(){
-  if(!recordingStream) return;
-  
-  recordedChunks = [];
-  recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
-  defectCount.textContent = '0';
-  
-  // Capturar stream do canvas
-  try {
-    const capturedStream = canvasStream.captureStream(30);
-    const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/webm;codecs=vp9';
-    mediaRecorder = new MediaRecorder(capturedStream, { mimeType });
-    
-    mediaRecorder.ondataavailable = (e) => {
-      if(e.data.size > 0) recordedChunks.push(e.data);
-    };
-    
-    mediaRecorder.onstop = () => {
-      const mimeType = mediaRecorder.mimeType || 'video/webm';
-      const blob = new Blob(recordedChunks, { type: mimeType });
-      btnDownloadVideo.disabled = false;
-      btnNewInspection.style.display = 'inline-block';
-    };
-    
-    mediaRecorder.start();
-  } catch(e) {
-    console.error('Erro ao iniciar gravação:', e);
-    return;
-  }
-  isRecording = true;
-  recordStartTime = Date.now();
-  
-  btnStartRecord.classList.add('hidden');
-  btnStartRecord.style.display = 'none';
-  btnPauseRecord.classList.remove('hidden');
-  btnPauseRecord.style.display = 'inline-flex';
-  btnStopRecord.classList.remove('hidden');
-  btnStopRecord.style.display = 'inline-flex';
-  btnDefectOff.disabled = false;
-  btnDefectFlask.disabled = false;
-  btnDefectBurn.disabled = false;
-  btnDefectDmg.disabled = false;
-  recordTimer.classList.remove('hidden');
-  recordTimer.style.display = 'inline-flex';
-  
-  canvasDrawInterval = setInterval(drawCanvasFrame, 33);
-  startTimer();
-  updateVideoGPS();
-  updateNearestPole();
-}
-
-function pauseRecording(){
-  if(mediaRecorder && isRecording){
-    mediaRecorder.pause();
-    isRecording = false;
-    btnPauseRecord.style.display = 'none';
-    btnResumeRecord.classList.remove('hidden');
-    btnResumeRecord.style.display = 'inline-flex';
-    clearInterval(timerInterval);
-  }
-}
-
-function resumeRecording(){
-  if(mediaRecorder && !isRecording){
-    mediaRecorder.resume();
-    isRecording = true;
-    btnResumeRecord.style.display = 'none';
-    btnPauseRecord.classList.remove('hidden');
-    btnPauseRecord.style.display = 'inline-flex';
-    startTimer();
-  }
-}
-
-function stopRecording(){
-  if(mediaRecorder){
-    mediaRecorder.stop();
-    isRecording = false;
-    clearInterval(timerInterval);
-    clearInterval(canvasDrawInterval);
-    
-    btnStartRecord.classList.remove('hidden');
-    btnStartRecord.style.display = 'inline-flex';
-    btnPauseRecord.classList.add('hidden');
-    btnResumeRecord.classList.add('hidden');
-    btnStopRecord.classList.add('hidden');
-    btnDefectOff.disabled = true;
-    btnDefectFlask.disabled = true;
-    btnDefectBurn.disabled = true;
-    btnDefectDmg.disabled = true;
-    recordTimer.classList.add('hidden');
-    
-    recordingStream.getTracks().forEach(track => track.stop());
-    recordingStream = null;
-    videoPreview.style.display = 'none';
-  }
-}
-
-function startTimer(){
-  timerInterval = setInterval(() => {
-    const elapsed = Date.now() - recordStartTime;
-    timerText.textContent = fmtTime(elapsed);
-    document.getElementById('videoTime').textContent = fmtTime(elapsed);
-  }, 100);
-}
-
-function markDefect(type='off'){
-  if(!isRecording || !lastPos) return;
-  
-  const now = Date.now();
-  const elapsed = now - recordStartTime;
-  const typeLabel = {
-    'off': '⚫ Apagado',
-    'flask': '💡 Piscante',
-    'burn': '🔥 Queimado',
-    'dmg': '🚨 Danificado'
-  }[type] || type;
-  
-  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
-  const defect = {
-    timestamp: elapsed,
-    timeStr: fmtTime(elapsed),
-    type: type,
-    typeLabel: typeLabel,
-    lat: lastPos.lat,
-    lon: lastPos.lon,
-    accuracy: lastPos.acc,
-    brightness: currentBrightness,
-    dateTime: nowBR(),
-    km: nearestKM(lastPos.lat, lastPos.lon),
-    poleId: nearest.length > 0 ? nearest[0].id : 'N/A',
-    poleDist: nearest.length > 0 ? Math.round(nearest[0].d) + ' m' : 'N/A'
-  };
-  
-  recordedDefects.push(defect);
-  defectCount.textContent = recordedDefects.length;
-  
-  // Feedback visual
-  const statBox = document.querySelector('.stat-box');
-  if(statBox){
-    statBox.classList.add('alert');
-    setTimeout(() => statBox.classList.remove('alert'), 600);
-  }
-  
-  renderDefectItem(defect, recordedDefects.length - 1);
-}
-
-function renderDefectItem(defect, idx){
-  const li = document.createElement('li');
-  li.className = 'defect-item';
-  
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'defect-time';
-  timeSpan.textContent = defect.typeLabel + ' ' + defect.timeStr;
-  
-  const infoDiv = document.createElement('div');
-  infoDiv.className = 'defect-info';
-  infoDiv.innerHTML = `
-    <span style="font-weight:800">Poste ${defect.poleId} • ${defect.poleDist}</span>
-    <span style="font-size:.8rem">Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)} | KM ${defect.km ? defect.km.km.toFixed(2) : 'N/A'}</span>
-    <span style="color:#fbbf24;font-size:.8rem">Brilho: ${defect.brightness}% | Precisão: ±${Math.round(defect.accuracy)}m</span>
-  `;
-  
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'defect-close';
-  closeBtn.textContent = '✕';
-  closeBtn.onclick = (e) => { e.preventDefault(); removeDefect(idx); };
-  
-  li.appendChild(timeSpan);
-  li.appendChild(infoDiv);
-  li.appendChild(closeBtn);
-  
-  const placeholder = defectList.querySelector('li');
-  if(placeholder && placeholder.textContent.includes('Nenhum')){
-    defectList.innerHTML = '';
-  }
-  defectList.appendChild(li);
-}
-
-function removeDefect(idx){
-  recordedDefects.splice(idx, 1);
-  defectCount.textContent = recordedDefects.length;
-  
-  if(recordedDefects.length === 0){
-    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
-  } else {
-    defectList.innerHTML = '';
-    recordedDefects.forEach((d, i) => renderDefectItem(d, i));
-  }
-}
-
-function downloadVideo(){
-  if(recordedChunks.length === 0) return;
-  const mimeType = mediaRecorder ? mediaRecorder.mimeType : 'video/webm';
-  const blob = new Blob(recordedChunks, { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `inspecao_iluminacao_${Date.now()}.webm`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 100);
-}
-
-function resetInspection(){
-  recordedChunks = [];
-  recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
-  defectCount.textContent = '0';
-  btnNewInspection.style.display = 'none';
-  btnDownloadVideo.disabled = true;
-  nearestPoleCard.style.display = 'none';
-  lumLeft.textContent = '—';
-  lumCenter.textContent = '—';
-  lumRight.textContent = '—';
-  lumLeftStatus.textContent = '—';
-  lumCenterStatus.textContent = '—';
-  lumRightStatus.textContent = '—';
-  brightnessValue.textContent = '—';
-  document.getElementById('videoGpsCoord').textContent = '—';
-  document.getElementById('videoGpsAcc').textContent = '—';
-  document.getElementById('videoKM').textContent = '—';
-  document.getElementById('videoTime').textContent = '00:00';
-  document.getElementById('lumLeftBar').style.width = '0%';
-  document.getElementById('lumCenterBar').style.width = '0%';
-  document.getElementById('lumRightBar').style.width = '0%';
-  initVideoCapture();
-}
-
-btnStartRecord.addEventListener('click', startRecording);
-btnPauseRecord.addEventListener('click', pauseRecording);
-btnResumeRecord.addEventListener('click', resumeRecording);
-btnStopRecord.addEventListener('click', stopRecording);
-btnDefectOff.addEventListener('click', () => markDefect('off'));
-btnDefectFlask.addEventListener('click', () => markDefect('flask'));
-btnDefectBurn.addEventListener('click', () => markDefect('burn'));
-btnDefectDmg.addEventListener('click', () => markDefect('dmg'));
-btnDownloadVideo.addEventListener('click', downloadVideo);
-btnNewInspection.addEventListener('click', resetInspection);
-
-canvasStream.addEventListener('click', () => {
-  if(isRecording) markDefect('off');
-});
-
-(function boot(){
-  loadCSV();
-  startGPS();
-  loadKMCSV();
-  startKMLoop();
-  initVideoCapture();
-})();
+(function boot(){loadCSV();loadKMCSV();startGPS();initVideoCapture();updateDashboard();})();
 </script>
 </body>
 </html>
