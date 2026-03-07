@@ -3,61 +3,64 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ID GPS · Inspeção Noturna com Vídeo</title>
+<title>ID GPS · Inspeção Noturna</title>
 <meta name="theme-color" content="#0b1020" />
 <style>
   :root{
-    --brand:#5a64ff; --brand2:#00c2c9; --bg:#0b1020; --bg-2:#0f1630; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --btn:#22c55e; --focus:#82a0ff; --shadow:0 12px 28px rgba(2,6,23,.55); --radius:14px; --pill:#0c1f17;
-    --km-bg:#ffffff; --km-fg:#0b1020; --km-border:#1e3a8a; --km-band:#1e3a8a;
+    --brand:#5a64ff; --brand2:#00c2c9; --bg:#0b1020; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{background:radial-gradient(1200px 1200px at 20% -20%, #111b3f 0%, transparent 50%) no-repeat,linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
-  header{background:linear-gradient(90deg,var(--brand),var(--brand2));padding:16px 16px;box-shadow:var(--shadow)}
+  body{background:linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
+  
+  header{background:linear-gradient(90deg,var(--brand),var(--brand2));padding:16px;box-shadow:0 12px 28px rgba(2,6,23,.55)}
   .brand{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px}
   .dot-logo{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.95}
   .brand h1{margin:0;font-weight:1000;letter-spacing:.06em;color:#0b1020;font-size:clamp(1rem,1.9vw,1.15rem)}
+  
+  .km-sign{display:inline-flex;align-items:stretch;gap:0;background:#fff;color:#0b1020;border:4px solid #1e3a8a;border-radius:10px;overflow:hidden;margin-left:auto}
+  .km-band{background:#1e3a8a;color:#eaf2ff;padding:6px 10px;display:flex;align-items:center;font-weight:900}
+  .km-body{padding:6px 14px 8px;display:flex;align-items:center;gap:10px;font-family:"Roboto Condensed",Arial,sans-serif;font-weight:900}
+  .km-value{font-size:clamp(1.5rem,3vw,2.2rem);color:#0b1020;min-width:4ch;text-align:right}
 
-  #status{max-width:1100px;margin:14px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 16px}
-  .chip,.badge{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800;box-shadow:var(--shadow)}
+  #status{max-width:1100px;margin:12px auto 0;display:flex;gap:12px;padding:0 16px}
+  .chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800}
   .dot{width:10px;height:10px;border-radius:50%}
   .ok .dot{background:var(--ok)}.ok{color:#bbf7d0}
   .warn .dot{background:var(--warn)}.warn{color:#ffe7b0}
   .bad .dot{background:var(--bad)}.bad{color:#fecaca}
 
-  main{max-width:1100px;margin:14px auto 28px;display:grid;gap:16px;padding:0 16px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .card h2{margin:0 0 12px 0;font-size:clamp(1.05rem,1.8vw,1.1rem);color:#e7ecff}
-  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  button{padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-  button:active{transform:translateY(1px)}button:hover{filter:brightness(1.06)}button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+  main{max-width:1100px;margin:14px auto 28px;padding:0 16px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  .card h2{margin:0 0 12px 0;color:#e7ecff;font-size:1.1rem}
+  
+  button{padding:14px 18px;font-weight:900;border:0;border-radius:12px;color:#0b1020;cursor:pointer;transition:all .08s ease;font-size:1rem}
+  button:active{transform:translateY(1px)}
+  button:hover:not(:disabled){filter:brightness(1.06)}
+  button:disabled{opacity:.55;cursor:not-allowed}
   #btnInspStar{background:var(--brand)}
-  .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
-  .opt select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer}
+  
+  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .opt{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
+  .opt select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0a122a;color:#e6ebff;font-weight:800}
 
-  .km-sign{display:inline-flex;align-items:stretch;gap:0;background:var(--km-bg);color:var(--km-fg);border:4px solid var(--km-border);border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.35);overflow:hidden;margin-left:auto}
-  .km-band{background:var(--km-band);color:#eaf2ff;width:auto;min-width:18px;padding:6px 10px;display:flex;align-items:center;justify-content:center;font-weight:900}
-  .km-body{padding:6px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--km-bg)}
-  .km-value{font-family:"Roboto Condensed","Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:1000;letter-spacing:.02em;font-size:clamp(1.6rem,3.6vw,2.4rem);line-height:1;color:var(--km-fg);min-width:4ch;text-align:right}
-
-  /* ===== INSPEÇÃO MODAL ===== */
-  .insp-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.98);z-index:9999;flex-direction:column}
+  /* ===== MODAL INSPEÇÃO ===== */
+  .insp-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;flex-direction:column}
   .insp-modal.open{display:flex}
-  .insp-modal:fullscreen{background:#000}
+  
   .insp-header{background:linear-gradient(90deg,#1a1f3a,#0f1630);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .insp-modal:fullscreen .insp-header{padding:16px}
-  .insp-header h3{margin:0;color:#e6ebff;font-size:1rem;flex:1}
-  .insp-timer{color:#ff6b6b;font-weight:900;font-family:ui-monospace;font-size:1rem}
+  .insp-header h3{margin:0;color:#e6ebff;flex:1;font-size:1rem}
+  .insp-timer{color:#ff6b6b;font-weight:900;font-family:monospace;font-size:1.1rem}
   .insp-close{width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#ff6b6b;font-weight:900;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center;padding:0}
   .insp-close:hover{background:rgba(239,68,68,.35)}
 
   .insp-video-wrapper{flex:1;position:relative;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  #inspVideo{max-width:100%;max-height:100%;display:block}
-  .record-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+  
+  #inspVideo, #recordCanvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain}
+  #recordCanvas{background:transparent}
 
   .insp-controls{background:linear-gradient(180deg,rgba(15,22,48,.95),rgba(11,16,32,.95));padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .insp-btn{padding:10px 14px;border:0;border-radius:10px;font-weight:900;cursor:pointer;transition:all .15s ease;font-size:.9rem}
+  .insp-btn{padding:10px 14px;border:0;border-radius:10px;font-weight:900;cursor:pointer;font-size:.9rem;transition:all .15s}
   #btnMarkMode{background:rgba(239,68,68,.95);color:#fff}
   #btnMarkMode:hover{background:#ef4444}
   #btnFixMark{background:rgba(34,197,94,.9);color:#fff;display:none}
@@ -65,26 +68,42 @@
   #btnFullscreen{background:rgba(90,100,255,.8);color:#e6ebff}
   #btnPause{background:rgba(245,158,11,.9);color:#fff}
   #btnStop{background:rgba(239,68,68,.95);color:#fff}
-  .insp-status{flex:1;text-align:right;font-size:.9rem;color:#a3b1d1}
-  .insp-status .dot{width:8px;height:8px;background:#22c55e;animation:blink 1s infinite;display:inline-block;margin-right:6px}
+  
+  .insp-status{flex:1;text-align:right;font-size:.9rem;color:#a3b1d1;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .insp-status .dot{width:8px;height:8px;background:#22c55e;animation:blink 1s infinite}
   @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:.3}}
 
-  /* ===== DOWNLOAD MODAL ===== */
+  /* ===== MODAL DOWNLOAD ===== */
   .download-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:10000;align-items:center;justify-content:center}
   .download-modal.open{display:flex}
-  .download-card{background:var(--surface);border:2px solid var(--brand);border-radius:var(--radius);padding:24px;max-width:450px;box-shadow:var(--shadow)}
+  .download-card{background:var(--surface);border:2px solid var(--brand);border-radius:14px;padding:24px;max-width:450px;box-shadow:0 12px 28px rgba(2,6,23,.55)}
   .download-card h3{margin:0 0 8px 0;color:#e6ebff;font-size:1.1rem}
   .download-card p{margin:0 0 16px 0;color:var(--muted);font-size:.9rem;line-height:1.4}
   .download-btn-grid{display:grid;gap:10px}
-  .download-btn{background:var(--btn);color:#0b1020;padding:12px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer;font-size:.95rem;border:0}
+  .download-btn{background:var(--ok);color:#0b1020;padding:12px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer;font-size:.95rem;width:100%}
   .download-btn:hover{filter:brightness(1.1)}
   .download-btn.secondary{background:#1e2647;color:#e6ebff}
   .download-btn.secondary:hover{background:#2a3555}
 
   @media (max-width:600px){
+    header{padding:12px}
     .insp-header{padding:10px 12px}
     .insp-controls{padding:10px 12px;gap:8px}
     .insp-btn{padding:8px 10px;font-size:.8rem}
+  }
+
+  /* Fullscreen fix */
+  #inspVideo:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+  }
+  #inspVideo:-moz-full-screen {
+    width: 100%;
+    height: 100%;
+  }
+  #recordCanvas:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
   }
 </style>
 </head>
@@ -92,43 +111,40 @@
 
 <header>
   <div class="brand">
-    <span class="dot-logo" aria-hidden="true"></span>
+    <span class="dot-logo"></span>
     <h1>ID GPS</h1>
-    <div id="kmChip" class="km-sign" aria-live="polite">
+    <div class="km-sign">
       <div class="km-band">KM</div>
       <div class="km-body">
-        <span id="kmValue" class="km-value">—</span>
+        <div class="km-value" id="kmValue">—</div>
       </div>
     </div>
   </div>
 </header>
 
-<div id="status" role="region" aria-label="Status do sistema">
-  <div id="gpsChip" class="chip bad" aria-live="polite">
+<div id="status">
+  <div id="gpsChip" class="chip bad">
     <span class="dot"></span><span id="gpsText">GPS: aguardando…</span>
   </div>
 </div>
 
 <main>
-  <div class="grid">
-    <section class="card col-12" aria-label="Inspeção Noturna">
-      <h2>🎬 Inspeção Noturna de Iluminação</h2>
-      <p style="color:var(--muted);font-size:.9rem;margin:0 0 12px 0">Grave inspeções noturnas com dados georeferenciados em tempo real. Marque pontos apagados e exporte para o supervisor.</p>
-      <div class="actions">
-        <button id="btnInspStar" disabled>▶ Iniciar Inspeção</button>
-        <label class="opt">
-          <span>Marcador:</span>
-          <select id="markerType">
-            <option value="circle">● Bola</option>
-            <option value="arrow">→ Seta</option>
-          </select>
-        </label>
-      </div>
-    </section>
+  <div class="card">
+    <h2>🎬 Inspeção Noturna de Iluminação</h2>
+    <div class="actions">
+      <button id="btnInspStar" disabled>▶ Iniciar Inspeção</button>
+      <label class="opt">
+        <span>Marcador:</span>
+        <select id="markerType">
+          <option value="circle">● Bola</option>
+          <option value="arrow">→ Seta</option>
+        </select>
+      </label>
+    </div>
   </div>
 </main>
 
-<!-- ===== MODAL INSPEÇÃO ===== -->
+<!-- MODAL INSPEÇÃO -->
 <div id="inspModal" class="insp-modal">
   <div class="insp-header">
     <h3>🎬 Inspeção Noturna</h3>
@@ -138,44 +154,31 @@
 
   <div class="insp-video-wrapper">
     <video id="inspVideo" playsinline autoplay muted></video>
-    <canvas id="recordCanvas" class="record-overlay"></canvas>
-    <div id="overlayContainer" class="record-overlay" style="pointer-events:none;padding:16px;display:flex;flex-direction:column;justify-content:flex-start">
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="background:rgba(0,0,0,.7);border:1px solid #5a64ff;border-radius:8px;padding:10px 14px;font-size:14px;color:#5a64ff;font-weight:900;font-family:monospace">
-          KM: <span id="overlayKM">—</span>
-        </div>
-        <div style="background:rgba(0,0,0,.7);border:1px solid #5a64ff;border-radius:8px;padding:10px 14px;font-size:14px;color:#5a64ff;font-weight:900;font-family:monospace">
-          ID: <span id="overlayID">—</span>
-        </div>
-        <div style="background:rgba(0,0,0,.7);border:1px solid #5a64ff;border-radius:8px;padding:10px 14px;font-size:14px;color:#5a64ff;font-weight:900;font-family:monospace">
-          <span id="overlayTime">—</span>
-        </div>
-      </div>
-    </div>
+    <canvas id="recordCanvas"></canvas>
   </div>
 
   <div class="insp-controls">
-    <button id="btnMarkMode" class="insp-btn">📍 Modo Marcação (OFF)</button>
-    <button id="btnFixMark" class="insp-btn">✓ Fixar Marca</button>
+    <button id="btnMarkMode" class="insp-btn">📍 Marcação (OFF)</button>
+    <button id="btnFixMark" class="insp-btn">✓ Fixar</button>
     <button id="btnFullscreen" class="insp-btn">⛶ Tela Cheia</button>
     <button id="btnPause" class="insp-btn">⏸ Pausar</button>
     <button id="btnStop" class="insp-btn">⏹ Parar</button>
     <div class="insp-status">
-      <span class="dot"></span><span id="inspStatus">Gravando...</span>
+      <span class="dot"></span><span>Gravando</span>
     </div>
   </div>
 </div>
 
-<!-- ===== MODAL DOWNLOAD ===== -->
+<!-- MODAL DOWNLOAD -->
 <div id="downloadModal" class="download-modal">
   <div class="download-card">
-    <h3>✓ Inspeção Finalizada</h3>
-    <p>Vídeo gravado com <strong id="markedCount">0</strong> pontos marcados. Todos os dados foram georeferenciados com precisão GPS.</p>
+    <h3>✓ Inspeção Concluída</h3>
+    <p>Vídeo gravado com <strong id="markedCount">0</strong> pontos. Envie para o supervisor revisar.</p>
     <div class="download-btn-grid">
       <button id="btnDownloadVideo" class="download-btn">⬇️ Baixar Vídeo</button>
-      <button id="btnDownloadJSON" class="download-btn">📋 Baixar Dados (JSON)</button>
-      <button id="btnSendWhatsApp" class="download-btn secondary">💬 Enviar p/ Supervisor</button>
-      <button id="btnNewInsp" class="download-btn secondary">+ Nova Inspeção</button>
+      <button id="btnDownloadJSON" class="download-btn">📋 Dados (JSON)</button>
+      <button id="btnSendWhatsApp" class="download-btn secondary">💬 WhatsApp</button>
+      <button id="btnNewInsp" class="download-btn secondary">+ Nova</button>
     </div>
   </div>
 </div>
@@ -183,11 +186,6 @@
 <script>
 const ACC_GREEN=10, ACC_YELLOW=25;
 let dataset=[], lastPos=null;
-const gpsChip=document.getElementById('gpsChip');
-const gpsText=document.getElementById('gpsText');
-const kmValue=document.getElementById('kmValue');
-const btnInspStar=document.getElementById('btnInspStar');
-const markerTypeSelect=document.getElementById('markerType');
 
 function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
 function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
@@ -196,390 +194,210 @@ function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; 
 function nearestN(lat,lon,n=10){ if(!dataset.length) return []; const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0, Math.min(n,arr.length)); }
 function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+' m'); }
 function nowBR(){ return new Date().toLocaleString('pt-BR'); }
+function fmtTime(ms){ const s = Math.floor(ms / 1000); const m = Math.floor(s / 60); return String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0'); }
 
 function updateGpsChip(){ 
-  if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; } 
+  const gpu = document.getElementById('gpsChip');
+  const txt = document.getElementById('gpsText');
+  if(!lastPos || lastPos.acc==null){ gpu.className='chip bad'; txt.textContent='GPS: buscando…'; return; } 
   const a=Math.round(lastPos.acc); 
-  if(a<=ACC_GREEN){ gpsChip.className='chip ok'; gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; }
-  else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; }
-  else { gpsChip.className='chip bad'; gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
+  if(a<=ACC_GREEN){ gpu.className='chip ok'; txt.textContent=`GPS: OK (${fmtAcc(a)})`; }
+  else if(a<=ACC_YELLOW){ gpu.className='chip warn'; txt.textContent=`GPS: ajustando (${fmtAcc(a)})`; }
+  else { gpu.className='chip bad'; txt.textContent=`GPS: fraco (${fmtAcc(a)})`; }
 }
-function updateButtons(){ btnInspStar.disabled=!lastPos; }
+function updateButtons(){ document.getElementById('btnInspStar').disabled=!lastPos; }
 
 async function loadCSV(){ 
   try{ 
     let resp=await fetch('dados.csv?v='+Date.now(), {cache:'no-store'}); 
-    if(!resp.ok){ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); } 
-    if(!resp.ok){ return; }
+    if(!resp.ok) resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); 
+    if(!resp.ok) return;
     let text=await resp.text(); 
     if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
     const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); 
-    if(lines.length<2){ return; }
+    if(lines.length<2) return;
     const head=lines.shift().split(';');
     const iId=findColumnIndex(head,['id do nox','idnox','id']),
           iLat=findColumnIndex(head,['latitude','lat']),
           iLon=findColumnIndex(head,['longitude','lon','long']);
-    if(iId<0||iLat<0||iLon<0){ return; }
+    if(iId<0||iLat<0||iLon<0) return;
     dataset=lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
                  .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-  }catch(e){ }
+  }catch(e){ console.error(e); }
 }
 
 function startGPS(){
-  if(!('geolocation' in navigator)){ return; }
+  if(!('geolocation' in navigator)) return;
   navigator.geolocation.getCurrentPosition(
     pos=>{
-      lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, spd:pos.coords.speed, head:pos.coords.heading, ts:Date.now() };
+      lastPos={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy,spd:pos.coords.speed,head:pos.coords.heading,ts:Date.now()};
       updateGpsChip(); updateButtons();
       navigator.geolocation.watchPosition(p=>{
-        lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, spd:p.coords.speed, head:p.coords.heading, ts:Date.now() };
+        lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,spd:p.coords.speed,head:p.coords.heading,ts:Date.now()};
         updateGpsChip(); updateButtons();
-      },err=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
+      },err=>{},{enableHighAccuracy:true,maximumAge:0,timeout:15000});
     },
-    err=>{ },
+    err=>{},
     {enableHighAccuracy:true,maximumAge:0,timeout:10000}
   );
 }
 
-// ===== KM CSV =====
 let kmDataset = [];
 async function loadKMCSV(){
   try{
     let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ return; }
+    if(!resp.ok) return;
     let text = await resp.text();
     if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
     const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if(lines.length < 2){ return; }
+    if(lines.length < 2) return;
     const head = lines.shift().split(';');
-    const iKm  = findColumnIndex(head, ['km']);
-    const iLat = findColumnIndex(head, ['lat','latitude']);
-    const iLon = findColumnIndex(head, ['lon','long','longitude']);
-    if(iKm < 0 || iLat < 0 || iLon < 0){ return; }
-    kmDataset = lines.map(l=>{ const r = l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
-                     .filter(p => Number.isFinite(p.km) && Number.isFinite(p.lat) && Number.isFinite(p.lon));
-  }catch(e){ }
+    const iKm=findColumnIndex(head,['km']), iLat=findColumnIndex(head,['lat','latitude']), iLon=findColumnIndex(head,['lon','long','longitude']);
+    if(iKm<0||iLat<0||iLon<0) return;
+    kmDataset=lines.map(l=>{ const r=l.split(';'); return {km:parsePt(r[iKm]),lat:parsePt(r[iLat]),lon:parsePt(r[iLon])}; }).filter(p=>Number.isFinite(p.km)&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  }catch(e){ console.error(e); }
 }
 
-function nearestKM(lat, lon){
-  if(!kmDataset.length || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  let best = null, bd = Infinity;
-  for(const p of kmDataset){
-    const d = hav(lat, lon, p.lat, p.lon);
-    if(d < bd){ bd = d; best = p; }
-  }
-  return best ? { km: best.km, d: bd } : null;
+function nearestKM(lat,lon){
+  if(!kmDataset.length||!Number.isFinite(lat)||!Number.isFinite(lon)) return null;
+  let best=null, bd=Infinity;
+  for(const p of kmDataset){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} }
+  return best?{km:best.km}:null;
 }
 
 function updateKMChip(){
-  if(!lastPos){ kmValue.textContent = '—'; return; }
-  if(!kmDataset.length){ kmValue.textContent = '…'; return; }
-  const n = nearestKM(lastPos.lat, lastPos.lon);
-  if(!n){ kmValue.textContent = '—'; return; }
-  const kmStr = (Math.round(n.km * 100) / 100).toFixed(2).replace('.', ',');
-  kmValue.textContent = kmStr;
+  if(!lastPos){ document.getElementById('kmValue').textContent='—'; return; }
+  const n=nearestKM(lastPos.lat,lastPos.lon);
+  if(!n){ document.getElementById('kmValue').textContent='—'; return; }
+  document.getElementById('kmValue').textContent=(Math.round(n.km*100)/100).toFixed(2).replace('.',',');
 }
 
-// ===== INSPEÇÃO NOTURNA =====
-const inspModal = document.getElementById('inspModal');
-const inspVideo = document.getElementById('inspVideo');
-const recordCanvas = document.getElementById('recordCanvas');
-const overlayContainer = document.getElementById('overlayContainer');
-const inspClose = document.getElementById('inspClose');
-const btnMarkMode = document.getElementById('btnMarkMode');
-const btnFixMark = document.getElementById('btnFixMark');
-const btnFullscreen = document.getElementById('btnFullscreen');
-const btnPause = document.getElementById('btnPause');
-const btnStop = document.getElementById('btnStop');
-const inspTimer = document.getElementById('inspTimer');
-const inspStatus = document.getElementById('inspStatus');
-const downloadModal = document.getElementById('downloadModal');
-const btnDownloadVideo = document.getElementById('btnDownloadVideo');
-const btnDownloadJSON = document.getElementById('btnDownloadJSON');
-const btnSendWhatsApp = document.getElementById('btnSendWhatsApp');
-const btnNewInsp = document.getElementById('btnNewInsp');
-const markedCount = document.getElementById('markedCount');
-const overlayKM = document.getElementById('overlayKM');
-const overlayID = document.getElementById('overlayID');
-const overlayTime = document.getElementById('overlayTime');
+// ===== INSPEÇÃO =====
+const inspModal=document.getElementById('inspModal');
+const inspVideo=document.getElementById('inspVideo');
+const recordCanvas=document.getElementById('recordCanvas');
+const btnInspStar=document.getElementById('btnInspStar');
+const btnMarkMode=document.getElementById('btnMarkMode');
+const btnFixMark=document.getElementById('btnFixMark');
+const btnFullscreen=document.getElementById('btnFullscreen');
+const btnPause=document.getElementById('btnPause');
+const btnStop=document.getElementById('btnStop');
+const inspTimer=document.getElementById('inspTimer');
+const markerTypeSelect=document.getElementById('markerType');
+const downloadModal=document.getElementById('downloadModal');
+const btnDownloadVideo=document.getElementById('btnDownloadVideo');
+const btnDownloadJSON=document.getElementById('btnDownloadJSON');
+const btnSendWhatsApp=document.getElementById('btnSendWhatsApp');
+const btnNewInsp=document.getElementById('btnNewInsp');
+const markedCount=document.getElementById('markedCount');
 
-let mediaRecorder = null;
-let recordedChunks = [];
-let inspStartTime = 0;
-let inspTimerInterval = null;
-let inspDataUpdateInterval = null;
-let inspPaused = false;
-let inspMarkedPoints = [];
-let inspStream = null;
-let canvasCtx = null;
-let markingMode = false;
-let videoUrl = null;
+let mediaRecorder=null, recordedChunks=[], inspStartTime=0, inspTimerInterval=null, inspPaused=false, inspMarkedPoints=[], inspStream=null, markingMode=false, videoUrl=null;
+const canvasCtx=recordCanvas.getContext('2d');
 
-function fmtTime(ms){ const s = Math.floor(ms / 1000); const m = Math.floor(s / 60); return String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0'); }
-
-function drawArrow(ctx, fromX, fromY, toX, toY, headlen=15){
-  const angle = Math.atan2(toY - fromY, toX - fromX);
-  ctx.strokeStyle = '#ff6b6b';
-  ctx.fillStyle = '#ff6b6b';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(fromX, fromY);
-  ctx.lineTo(toX, toY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(toX, toY);
-  ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-  ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+function drawArrow(ctx,fromX,fromY,toX,toY,headlen=18){
+  const angle=Math.atan2(toY-fromY,toX-fromX);
+  ctx.strokeStyle='#ff6b6b';ctx.fillStyle='#ff6b6b';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(fromX,fromY);ctx.lineTo(toX,toY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(toX,toY);
+  ctx.lineTo(toX-headlen*Math.cos(angle-Math.PI/6),toY-headlen*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(toX-headlen*Math.cos(angle+Math.PI/6),toY-headlen*Math.sin(angle+Math.PI/6));
   ctx.fill();
 }
 
-function updateDataOverlay(){
-  if(!lastPos) return;
+function drawDataOverlay(){
+  if(!recordCanvas||!canvasCtx||!lastPos||recordCanvas.width===0) return;
   
-  const km = nearestKM(lastPos.lat, lastPos.lon);
-  overlayKM.textContent = km ? km.km.toFixed(2).replace('.', ',') : '—';
+  const w=recordCanvas.width, h=recordCanvas.height;
+  canvasCtx.clearRect(0,0,w,h);
   
-  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
-  overlayID.textContent = nearest[0]?.id || '—';
-  
-  const now = new Date();
-  const timeStr = now.toLocaleString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  overlayTime.textContent = timeStr;
-  
-  // Desenha na tela via canvas
-  if(!canvasCtx) return;
-  const w = recordCanvas.width, h = recordCanvas.height;
-  canvasCtx.clearRect(0, 0, w, h);
+  // Dados no topo esquerdo
+  canvasCtx.fillStyle='rgba(0,0,0,0.5)';canvasCtx.fillRect(8,8,200,95);
+  canvasCtx.fillStyle='#5a64ff';canvasCtx.font='bold 20px monospace';
+  const km=nearestKM(lastPos.lat,lastPos.lon);
+  canvasCtx.fillText('KM '+(km?km.km.toFixed(2).replace('.',','):'—'),16,32);
+  const nearest=nearestN(lastPos.lat,lastPos.lon,1);
+  canvasCtx.fillText('ID '+(nearest[0]?.id||'—'),16,58);
+  const t=new Date().toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  canvasCtx.font='bold 16px monospace';canvasCtx.fillText(t,16,83);
   
   if(markingMode){
-    const centerX = w / 2, centerY = h / 2;
-    canvasCtx.strokeStyle = '#ff6b6b';
-    canvasCtx.lineWidth = 3;
-    
-    if(markerTypeSelect.value === 'arrow'){
-      drawArrow(canvasCtx, centerX - 40, centerY, centerX + 40, centerY, 15);
-    } else {
-      canvasCtx.beginPath();
-      canvasCtx.arc(centerX, centerY, 20, 0, Math.PI * 2);
-      canvasCtx.strokeStyle = '#ff6b6b';
-      canvasCtx.lineWidth = 3;
-      canvasCtx.stroke();
-    }
-    
-    canvasCtx.fillStyle = '#ff6b6b';
-    canvasCtx.font = 'bold 16px sans-serif';
-    canvasCtx.textAlign = 'center';
-    canvasCtx.fillText('Clique para fixar', centerX, centerY + 60);
+    const cx=w/2, cy=h/2;
+    drawArrow(canvasCtx,cx-40,cy,cx+40,cy,16);
   }
 }
 
 async function openInspModal(){
   inspModal.classList.add('open');
-  inspMarkedPoints = [];
-  recordedChunks = [];
-  inspPaused = false;
-  markingMode = false;
-  btnMarkMode.textContent = '📍 Modo Marcação (OFF)';
-  btnFixMark.style.display = 'none';
-  inspStatus.textContent = 'Gravando...';
+  inspMarkedPoints=[];recordedChunks=[];inspPaused=false;markingMode=false;
+  btnMarkMode.textContent='📍 Marcação (OFF)';btnFixMark.style.display='none';
   
   try{
-    inspStream = await navigator.mediaDevices.getUserMedia({ 
-      video: {facingMode:'environment', width:{ideal:480}, height:{ideal:640}},
-      audio: false 
-    });
+    inspStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:480},height:{ideal:640}},audio:false});
+    inspVideo.srcObject=inspStream;
     
-    inspVideo.srcObject = inspStream;
+    await new Promise(resolve=>{inspVideo.onloadedmetadata=()=>{recordCanvas.width=inspVideo.videoWidth;recordCanvas.height=inspVideo.videoHeight;resolve();};});
     
-    // Aguarda o vídeo carregar para pegar dimensões
-    await new Promise(resolve => {
-      inspVideo.onloadedmetadata = () => {
-        recordCanvas.width = inspVideo.videoWidth;
-        recordCanvas.height = inspVideo.videoHeight;
-        canvasCtx = recordCanvas.getContext('2d');
-        resolve();
-      };
-    });
+    const mediaSource=new MediaSource();
+    mediaRecorder=new MediaRecorder(inspStream,{mimeType:'video/webm;codecs=vp8',videoBitsPerSecond:500000});
+    mediaRecorder.ondataavailable=e=>recordedChunks.push(e.data);
+    mediaRecorder.onstop=handleInspFinish;
     
-    const mimeType = 'video/webm;codecs=vp8';
-    mediaRecorder = new MediaRecorder(inspStream, { mimeType, videoBitsPerSecond: 500000 });
-    
-    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-    mediaRecorder.onstop = handleInspFinish;
-    
-    inspStartTime = Date.now();
+    inspStartTime=Date.now();
     mediaRecorder.start();
-    startTimerUI();
-    startDataUpdateLoop();
+    inspTimerInterval=setInterval(()=>{if(!inspPaused){const e=Date.now()-inspStartTime;inspTimer.textContent=fmtTime(e);}},100);
+    
+    const drawLoop=setInterval(()=>{if(!inspModal.classList.contains('open')){clearInterval(drawLoop);return;}drawDataOverlay();},200);
   }catch(err){
-    console.error('Erro ao acessar câmera:', err);
+    console.error('Erro:',err);
     alert('Não foi possível acessar a câmera.');
     closeInspModal();
   }
 }
 
-function startTimerUI(){
-  inspTimerInterval = setInterval(() => {
-    if(!inspPaused){
-      const elapsed = Date.now() - inspStartTime;
-      inspTimer.textContent = fmtTime(elapsed);
-    }
-  }, 100);
-}
-
-function startDataUpdateLoop(){
-  inspDataUpdateInterval = setInterval(() => {
-    if(!inspModal.classList.contains('open')){ clearInterval(inspDataUpdateInterval); return; }
-    updateDataOverlay();
-  }, 300);
-}
-
 function closeInspModal(){
-  if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  if(inspStream) inspStream.getTracks().forEach(track => track.stop());
-  if(inspTimerInterval) clearInterval(inspTimerInterval);
-  if(inspDataUpdateInterval) clearInterval(inspDataUpdateInterval);
-  inspVideo.srcObject = null;
+  if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+  if(inspStream)inspStream.getTracks().forEach(t=>t.stop());
+  if(inspTimerInterval)clearInterval(inspTimerInterval);
+  inspVideo.srcObject=null;
   inspModal.classList.remove('open');
 }
 
 function addMarkPoint(){
-  if(!lastPos) return;
-  
-  const mark = {
-    time: Date.now() - inspStartTime,
-    timeStr: fmtTime(Date.now() - inspStartTime),
-    lat: lastPos.lat,
-    lon: lastPos.lon,
-    accuracy: lastPos.acc,
-    km: nearestKM(lastPos.lat, lastPos.lon)?.km || null,
-    id: nearestN(lastPos.lat, lastPos.lon, 1)[0]?.id || null,
-    timestamp: nowBR(),
-    markerType: markerTypeSelect.value
-  };
-  
+  if(!lastPos)return;
+  const km=nearestKM(lastPos.lat,lastPos.lon);
+  const nearest=nearestN(lastPos.lat,lastPos.lon,1);
+  const mark={time:Date.now()-inspStartTime,timeStr:fmtTime(Date.now()-inspStartTime),lat:lastPos.lat,lon:lastPos.lon,accuracy:lastPos.acc,km:km?.km||null,id:nearest[0]?.id||null,timestamp:nowBR(),markerType:markerTypeSelect.value};
   inspMarkedPoints.push(mark);
   
-  // Desenha na tela
-  if(canvasCtx){
-    const w = recordCanvas.width, h = recordCanvas.height;
-    const centerX = w / 2, centerY = h / 2;
-    
-    canvasCtx.fillStyle = markerTypeSelect.value === 'arrow' ? '#ff6b6b' : 'rgba(239, 68, 68, 0.9)';
-    
-    if(markerTypeSelect.value === 'arrow'){
-      drawArrow(canvasCtx, centerX - 30, centerY, centerX + 30, centerY, 15);
-    } else {
-      canvasCtx.beginPath();
-      canvasCtx.arc(centerX, centerY, 18, 0, Math.PI * 2);
-      canvasCtx.fill();
-      canvasCtx.strokeStyle = '#ffffff';
-      canvasCtx.lineWidth = 2;
-      canvasCtx.stroke();
-    }
-  }
+  const w=recordCanvas.width, h=recordCanvas.height, cx=w/2, cy=h/2;
+  canvasCtx.fillStyle=markerTypeSelect.value==='arrow'?'#ff6b6b':'rgba(239,68,68,0.9)';
+  if(markerTypeSelect.value==='arrow'){drawArrow(canvasCtx,cx-30,cy,cx+30,cy,16);}else{canvasCtx.beginPath();canvasCtx.arc(cx,cy,18,0,Math.PI*2);canvasCtx.fill();canvasCtx.strokeStyle='#fff';canvasCtx.lineWidth=2;canvasCtx.stroke();}
   
-  markingMode = false;
-  btnMarkMode.textContent = '📍 Modo Marcação (OFF)';
-  btnFixMark.style.display = 'none';
+  markingMode=false;btnMarkMode.textContent='📍 Marcação (OFF)';btnFixMark.style.display='none';
 }
 
 function handleInspFinish(){
   clearInterval(inspTimerInterval);
-  clearInterval(inspDataUpdateInterval);
-  const blob = new Blob(recordedChunks, { type: 'video/webm' });
-  videoUrl = URL.createObjectURL(blob);
-  markedCount.textContent = inspMarkedPoints.length;
+  const blob=new Blob(recordedChunks,{type:'video/webm'});
+  videoUrl=URL.createObjectURL(blob);
+  markedCount.textContent=inspMarkedPoints.length;
   downloadModal.classList.add('open');
 }
 
-btnInspStar.addEventListener('click', openInspModal);
-inspClose.addEventListener('click', closeInspModal);
+btnInspStar.addEventListener('click',openInspModal);
+document.getElementById('inspClose').addEventListener('click',closeInspModal);
+btnMarkMode.addEventListener('click',()=>{markingMode=!markingMode;btnMarkMode.textContent=markingMode?'📍 Marcação (ON)':'📍 Marcação (OFF)';btnFixMark.style.display=markingMode?'inline-flex':'none';});
+btnFixMark.addEventListener('click',addMarkPoint);
+recordCanvas.addEventListener('click',()=>{if(markingMode)addMarkPoint();});
+btnFullscreen.addEventListener('click',()=>{if(recordCanvas.requestFullscreen)recordCanvas.requestFullscreen();else if(recordCanvas.webkitRequestFullscreen)recordCanvas.webkitRequestFullscreen();});
+btnPause.addEventListener('click',()=>{if(inspPaused){mediaRecorder.resume();inspPaused=false;btnPause.textContent='⏸ Pausar';}else{mediaRecorder.pause();inspPaused=true;btnPause.textContent='▶ Retomar';}});
+btnStop.addEventListener('click',closeInspModal);
+btnDownloadVideo.addEventListener('click',()=>{if(!videoUrl)return;const a=document.createElement('a');a.href=videoUrl;a.download=`insp_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;a.click();});
+btnDownloadJSON.addEventListener('click',()=>{const data={timestamp:new Date().toISOString(),duracao:fmtTime(Date.now()-inspStartTime),pos:{lat:lastPos?.lat,lon:lastPos?.lon,acc:lastPos?.acc},pontos:inspMarkedPoints.map((p,i)=>({...p,num:i+1}))};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download=`insp_dados_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;a.click();});
+btnSendWhatsApp.addEventListener('click',()=>{const pts=inspMarkedPoints.map((p,i)=>`#${i+1}: ${p.timeStr} | ID ${p.id||'—'} | KM ${p.km?p.km.toFixed(2):'—'}`).join('\n');const msg=`*Relatório de Inspeção Noturna*\n\n⏱️ Duração: ${fmtTime(Date.now()-inspStartTime)}\n📍 Pontos: ${inspMarkedPoints.length}\n📌 Posição: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)}\n\n*Marcações:*\n${pts}\n\n✓ ID GPS`;window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');});
+btnNewInsp.addEventListener('click',()=>{downloadModal.classList.remove('open');if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=null;});
 
-btnMarkMode.addEventListener('click', () => {
-  markingMode = !markingMode;
-  if(markingMode){
-    btnMarkMode.textContent = '📍 Modo Marcação (ON)';
-    btnFixMark.style.display = 'inline-flex';
-  } else {
-    btnMarkMode.textContent = '📍 Modo Marcação (OFF)';
-    btnFixMark.style.display = 'none';
-  }
-});
-
-btnFixMark.addEventListener('click', addMarkPoint);
-
-recordCanvas.addEventListener('click', () => {
-  if(markingMode) addMarkPoint();
-});
-
-btnFullscreen.addEventListener('click', () => {
-  const wrapper = document.querySelector('.insp-video-wrapper');
-  if(wrapper.requestFullscreen) wrapper.requestFullscreen();
-  else if(wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
-});
-
-btnPause.addEventListener('click', () => {
-  if(inspPaused){
-    mediaRecorder.resume();
-    inspPaused = false;
-    btnPause.textContent = '⏸ Pausar';
-    inspStatus.textContent = 'Gravando...';
-  } else {
-    mediaRecorder.pause();
-    inspPaused = true;
-    btnPause.textContent = '▶ Retomar';
-    inspStatus.textContent = 'Pausado';
-  }
-});
-
-btnStop.addEventListener('click', closeInspModal);
-
-btnDownloadVideo.addEventListener('click', () => {
-  if(!videoUrl) return;
-  const a = document.createElement('a');
-  a.href = videoUrl;
-  a.download = `inspecao_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;
-  a.click();
-});
-
-btnDownloadJSON.addEventListener('click', () => {
-  const data = {
-    timestamp: new Date().toISOString(),
-    duracaoMs: Date.now() - inspStartTime,
-    duraçãoFormatado: fmtTime(Date.now() - inspStartTime),
-    posicaoInicial: { lat: lastPos?.lat, lon: lastPos?.lon, accuracy: lastPos?.acc },
-    pontosMarcados: inspMarkedPoints.map((p, i) => ({numero: i+1, ...p}))
-  };
-  
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  a.download = `inspecao_dados_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
-  a.click();
-});
-
-btnSendWhatsApp.addEventListener('click', () => {
-  const pontos = inspMarkedPoints.map((p, i) => 
-    `#${i+1}: ${p.timeStr} | ID ${p.id} | KM ${p.km ? p.km.toFixed(2) : 'N/A'} | ${p.timestamp}`
-  ).join('\n');
-  
-  const msg = `*🔴 RELATÓRIO DE INSPEÇÃO NOTURNA*\n\n📍 *Duração:* ${fmtTime(Date.now() - inspStartTime)}\n📍 *Total de Pontos:* ${inspMarkedPoints.length}\n📍 *Posição Inicial:* Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)}\n\n*Pontos Marcados:*\n${pontos}\n\n💬 Enviado via ID GPS`;
-  
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
-});
-
-btnNewInsp.addEventListener('click', () => {
-  downloadModal.classList.remove('open');
-  if(videoUrl) URL.revokeObjectURL(videoUrl);
-  videoUrl = null;
-});
-
-(function boot(){
-  loadCSV();
-  startGPS();
-  loadKMCSV();
-  setInterval(updateKMChip, 1000);
-})();
+(function(){loadCSV();startGPS();loadKMCSV();setInterval(updateKMChip,1000);})();
 </script>
 </body>
 </html>
