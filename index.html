@@ -201,9 +201,9 @@
 
     <!-- ============ TAB: VIDEO INSPECTION ============ -->
     <section id="tab-inspection" class="card col-12 hidden" aria-label="Inspeção com Vídeo">
-      <h2>🎥 Inspeção Noturna de Iluminação</h2>
+      <h2>🎥 Inspeção de Postes de Iluminação em Rodovia</h2>
       <p style="color:var(--muted);font-size:.95rem;margin:0 0 12px 0;line-height:1.4">
-        Grave um vídeo com dados de GPS, timestamp e deficiências gravados automaticamente. <strong>Todos os dados ficam no vídeo</strong> - não há exportação separada.
+        Sistema otimizado para inspeção noturna de iluminação em concessão de rodovia. O vídeo registra GPS, tempo, deficiências e análise de luminosidade. <strong>Todos os dados ficam no vídeo</strong>.
       </p>
 
       <!-- Video preview com canvas para overlay -->
@@ -228,30 +228,68 @@
       <!-- Defect marking -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
-          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Marcar Deficiência</h3>
-          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Clique no vídeo ou use o botão para marcar um ponto apagado</p>
-          <button id="btnMarkDefect" class="btn-warn" style="width:100%;background:var(--bad);color:#fff" disabled>📍 Marcar Ponto Apagado</button>
+          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Classificar Defeito</h3>
+          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Selecione o tipo de defeito detectado</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button id="btnDefectOff" class="btn-warn" style="background:var(--bad);color:#fff;padding:10px;font-size:.9rem" disabled>⚫ Apagado</button>
+            <button id="btnDefectFlask" class="btn-warn" style="background:#ff8c00;color:#fff;padding:10px;font-size:.9rem" disabled>💡 Piscante</button>
+            <button id="btnDefectBurn" class="btn-warn" style="background:#ffa500;color:#fff;padding:10px;font-size:.9rem" disabled>🔥 Queimado</button>
+            <button id="btnDefectDmg" class="btn-warn" style="background:#9c27b0;color:#fff;padding:10px;font-size:.9rem" disabled>🚨 Danificado</button>
+          </div>
         </div>
 
         <div>
           <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Status da Gravação</h3>
           <div class="defect-stats" style="gap:8px">
             <div class="stat-box">
-              <div class="stat-label">PONTOS</div>
+              <div class="stat-label">DEFEITOS</div>
               <div class="stat-value" id="defectCount">0</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">PRECISÃO GPS</div>
-              <div class="stat-value" id="gpsAccuracyDisplay" style="font-size:1.1rem">—</div>
+              <div class="stat-label">BRILHO</div>
+              <div class="stat-value" id="brightnessValue" style="font-size:1.1rem">—</div>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Análise de brilho do vídeo -->
+      <div style="margin-top:16px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <h3 style="margin:0 0 12px 0;font-size:.95rem;color:#e7ecff">Análise de Luminosidade em Tempo Real</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Esquerda</div>
+            <div id="lumLeft" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumLeftStatus">—</div>
+          </div>
+          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Centro</div>
+            <div id="lumCenter" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumCenterStatus">—</div>
+          </div>
+          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Direita</div>
+            <div id="lumRight" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumRightStatus">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Poste próximo detectado -->
+      <div id="nearestPoleCard" style="display:none;margin-top:16px;padding:12px;background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(96,165,250,.1));border:1px solid var(--ok);border-radius:10px">
+        <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#b6ffce">⚡ Poste Próximo Detectado</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.9rem">
+          <div><span style="color:var(--muted)">ID Poste:</span> <span id="nearestPoleId" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
+          <div><span style="color:var(--muted)">Distância:</span> <span id="nearestPoleDist" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
+          <div><span style="color:var(--muted)">KM:</span> <span id="nearestPoleKM" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
+          <div><span style="color:var(--muted)">Precisão GPS:</span> <span id="nearestPoleAcc" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
+        </div>
+      </div>
+
       <!-- Defects list -->
-      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Deficiências Marcadas (gravadas no vídeo)</h3>
+      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Histórico de Defeitos Detectados (gravados no vídeo)</h3>
       <ul id="defectList" class="defect-list" aria-live="polite">
-        <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>
+        <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>
       </ul>
 
       <!-- Export section -->
@@ -496,14 +534,24 @@ const btnStartRecord = document.getElementById('btnStartRecord');
 const btnPauseRecord = document.getElementById('btnPauseRecord');
 const btnResumeRecord = document.getElementById('btnResumeRecord');
 const btnStopRecord = document.getElementById('btnStopRecord');
-const btnMarkDefect = document.getElementById('btnMarkDefect');
+const btnDefectOff = document.getElementById('btnDefectOff');
+const btnDefectFlask = document.getElementById('btnDefectFlask');
+const btnDefectBurn = document.getElementById('btnDefectBurn');
+const btnDefectDmg = document.getElementById('btnDefectDmg');
 const btnDownloadVideo = document.getElementById('btnDownloadVideo');
 const btnNewInspection = document.getElementById('btnNewInspection');
 const defectList = document.getElementById('defectList');
 const defectCount = document.getElementById('defectCount');
 const recordTimer = document.getElementById('recordTimer');
 const timerText = document.getElementById('timerText');
-const gpsAccuracyDisplay = document.getElementById('gpsAccuracyDisplay');
+const brightnessValue = document.getElementById('brightnessValue');
+const lumLeft = document.getElementById('lumLeft');
+const lumCenter = document.getElementById('lumCenter');
+const lumRight = document.getElementById('lumRight');
+const lumLeftStatus = document.getElementById('lumLeftStatus');
+const lumCenterStatus = document.getElementById('lumCenterStatus');
+const lumRightStatus = document.getElementById('lumRightStatus');
+const nearestPoleCard = document.getElementById('nearestPoleCard');
 
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -514,11 +562,14 @@ let recordingStream = null;
 let timerInterval = null;
 let canvasDrawInterval = null;
 let videoWidth = 0, videoHeight = 0;
+let currentBrightness = 0;
 
 async function initVideoCapture(){
   try{
     recordedChunks = [];
     recordedDefects = [];
+    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
+    defectCount.textContent = '0';
     
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -547,6 +598,8 @@ function drawCanvasFrame(){
   canvasCtx.drawImage(videoPreview, 0, 0, videoWidth, videoHeight);
   
   if(isRecording){
+    updateBrightnessDisplay();
+    updateNearestPole();
     drawOverlay();
   }
   
@@ -557,20 +610,20 @@ function drawCanvasFrame(){
 
 function drawOverlay(){
   const padding = 12;
-  const lineHeight = 24;
+  const lineHeight = 20;
   let y = padding;
   
   // Fundo semitransparente para o texto
-  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  canvasCtx.fillRect(padding, padding, 380, 160);
+  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  canvasCtx.fillRect(padding, padding, 420, 140);
   
   // Borda
-  canvasCtx.strokeStyle = '#5a64ff';
+  canvasCtx.strokeStyle = currentBrightness < 30 ? '#ef4444' : '#5a64ff';
   canvasCtx.lineWidth = 2;
-  canvasCtx.strokeRect(padding, padding, 380, 160);
+  canvasCtx.strokeRect(padding, padding, 420, 140);
   
   // Configurar fonte
-  canvasCtx.font = 'bold 16px monospace';
+  canvasCtx.font = 'bold 14px monospace';
   canvasCtx.fillStyle = '#e6ebff';
   
   // Timestamp
@@ -581,17 +634,101 @@ function drawOverlay(){
   
   // GPS
   if(lastPos){
-    canvasCtx.font = '14px monospace';
+    canvasCtx.font = '12px monospace';
     const accStr = Math.round(lastPos.acc) + 'm';
     canvasCtx.fillText(`📍 ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`, padding + 8, y + lineHeight);
     y += lineHeight;
-    canvasCtx.fillText(`Precisão: ${accStr}`, padding + 8, y + lineHeight);
+    canvasCtx.fillText(`Precisão: ${accStr} | Brilho: ${Math.round(currentBrightness)}`, padding + 8, y + lineHeight);
   }
   
-  // Defects count
-  canvasCtx.font = 'bold 16px monospace';
-  canvasCtx.fillStyle = recordedDefects.length > 0 ? '#fca5a5' : '#e6ebff';
-  canvasCtx.fillText(`🔴 Pontos: ${recordedDefects.length}`, padding + 8, y + 38);
+  // KM
+  const kmInfo = nearestKM(lastPos?.lat, lastPos?.lon);
+  if(kmInfo){
+    canvasCtx.font = '12px monospace';
+    canvasCtx.fillText(`KM: ${kmInfo.km.toFixed(2)}`, padding + 8, y + 32);
+  }
+  
+  // Defeitos
+  canvasCtx.font = 'bold 14px monospace';
+  canvasCtx.fillStyle = recordedDefects.length > 0 ? '#fca5a5' : '#b6ffce';
+  canvasCtx.fillText(`DEFEITOS: ${recordedDefects.length}`, padding + 8, y + 52);
+}
+
+function calculateBrightness(){
+  if(videoWidth === 0 || videoHeight === 0) return 0;
+  
+  const imageData = canvasCtx.getImageData(0, 0, videoWidth, videoHeight);
+  const data = imageData.data;
+  let total = 0;
+  
+  for(let i = 0; i < data.length; i += 4){
+    const r = data[i], g = data[i+1], b = data[i+2];
+    total += (r * 0.299 + g * 0.587 + b * 0.114);
+  }
+  
+  return Math.round(total / (videoWidth * videoHeight * 255) * 100);
+}
+
+function calculateZoneBrightness(zoneX){
+  if(videoWidth === 0 || videoHeight === 0) return 0;
+  
+  const zoneWidth = Math.floor(videoWidth / 3);
+  const x = zoneX * zoneWidth;
+  const imageData = canvasCtx.getImageData(x, 0, zoneWidth, videoHeight);
+  const data = imageData.data;
+  let total = 0;
+  
+  for(let i = 0; i < data.length; i += 4){
+    const r = data[i], g = data[i+1], b = data[i+2];
+    total += (r * 0.299 + g * 0.587 + b * 0.114);
+  }
+  
+  return Math.round(total / (zoneWidth * videoHeight * 255) * 100);
+}
+
+function updateBrightnessDisplay(){
+  const left = calculateZoneBrightness(0);
+  const center = calculateZoneBrightness(1);
+  const right = calculateZoneBrightness(2);
+  const avg = Math.round((left + center + right) / 3);
+  
+  currentBrightness = avg;
+  brightnessValue.textContent = avg + '%';
+  
+  const getStatus = (val) => val < 15 ? '🔴 Apagado' : val < 35 ? '🟡 Fraco' : '🟢 OK';
+  const getColor = (val) => val < 15 ? '#ef4444' : val < 35 ? '#f59e0b' : '#22c55e';
+  
+  lumLeft.textContent = left + '%';
+  lumLeft.style.color = getColor(left);
+  lumLeftStatus.textContent = getStatus(left);
+  
+  lumCenter.textContent = center + '%';
+  lumCenter.style.color = getColor(center);
+  lumCenterStatus.textContent = getStatus(center);
+  
+  lumRight.textContent = right + '%';
+  lumRight.style.color = getColor(right);
+  lumRightStatus.textContent = getStatus(right);
+}
+
+function updateNearestPole(){
+  if(!lastPos) return;
+  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
+  if(!nearest.length) return;
+  
+  const pole = nearest[0];
+  const km = nearestKM(lastPos.lat, lastPos.lon);
+  
+  document.getElementById('nearestPoleId').textContent = pole.id;
+  document.getElementById('nearestPoleDist').textContent = Math.round(pole.d) + ' m';
+  document.getElementById('nearestPoleKM').textContent = km ? km.km.toFixed(2) : '—';
+  document.getElementById('nearestPoleAcc').textContent = (Math.round(lastPos.acc) || '—') + (lastPos.acc ? ' m' : '');
+  
+  if(pole.d < 200){
+    nearestPoleCard.style.display = 'block';
+  } else {
+    nearestPoleCard.style.display = 'none';
+  }
 }
 
 function startRecording(){
@@ -599,48 +736,31 @@ function startRecording(){
   
   recordedChunks = [];
   recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
+  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
   defectCount.textContent = '0';
   
-  // Combinar canvas stream com áudio silence
-  const canvasStream = canvasStream.captureStream(30);
-  const audioContext = new AudioContext();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-  oscillator.start();
-  
-  const audioTrack = audioContext.createMediaStreamDestination().stream.getAudioTracks()[0];
-  const combinedStream = new MediaStream([...canvasStream.getVideoTracks()]);
-  
-  const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') ? 'video/mp4;codecs=h264' : 'video/webm';
-  mediaRecorder = new MediaRecorder(combinedStream, { mimeType });
-  
-  mediaRecorder.ondataavailable = (e) => {
-    if(e.data.size > 0) recordedChunks.push(e.data);
-  };
-  
-  mediaRecorder.onstop = () => {
-    const mimeType = mediaRecorder.mimeType || 'video/webm';
-    const blob = new Blob(recordedChunks, { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    videoPreview.style.display = 'none';
+  // Capturar stream do canvas
+  try {
+    const capturedStream = canvasStream.captureStream(30);
+    const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/webm;codecs=vp9';
+    mediaRecorder = new MediaRecorder(capturedStream, { mimeType });
     
-    btnDownloadVideo.disabled = false;
-    btnNewInspection.style.display = 'inline-block';
+    mediaRecorder.ondataavailable = (e) => {
+      if(e.data.size > 0) recordedChunks.push(e.data);
+    };
     
-    // Criar link para download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `inspecao_iluminacao_${Date.now()}.webm`;
-    a._blob = blob;
-    a._url = url;
-    btnDownloadVideo.dataset.downloadData = JSON.stringify({url, download: a.download});
-  };
-  
-  mediaRecorder.start();
+    mediaRecorder.onstop = () => {
+      const mimeType = mediaRecorder.mimeType || 'video/webm';
+      const blob = new Blob(recordedChunks, { type: mimeType });
+      btnDownloadVideo.disabled = false;
+      btnNewInspection.style.display = 'inline-block';
+    };
+    
+    mediaRecorder.start();
+  } catch(e) {
+    console.error('Erro ao iniciar gravação:', e);
+    return;
+  }
   isRecording = true;
   recordStartTime = Date.now();
   
@@ -650,13 +770,16 @@ function startRecording(){
   btnPauseRecord.style.display = 'inline-flex';
   btnStopRecord.classList.remove('hidden');
   btnStopRecord.style.display = 'inline-flex';
-  btnMarkDefect.disabled = false;
+  btnDefectOff.disabled = false;
+  btnDefectFlask.disabled = false;
+  btnDefectBurn.disabled = false;
+  btnDefectDmg.disabled = false;
   recordTimer.classList.remove('hidden');
   recordTimer.style.display = 'inline-flex';
   
   canvasDrawInterval = setInterval(drawCanvasFrame, 33);
   startTimer();
-  updateVideoGPS();
+  updateNearestPole();
 }
 
 function pauseRecording(){
@@ -693,7 +816,10 @@ function stopRecording(){
     btnPauseRecord.classList.add('hidden');
     btnResumeRecord.classList.add('hidden');
     btnStopRecord.classList.add('hidden');
-    btnMarkDefect.disabled = true;
+    btnDefectOff.disabled = true;
+    btnDefectFlask.disabled = true;
+    btnDefectBurn.disabled = true;
+    btnDefectDmg.disabled = true;
     recordTimer.classList.add('hidden');
     
     recordingStream.getTracks().forEach(track => track.stop());
@@ -715,19 +841,32 @@ function updateVideoGPS(){
   gpsAccuracyDisplay.textContent = accValue + ' m';
 }
 
-function markDefect(){
+function markDefect(type='off'){
   if(!isRecording || !lastPos) return;
   
   const now = Date.now();
   const elapsed = now - recordStartTime;
+  const typeLabel = {
+    'off': '⚫ Apagado',
+    'flask': '💡 Piscante',
+    'burn': '🔥 Queimado',
+    'dmg': '🚨 Danificado'
+  }[type] || type;
+  
+  const nearest = nearestN(lastPos.lat, lastPos.lon, 1);
   const defect = {
     timestamp: elapsed,
     timeStr: fmtTime(elapsed),
+    type: type,
+    typeLabel: typeLabel,
     lat: lastPos.lat,
     lon: lastPos.lon,
     accuracy: lastPos.acc,
+    brightness: currentBrightness,
     dateTime: nowBR(),
-    km: nearestKM(lastPos.lat, lastPos.lon)
+    km: nearestKM(lastPos.lat, lastPos.lon),
+    poleId: nearest.length > 0 ? nearest[0].id : 'N/A',
+    poleDist: nearest.length > 0 ? Math.round(nearest[0].d) + ' m' : 'N/A'
   };
   
   recordedDefects.push(defect);
@@ -742,13 +881,14 @@ function renderDefectItem(defect, idx){
   
   const timeSpan = document.createElement('span');
   timeSpan.className = 'defect-time';
-  timeSpan.textContent = defect.timeStr;
+  timeSpan.textContent = defect.typeLabel + ' ' + defect.timeStr;
   
   const infoDiv = document.createElement('div');
   infoDiv.className = 'defect-info';
   infoDiv.innerHTML = `
-    <span>Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)}</span>
-    <span style="color:#93c5fd">GPS: ±${Math.round(defect.accuracy)}m · ${defect.km ? 'KM ' + (defect.km.km).toFixed(2) : 'KM N/A'}</span>
+    <span style="font-weight:800">${'Poste ' + defect.poleId + ' (' + defect.poleDist + ')'}</span>
+    <span>Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)} · KM ${defect.km ? defect.km.km.toFixed(2) : 'N/A'}</span>
+    <span style="color:#fbbf24">Brilho: ${defect.brightness}% · Precisão: ±${Math.round(defect.accuracy)}m</span>
   `;
   
   const closeBtn = document.createElement('button');
@@ -761,7 +901,7 @@ function renderDefectItem(defect, idx){
   li.appendChild(closeBtn);
   
   const placeholder = defectList.querySelector('li');
-  if(placeholder && placeholder.textContent.includes('Nenhuma')){
+  if(placeholder && placeholder.textContent.includes('Nenhum')){
     defectList.innerHTML = '';
   }
   defectList.appendChild(li);
@@ -772,7 +912,7 @@ function removeDefect(idx){
   defectCount.textContent = recordedDefects.length;
   
   if(recordedDefects.length === 0){
-    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
+    defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
   } else {
     defectList.innerHTML = '';
     recordedDefects.forEach((d, i) => renderDefectItem(d, i));
@@ -788,16 +928,21 @@ function downloadVideo(){
   a.href = url;
   a.download = `inspecao_iluminacao_${Date.now()}.webm`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 function resetInspection(){
   recordedChunks = [];
   recordedDefects = [];
-  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
+  defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>';
   defectCount.textContent = '0';
   btnNewInspection.style.display = 'none';
   btnDownloadVideo.disabled = true;
+  nearestPoleCard.style.display = 'none';
+  lumLeft.textContent = '—';
+  lumCenter.textContent = '—';
+  lumRight.textContent = '—';
+  brightnessValue.textContent = '—';
   initVideoCapture();
 }
 
@@ -805,12 +950,15 @@ btnStartRecord.addEventListener('click', startRecording);
 btnPauseRecord.addEventListener('click', pauseRecording);
 btnResumeRecord.addEventListener('click', resumeRecording);
 btnStopRecord.addEventListener('click', stopRecording);
-btnMarkDefect.addEventListener('click', markDefect);
+btnDefectOff.addEventListener('click', () => markDefect('off'));
+btnDefectFlask.addEventListener('click', () => markDefect('flask'));
+btnDefectBurn.addEventListener('click', () => markDefect('burn'));
+btnDefectDmg.addEventListener('click', () => markDefect('dmg'));
 btnDownloadVideo.addEventListener('click', downloadVideo);
 btnNewInspection.addEventListener('click', resetInspection);
 
 canvasStream.addEventListener('click', () => {
-  if(isRecording) markDefect();
+  if(isRecording) markDefect('off');
 });
 
 (function boot(){
