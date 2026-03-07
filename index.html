@@ -87,8 +87,9 @@
   }
 
   /* ============ VIDEO INSPECTION STYLES ============ */
-  .video-container{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;border:1px solid var(--border)}
-  #videoPreview{width:100%;height:100%;object-fit:cover}
+  .video-wrapper{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/9;border:1px solid var(--border)}
+  #videoPreview{width:100%;height:100%;object-fit:cover;display:none}
+  #canvasStream{width:100%;height:100%;display:block;background:#000}
   .video-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;border-radius:12px}
   .video-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
   .timer{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1532;border:1px solid var(--border);border-radius:8px;color:#fff;font-family:ui-monospace;font-weight:900;font-size:.98rem}
@@ -100,6 +101,12 @@
   .btn-warn{background:var(--warn);color:#0b1020}
   button:disabled{opacity:.55;cursor:not-allowed}
 
+  .defect-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
+  .stat-box{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .stat-label{font-size:.8rem;color:var(--muted);font-weight:800}
+  .stat-value{font-size:1.5rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin-top:4px}
+  .stat-value sup{font-size:.7em;margin-left:2px}
+
   .defect-list{margin-top:12px;max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:#0b1433}
   .defect-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0c1532;border-radius:8px;margin-bottom:6px;font-size:.9rem;color:#edf2ff;border-left:3px solid var(--bad)}
   .defect-item:last-child{margin-bottom:0}
@@ -107,11 +114,6 @@
   .defect-info{display:grid;gap:2px;flex:1;margin-left:12px}
   .defect-close{background:rgba(239,68,68,.2);color:#fca5a5;border:0;padding:4px 8px;border-radius:6px;cursor:pointer;font-weight:900;font-size:.8rem}
   .defect-close:hover{background:rgba(239,68,68,.4)}
-
-  .stats-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
-  .stat{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-  .stat-label{font-size:.8rem;color:var(--muted);font-weight:800}
-  .stat-value{font-size:1.5rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin-top:4px}
 
   .tab-buttons{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
   .tab-btn{padding:10px 16px;background:#0c1532;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-weight:900;cursor:pointer;transition:all .2s ease}
@@ -154,7 +156,7 @@
       <h2 class="info-title">Informação importante</h2>
     </div>
     <div class="info-text">
-      <span class="strong">Atenção:</span> esta ferramenta utiliza uma <span class="strong">lista interna previamente cadastrada</span> para indicar o <span class="strong">ID mais próximo</span> com base na posição GPS do seu dispositivo. Não há integração em tempo real com sistemas corporativos. Como a base é estática, <span class="strong">podem existir equipamentos já removidos em campo</span> que ainda aparecem na listagem. Este recurso foi idealizado <span class="strong">exclusivamente como apoio</span> à localização em campo e ao envio de <span class="strong">solicitações de acionamento</span> ou <span class="strong">relatórios de inspeção</span>.
+      <span class="strong">Atenção:</span> esta ferramenta utiliza uma <span class="strong">lista interna previamente cadastrada</span> para indicar o <span class="strong">ID mais próximo</span> com base na posição GPS do seu dispositivo. Não há integração em tempo real com sistemas corporativos. Como a base é estática, <span class="strong">podem existir equipamentos já removidos em campo</span> que ainda aparecem na listagem.
     </div>
     <button id="infoClose" class="info-close" aria-label="Fechar">✕</button>
   </div>
@@ -201,12 +203,13 @@
     <section id="tab-inspection" class="card col-12 hidden" aria-label="Inspeção com Vídeo">
       <h2>🎥 Inspeção Noturna de Iluminação</h2>
       <p style="color:var(--muted);font-size:.95rem;margin:0 0 12px 0;line-height:1.4">
-        Grave um vídeo da inspeção e marque os pontos apagados em tempo real. As coordenadas GPS, timestamp e deficiências serão salvos automaticamente para gerar ordem de serviço.
+        Grave um vídeo com dados de GPS, timestamp e deficiências gravados automaticamente. <strong>Todos os dados ficam no vídeo</strong> - não há exportação separada.
       </p>
 
-      <!-- Video preview -->
-      <div class="video-container">
-        <video id="videoPreview" playsinline autoplay muted></video>
+      <!-- Video preview com canvas para overlay -->
+      <div class="video-wrapper">
+        <video id="videoPreview" playsinline autoplay muted style="display:none"></video>
+        <canvas id="canvasStream"></canvas>
       </div>
 
       <!-- Video controls -->
@@ -232,12 +235,12 @@
 
         <div>
           <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Status da Gravação</h3>
-          <div class="stats-box" style="gap:8px">
-            <div class="stat">
+          <div class="defect-stats" style="gap:8px">
+            <div class="stat-box">
               <div class="stat-label">PONTOS</div>
               <div class="stat-value" id="defectCount">0</div>
             </div>
-            <div class="stat">
+            <div class="stat-box">
               <div class="stat-label">PRECISÃO GPS</div>
               <div class="stat-value" id="gpsAccuracyDisplay" style="font-size:1.1rem">—</div>
             </div>
@@ -246,18 +249,17 @@
       </div>
 
       <!-- Defects list -->
-      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Deficiências Marcadas</h3>
+      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Deficiências Marcadas (gravadas no vídeo)</h3>
       <ul id="defectList" class="defect-list" aria-live="polite">
         <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>
       </ul>
 
       <!-- Export section -->
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Exportar Relatório</h3>
+      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Baixar Vídeo com Dados Integrados</h3>
       <div class="actions" style="gap:12px">
-        <button id="btnExportJSON" class="btn-secondary" disabled>📋 Salvar Dados (JSON)</button>
-        <button id="btnDownloadVideo" class="btn-secondary" disabled>🎬 Baixar Vídeo</button>
-        <button id="btnNewInspection" class="btn-primary" style="background:#1e2647;color:#e6ebff;display:none">+ Nova Inspeção</button>
+        <button id="btnDownloadVideo" class="btn-primary" disabled>🎬 Baixar Vídeo Completo</button>
+        <button id="btnNewInspection" class="btn-secondary" style="display:none">+ Nova Inspeção</button>
       </div>
       <div id="exportStatus" style="margin-top:10px;font-size:.9rem;color:var(--muted)"></div>
     </section>
@@ -433,7 +435,7 @@ let kmTimer = null;
 async function loadKMCSV(){
   try{
     let resp = await fetch('SNVBR116SPRJ.csv?v=' + Date.now(), {cache:'no-store'});
-    if(!resp.ok){ console.warn('KM CSV não encontrado (SNVBR116SPRJ.csv)'); return; }
+    if(!resp.ok){ console.warn('KM CSV não encontrado'); return; }
 
     let text = await resp.text();
     if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
@@ -445,10 +447,7 @@ async function loadKMCSV(){
     const iKm  = findColumnIndex(head, ['km']);
     const iLat = findColumnIndex(head, ['lat','latitude']);
     const iLon = findColumnIndex(head, ['lon','long','longitude']);
-    if(iKm < 0 || iLat < 0 || iLon < 0){
-      console.warn('Cabeçalho do KM CSV inválido (esperado: KM/LAT/LONG)');
-      return;
-    }
+    if(iKm < 0 || iLat < 0 || iLon < 0){ console.warn('Cabeçalho do KM CSV inválido'); return; }
 
     kmDataset = lines.map(l=>{
       const r = l.split(';');
@@ -491,12 +490,13 @@ function startKMLoop(){
 
 // ===================== VIDEO INSPECTION MODULE =====================
 const videoPreview = document.getElementById('videoPreview');
+const canvasStream = document.getElementById('canvasStream');
+const canvasCtx = canvasStream.getContext('2d');
 const btnStartRecord = document.getElementById('btnStartRecord');
 const btnPauseRecord = document.getElementById('btnPauseRecord');
 const btnResumeRecord = document.getElementById('btnResumeRecord');
 const btnStopRecord = document.getElementById('btnStopRecord');
 const btnMarkDefect = document.getElementById('btnMarkDefect');
-const btnExportJSON = document.getElementById('btnExportJSON');
 const btnDownloadVideo = document.getElementById('btnDownloadVideo');
 const btnNewInspection = document.getElementById('btnNewInspection');
 const defectList = document.getElementById('defectList');
@@ -512,6 +512,8 @@ let recordStartTime = 0;
 let recordedDefects = [];
 let recordingStream = null;
 let timerInterval = null;
+let canvasDrawInterval = null;
+let videoWidth = 0, videoHeight = 0;
 
 async function initVideoCapture(){
   try{
@@ -524,10 +526,72 @@ async function initVideoCapture(){
     });
     recordingStream = stream;
     videoPreview.srcObject = stream;
+    
+    videoPreview.onloadedmetadata = () => {
+      videoWidth = videoPreview.videoWidth;
+      videoHeight = videoPreview.videoHeight;
+      canvasStream.width = videoWidth;
+      canvasStream.height = videoHeight;
+      drawCanvasFrame();
+    };
+    
     btnStartRecord.disabled = false;
   }catch(e){
     alert('Erro ao acessar câmera: ' + e.message);
   }
+}
+
+function drawCanvasFrame(){
+  if(!recordingStream || !videoPreview.srcObject) return;
+  
+  canvasCtx.drawImage(videoPreview, 0, 0, videoWidth, videoHeight);
+  
+  if(isRecording){
+    drawOverlay();
+  }
+  
+  if(canvasDrawInterval || isRecording){
+    requestAnimationFrame(drawCanvasFrame);
+  }
+}
+
+function drawOverlay(){
+  const padding = 12;
+  const lineHeight = 24;
+  let y = padding;
+  
+  // Fundo semitransparente para o texto
+  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  canvasCtx.fillRect(padding, padding, 380, 160);
+  
+  // Borda
+  canvasCtx.strokeStyle = '#5a64ff';
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeRect(padding, padding, 380, 160);
+  
+  // Configurar fonte
+  canvasCtx.font = 'bold 16px monospace';
+  canvasCtx.fillStyle = '#e6ebff';
+  
+  // Timestamp
+  const elapsed = Date.now() - recordStartTime;
+  const timeStr = fmtTime(elapsed);
+  canvasCtx.fillText(`⏱ ${timeStr}`, padding + 8, y + lineHeight);
+  y += lineHeight + 4;
+  
+  // GPS
+  if(lastPos){
+    canvasCtx.font = '14px monospace';
+    const accStr = Math.round(lastPos.acc) + 'm';
+    canvasCtx.fillText(`📍 ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`, padding + 8, y + lineHeight);
+    y += lineHeight;
+    canvasCtx.fillText(`Precisão: ${accStr}`, padding + 8, y + lineHeight);
+  }
+  
+  // Defects count
+  canvasCtx.font = 'bold 16px monospace';
+  canvasCtx.fillStyle = recordedDefects.length > 0 ? '#fca5a5' : '#e6ebff';
+  canvasCtx.fillText(`🔴 Pontos: ${recordedDefects.length}`, padding + 8, y + 38);
 }
 
 function startRecording(){
@@ -538,8 +602,21 @@ function startRecording(){
   defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
   defectCount.textContent = '0';
   
+  // Combinar canvas stream com áudio silence
+  const canvasStream = canvasStream.captureStream(30);
+  const audioContext = new AudioContext();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  oscillator.start();
+  
+  const audioTrack = audioContext.createMediaStreamDestination().stream.getAudioTracks()[0];
+  const combinedStream = new MediaStream([...canvasStream.getVideoTracks()]);
+  
   const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') ? 'video/mp4;codecs=h264' : 'video/webm';
-  mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
+  mediaRecorder = new MediaRecorder(combinedStream, { mimeType });
   
   mediaRecorder.ondataavailable = (e) => {
     if(e.data.size > 0) recordedChunks.push(e.data);
@@ -549,13 +626,18 @@ function startRecording(){
     const mimeType = mediaRecorder.mimeType || 'video/webm';
     const blob = new Blob(recordedChunks, { type: mimeType });
     const url = URL.createObjectURL(blob);
-    videoPreview.srcObject = null;
-    videoPreview.src = url;
-    videoPreview.controls = true;
+    videoPreview.style.display = 'none';
     
     btnDownloadVideo.disabled = false;
-    btnExportJSON.disabled = false;
     btnNewInspection.style.display = 'inline-block';
+    
+    // Criar link para download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inspecao_iluminacao_${Date.now()}.webm`;
+    a._blob = blob;
+    a._url = url;
+    btnDownloadVideo.dataset.downloadData = JSON.stringify({url, download: a.download});
   };
   
   mediaRecorder.start();
@@ -563,6 +645,7 @@ function startRecording(){
   recordStartTime = Date.now();
   
   btnStartRecord.classList.add('hidden');
+  btnStartRecord.style.display = 'none';
   btnPauseRecord.classList.remove('hidden');
   btnPauseRecord.style.display = 'inline-flex';
   btnStopRecord.classList.remove('hidden');
@@ -571,6 +654,7 @@ function startRecording(){
   recordTimer.classList.remove('hidden');
   recordTimer.style.display = 'inline-flex';
   
+  canvasDrawInterval = setInterval(drawCanvasFrame, 33);
   startTimer();
   updateVideoGPS();
 }
@@ -602,8 +686,10 @@ function stopRecording(){
     mediaRecorder.stop();
     isRecording = false;
     clearInterval(timerInterval);
+    clearInterval(canvasDrawInterval);
     
     btnStartRecord.classList.remove('hidden');
+    btnStartRecord.style.display = 'inline-flex';
     btnPauseRecord.classList.add('hidden');
     btnResumeRecord.classList.add('hidden');
     btnStopRecord.classList.add('hidden');
@@ -612,6 +698,7 @@ function stopRecording(){
     
     recordingStream.getTracks().forEach(track => track.stop());
     recordingStream = null;
+    videoPreview.style.display = 'none';
   }
 }
 
@@ -692,50 +779,6 @@ function removeDefect(idx){
   }
 }
 
-function exportJSON(){
-  if(recordedDefects.length === 0){
-    alert('Nenhuma deficiência marcada para exportar.');
-    return;
-  }
-  
-  const report = {
-    inspeção: {
-      data: nowBR(),
-      tipo: 'Inspeção Noturna - Iluminação Apagada',
-      status: 'Concluída',
-      totalDeficiências: recordedDefects.length,
-      duração: timerText.textContent
-    },
-    posiçãoInicial: {
-      latitude: lastPos.lat,
-      longitude: lastPos.lon,
-      precisão: lastPos.acc + ' m'
-    },
-    deficiências: recordedDefects.map((d, i) => ({
-      id: i + 1,
-      timestamp: d.timestamp + ' ms',
-      horário: d.timeStr,
-      dataHora: d.dateTime,
-      localização: {
-        latitude: d.lat.toFixed(6),
-        longitude: d.lon.toFixed(6),
-        precision: d.accuracy + ' m',
-        mapLink: `https://maps.google.com/?q=${d.lat.toFixed(6)},${d.lon.toFixed(6)}`
-      },
-      quilometro: d.km ? d.km.km.toFixed(2) : 'Não disponível'
-    })),
-    observações: 'Relatório gerado automaticamente pela ferramenta de inspeção com vídeo. Coordenadas coletadas via GPS do dispositivo.'
-  };
-  
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `inspecao_iluminacao_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function downloadVideo(){
   if(recordedChunks.length === 0) return;
   const mimeType = mediaRecorder ? mediaRecorder.mimeType : 'video/webm';
@@ -743,7 +786,7 @@ function downloadVideo(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `inspecao_video_${Date.now()}.mp4`;
+  a.download = `inspecao_iluminacao_${Date.now()}.webm`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -754,10 +797,7 @@ function resetInspection(){
   defectList.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhuma deficiência marcada</li>';
   defectCount.textContent = '0';
   btnNewInspection.style.display = 'none';
-  btnExportJSON.disabled = true;
   btnDownloadVideo.disabled = true;
-  videoPreview.src = '';
-  videoPreview.controls = false;
   initVideoCapture();
 }
 
@@ -766,11 +806,10 @@ btnPauseRecord.addEventListener('click', pauseRecording);
 btnResumeRecord.addEventListener('click', resumeRecording);
 btnStopRecord.addEventListener('click', stopRecording);
 btnMarkDefect.addEventListener('click', markDefect);
-btnExportJSON.addEventListener('click', exportJSON);
 btnDownloadVideo.addEventListener('click', downloadVideo);
 btnNewInspection.addEventListener('click', resetInspection);
 
-videoPreview.addEventListener('click', () => {
+canvasStream.addEventListener('click', () => {
   if(isRecording) markDefect();
 });
 
