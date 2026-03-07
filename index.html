@@ -95,6 +95,9 @@
   .timer{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1532;border:1px solid var(--border);border-radius:8px;color:#fff;font-family:ui-monospace;font-weight:900;font-size:.98rem}
   .timer .dot{width:8px;height:8px;background:#ef4444;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes defectFlash{0%{background:#ef4444;}50%{background:#ff6b6b;}100%{background:#ef4444;}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes fadeIn{from{opacity:0;scale:.95}to{opacity:1;scale:1}}
   .btn-primary{background:var(--btn);color:#0b1020}
   .btn-secondary{background:#1e2647;color:#e6ebff}
   .btn-danger{background:#ef4444;color:#fff}
@@ -103,12 +106,13 @@
 
   .defect-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
   .stat-box{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .stat-box.alert{animation:defectFlash .6s ease-in-out}
   .stat-label{font-size:.8rem;color:var(--muted);font-weight:800}
   .stat-value{font-size:1.5rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin-top:4px}
   .stat-value sup{font-size:.7em;margin-left:2px}
 
   .defect-list{margin-top:12px;max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px;background:#0b1433}
-  .defect-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0c1532;border-radius:8px;margin-bottom:6px;font-size:.9rem;color:#edf2ff;border-left:3px solid var(--bad)}
+  .defect-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0c1532;border-radius:8px;margin-bottom:6px;font-size:.9rem;color:#edf2ff;border-left:3px solid var(--bad);animation:slideIn .3s ease-out}
   .defect-item:last-child{margin-bottom:0}
   .defect-time{font-family:ui-monospace;font-weight:900;color:#fca5a5;min-width:60px}
   .defect-info{display:grid;gap:2px;flex:1;margin-left:12px}
@@ -120,6 +124,31 @@
   .tab-btn.active{background:var(--brand);color:#0b1020;border-color:var(--brand)}
 
   .hidden{display:none !important}
+
+  /* Melhorias para Video Inspection */
+  .brightness-bar{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .brightness-bar-fill{flex:1;height:20px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);border-radius:6px;overflow:hidden;position:relative}
+  .brightness-bar-progress{height:100%;background:rgba(255,255,255,.3);border-radius:6px;transition:width .2s ease;display:flex;align-items:center;justify-content:flex-end;padding:0 6px}
+  .brightness-percent{font-weight:900;font-size:.75rem;color:#000;mix-blend-mode:lighten;font-family:ui-monospace}
+
+  .inspection-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){.inspection-layout{grid-template-columns:1fr}}
+
+  .lum-zone{background:#0c1532;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;position:relative;overflow:hidden}
+  .lum-zone::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(34,197,94,.1),transparent);pointer-events:none}
+  .lum-zone-name{font-size:.85rem;color:var(--muted);margin-bottom:8px;font-weight:800}
+  .lum-zone-value{font-size:2rem;font-weight:1000;color:#e7f0ff;font-family:ui-monospace;margin:6px 0}
+  .lum-zone-status{font-size:.75rem;margin-top:6px;font-weight:700}
+  .lum-zone-status.ok{color:#22c55e}
+  .lum-zone-status.warn{color:#f59e0b}
+  .lum-zone-status.bad{color:#ef4444}
+
+  .nearest-pole-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#b6ffce;font-size:.85rem;font-weight:800;margin-bottom:8px;animation:fadeIn .4s ease-out}
+
+  .video-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;font-size:.85rem}
+  .video-info-item{background:rgba(90,100,255,.08);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px}
+  .video-info-label{color:var(--muted);font-weight:700}
+  .video-info-value{color:#e7f0ff;font-weight:900;font-family:ui-monospace}
 </style>
 </head>
 <body>
@@ -223,78 +252,112 @@
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-
-      <!-- Defect marking -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <!-- Informações em tempo real durante gravação -->
+      <div class="inspection-layout">
+        <!-- Coluna esquerda: Defeitos e Status -->
         <div>
-          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Classificar Defeito</h3>
-          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Selecione o tipo de defeito detectado</p>
+          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">⚠ Classificar Defeito</h3>
+          <p style="margin:0 0 10px 0;font-size:.85rem;color:var(--muted)">Clique durante a gravação para marcar</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <button id="btnDefectOff" class="btn-warn" style="background:var(--bad);color:#fff;padding:10px;font-size:.9rem" disabled>⚫ Apagado</button>
             <button id="btnDefectFlask" class="btn-warn" style="background:#ff8c00;color:#fff;padding:10px;font-size:.9rem" disabled>💡 Piscante</button>
             <button id="btnDefectBurn" class="btn-warn" style="background:#ffa500;color:#fff;padding:10px;font-size:.9rem" disabled>🔥 Queimado</button>
             <button id="btnDefectDmg" class="btn-warn" style="background:#9c27b0;color:#fff;padding:10px;font-size:.9rem" disabled>🚨 Danificado</button>
           </div>
-        </div>
 
-        <div>
-          <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Status da Gravação</h3>
+          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">📊 Status</h3>
           <div class="defect-stats" style="gap:8px">
             <div class="stat-box">
               <div class="stat-label">DEFEITOS</div>
               <div class="stat-value" id="defectCount">0</div>
             </div>
             <div class="stat-box">
-              <div class="stat-label">BRILHO</div>
+              <div class="stat-label">BRILHO AVG</div>
               <div class="stat-value" id="brightnessValue" style="font-size:1.1rem">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna direita: Luminosidade por zona -->
+        <div>
+          <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">💡 Luminosidade em Tempo Real</h3>
+          
+          <div id="nearestPoleCard" style="display:none;margin-bottom:12px">
+            <span class="nearest-pole-badge">⚡ Poste <span id="nearestPoleIdBadge">—</span> | <span id="nearestPoleDistBadge">—</span></span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div class="lum-zone">
+              <div class="lum-zone-name">Esquerda</div>
+              <div class="lum-zone-value" id="lumLeft">—</div>
+              <div class="brightness-bar">
+                <div class="brightness-bar-fill" style="flex:1">
+                  <div class="brightness-bar-progress" id="lumLeftBar" style="width:0%">
+                    <span class="brightness-percent" id="lumLeftPct"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="lum-zone-status" id="lumLeftStatus">—</div>
+            </div>
+
+            <div class="lum-zone">
+              <div class="lum-zone-name">Centro</div>
+              <div class="lum-zone-value" id="lumCenter">—</div>
+              <div class="brightness-bar">
+                <div class="brightness-bar-fill" style="flex:1">
+                  <div class="brightness-bar-progress" id="lumCenterBar" style="width:0%">
+                    <span class="brightness-percent" id="lumCenterPct"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="lum-zone-status" id="lumCenterStatus">—</div>
+            </div>
+
+            <div class="lum-zone">
+              <div class="lum-zone-name">Direita</div>
+              <div class="lum-zone-value" id="lumRight">—</div>
+              <div class="brightness-bar">
+                <div class="brightness-bar-fill" style="flex:1">
+                  <div class="brightness-bar-progress" id="lumRightBar" style="width:0%">
+                    <span class="brightness-percent" id="lumRightPct"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="lum-zone-status" id="lumRightStatus">—</div>
+            </div>
+          </div>
+
+          <!-- Info GPS e KM -->
+          <div class="video-info-grid">
+            <div class="video-info-item">
+              <div class="video-info-label">Coordenadas</div>
+              <div class="video-info-value" id="videoGpsCoord">—</div>
+            </div>
+            <div class="video-info-item">
+              <div class="video-info-label">Precisão</div>
+              <div class="video-info-value" id="videoGpsAcc">—</div>
+            </div>
+            <div class="video-info-item">
+              <div class="video-info-label">KM Atual</div>
+              <div class="video-info-value" id="videoKM">—</div>
+            </div>
+            <div class="video-info-item">
+              <div class="video-info-label">Tempo Gravação</div>
+              <div class="video-info-value" id="videoTime">00:00</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Análise de brilho do vídeo -->
-      <div style="margin-top:16px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
-        <h3 style="margin:0 0 12px 0;font-size:.95rem;color:#e7ecff">Análise de Luminosidade em Tempo Real</h3>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Esquerda</div>
-            <div id="lumLeft" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
-            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumLeftStatus">—</div>
-          </div>
-          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Centro</div>
-            <div id="lumCenter" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
-            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumCenterStatus">—</div>
-          </div>
-          <div style="background:#0c1532;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Direita</div>
-            <div id="lumRight" style="font-size:1.8rem;font-weight:900;color:#ef4444;font-family:ui-monospace">—</div>
-            <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="lumRightStatus">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Poste próximo detectado -->
-      <div id="nearestPoleCard" style="display:none;margin-top:16px;padding:12px;background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(96,165,250,.1));border:1px solid var(--ok);border-radius:10px">
-        <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#b6ffce">⚡ Poste Próximo Detectado</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.9rem">
-          <div><span style="color:var(--muted)">ID Poste:</span> <span id="nearestPoleId" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
-          <div><span style="color:var(--muted)">Distância:</span> <span id="nearestPoleDist" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
-          <div><span style="color:var(--muted)">KM:</span> <span id="nearestPoleKM" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
-          <div><span style="color:var(--muted)">Precisão GPS:</span> <span id="nearestPoleAcc" style="color:var(--fg);font-weight:800;font-family:ui-monospace">—</span></div>
-        </div>
-      </div>
-
       <!-- Defects list -->
-      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">Histórico de Defeitos Detectados (gravados no vídeo)</h3>
+      <h3 style="margin:16px 0 8px 0;font-size:.95rem;color:#e7ecff">📋 Histórico de Defeitos Detectados</h3>
       <ul id="defectList" class="defect-list" aria-live="polite">
         <li style="padding:20px;text-align:center;color:var(--muted);background:transparent;border:none;list-style:none">Nenhum defeito marcado</li>
       </ul>
 
       <!-- Export section -->
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">Baixar Vídeo com Dados Integrados</h3>
+      <h3 style="margin:0 0 8px 0;font-size:.95rem;color:#e7ecff">🎬 Baixar Vídeo</h3>
       <div class="actions" style="gap:12px">
         <button id="btnDownloadVideo" class="btn-primary" disabled>🎬 Baixar Vídeo Completo</button>
         <button id="btnNewInspection" class="btn-secondary" style="display:none">+ Nova Inspeção</button>
@@ -563,6 +626,7 @@ let timerInterval = null;
 let canvasDrawInterval = null;
 let videoWidth = 0, videoHeight = 0;
 let currentBrightness = 0;
+let lastBrightnessUpdate = 0;
 
 async function initVideoCapture(){
   try{
@@ -614,44 +678,56 @@ function drawOverlay(){
   let y = padding;
   
   // Fundo semitransparente para o texto
-  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-  canvasCtx.fillRect(padding, padding, 420, 140);
+  canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  canvasCtx.fillRect(padding, padding, 450, 160);
   
   // Borda
-  canvasCtx.strokeStyle = currentBrightness < 30 ? '#ef4444' : '#5a64ff';
+  canvasCtx.strokeStyle = currentBrightness < 30 ? '#ff6b6b' : '#5a64ff';
   canvasCtx.lineWidth = 2;
-  canvasCtx.strokeRect(padding, padding, 420, 140);
+  canvasCtx.strokeRect(padding, padding, 450, 160);
+  
+  // Linha superior colorida
+  canvasCtx.fillStyle = currentBrightness < 30 ? '#ff6b6b' : '#22c55e';
+  canvasCtx.fillRect(padding, padding, 450, 3);
   
   // Configurar fonte
-  canvasCtx.font = 'bold 14px monospace';
+  canvasCtx.font = 'bold 16px monospace';
   canvasCtx.fillStyle = '#e6ebff';
   
   // Timestamp
   const elapsed = Date.now() - recordStartTime;
   const timeStr = fmtTime(elapsed);
-  canvasCtx.fillText(`⏱ ${timeStr}`, padding + 8, y + lineHeight);
-  y += lineHeight + 4;
+  canvasCtx.fillText(`⏱ ${timeStr}`, padding + 12, y + lineHeight);
+  y += lineHeight + 6;
   
-  // GPS
+  // GPS e Precisão
   if(lastPos){
-    canvasCtx.font = '12px monospace';
+    canvasCtx.font = '13px monospace';
     const accStr = Math.round(lastPos.acc) + 'm';
-    canvasCtx.fillText(`📍 ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`, padding + 8, y + lineHeight);
-    y += lineHeight;
-    canvasCtx.fillText(`Precisão: ${accStr} | Brilho: ${Math.round(currentBrightness)}`, padding + 8, y + lineHeight);
+    canvasCtx.fillText(`📍 ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`, padding + 12, y + lineHeight);
+    y += lineHeight + 2;
+    canvasCtx.fillStyle = lastPos.acc <= ACC_GREEN ? '#22c55e' : (lastPos.acc <= ACC_YELLOW ? '#f59e0b' : '#ff6b6b');
+    canvasCtx.fillText(`Precisão: ±${accStr}`, padding + 12, y + lineHeight);
+    canvasCtx.fillStyle = '#e6ebff';
+    y += lineHeight + 2;
   }
   
   // KM
   const kmInfo = nearestKM(lastPos?.lat, lastPos?.lon);
   if(kmInfo){
-    canvasCtx.font = '12px monospace';
-    canvasCtx.fillText(`KM: ${kmInfo.km.toFixed(2)}`, padding + 8, y + 32);
+    canvasCtx.font = '13px monospace';
+    canvasCtx.fillText(`KM: ${kmInfo.km.toFixed(2).replace('.', ',')}`, padding + 12, y + lineHeight);
+    y += lineHeight + 6;
   }
   
-  // Defeitos
+  // Brilho
   canvasCtx.font = 'bold 14px monospace';
+  canvasCtx.fillStyle = currentBrightness < 15 ? '#ef4444' : (currentBrightness < 35 ? '#f59e0b' : '#22c55e');
+  canvasCtx.fillText(`Brilho: ${Math.round(currentBrightness)}%`, padding + 12, y + lineHeight);
+  
+  // Defeitos
   canvasCtx.fillStyle = recordedDefects.length > 0 ? '#fca5a5' : '#b6ffce';
-  canvasCtx.fillText(`DEFEITOS: ${recordedDefects.length}`, padding + 8, y + 52);
+  canvasCtx.fillText(`DEFEITOS: ${recordedDefects.length}`, padding + 220, y + lineHeight);
 }
 
 function calculateBrightness(){
@@ -687,6 +763,10 @@ function calculateZoneBrightness(zoneX){
 }
 
 function updateBrightnessDisplay(){
+  const now = performance.now();
+  if(now - lastBrightnessUpdate < 300) return;
+  lastBrightnessUpdate = now;
+
   const left = calculateZoneBrightness(0);
   const center = calculateZoneBrightness(1);
   const right = calculateZoneBrightness(2);
@@ -698,17 +778,41 @@ function updateBrightnessDisplay(){
   const getStatus = (val) => val < 15 ? '🔴 Apagado' : val < 35 ? '🟡 Fraco' : '🟢 OK';
   const getColor = (val) => val < 15 ? '#ef4444' : val < 35 ? '#f59e0b' : '#22c55e';
   
+  // Esquerda
   lumLeft.textContent = left + '%';
   lumLeft.style.color = getColor(left);
   lumLeftStatus.textContent = getStatus(left);
+  const leftPercent = Math.min(100, left * 2.5);
+  document.getElementById('lumLeftBar').style.width = leftPercent + '%';
   
+  // Centro
   lumCenter.textContent = center + '%';
   lumCenter.style.color = getColor(center);
   lumCenterStatus.textContent = getStatus(center);
+  const centerPercent = Math.min(100, center * 2.5);
+  document.getElementById('lumCenterBar').style.width = centerPercent + '%';
   
+  // Direita
   lumRight.textContent = right + '%';
   lumRight.style.color = getColor(right);
   lumRightStatus.textContent = getStatus(right);
+  const rightPercent = Math.min(100, right * 2.5);
+  document.getElementById('lumRightBar').style.width = rightPercent + '%';
+}
+
+function updateVideoGPS(){
+  if(!lastPos) return;
+  
+  const coordText = `${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)}`;
+  const accText = Math.round(lastPos.acc) + ' m';
+  
+  document.getElementById('videoGpsCoord').textContent = coordText;
+  document.getElementById('videoGpsAcc').textContent = accText;
+  
+  const kmInfo = nearestKM(lastPos.lat, lastPos.lon);
+  if(kmInfo){
+    document.getElementById('videoKM').textContent = kmInfo.km.toFixed(2).replace('.', ',');
+  }
 }
 
 function updateNearestPole(){
@@ -717,15 +821,11 @@ function updateNearestPole(){
   if(!nearest.length) return;
   
   const pole = nearest[0];
-  const km = nearestKM(lastPos.lat, lastPos.lon);
-  
-  document.getElementById('nearestPoleId').textContent = pole.id;
-  document.getElementById('nearestPoleDist').textContent = Math.round(pole.d) + ' m';
-  document.getElementById('nearestPoleKM').textContent = km ? km.km.toFixed(2) : '—';
-  document.getElementById('nearestPoleAcc').textContent = (Math.round(lastPos.acc) || '—') + (lastPos.acc ? ' m' : '');
   
   if(pole.d < 200){
     nearestPoleCard.style.display = 'block';
+    document.getElementById('nearestPoleIdBadge').textContent = pole.id;
+    document.getElementById('nearestPoleDistBadge').textContent = Math.round(pole.d) + ' m';
   } else {
     nearestPoleCard.style.display = 'none';
   }
@@ -779,6 +879,7 @@ function startRecording(){
   
   canvasDrawInterval = setInterval(drawCanvasFrame, 33);
   startTimer();
+  updateVideoGPS();
   updateNearestPole();
 }
 
@@ -832,13 +933,8 @@ function startTimer(){
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - recordStartTime;
     timerText.textContent = fmtTime(elapsed);
+    document.getElementById('videoTime').textContent = fmtTime(elapsed);
   }, 100);
-}
-
-function updateVideoGPS(){
-  if(!lastPos) return;
-  const accValue = Math.round(lastPos.acc);
-  gpsAccuracyDisplay.textContent = accValue + ' m';
 }
 
 function markDefect(type='off'){
@@ -872,6 +968,13 @@ function markDefect(type='off'){
   recordedDefects.push(defect);
   defectCount.textContent = recordedDefects.length;
   
+  // Feedback visual
+  const statBox = document.querySelector('.stat-box');
+  if(statBox){
+    statBox.classList.add('alert');
+    setTimeout(() => statBox.classList.remove('alert'), 600);
+  }
+  
   renderDefectItem(defect, recordedDefects.length - 1);
 }
 
@@ -886,9 +989,9 @@ function renderDefectItem(defect, idx){
   const infoDiv = document.createElement('div');
   infoDiv.className = 'defect-info';
   infoDiv.innerHTML = `
-    <span style="font-weight:800">${'Poste ' + defect.poleId + ' (' + defect.poleDist + ')'}</span>
-    <span>Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)} · KM ${defect.km ? defect.km.km.toFixed(2) : 'N/A'}</span>
-    <span style="color:#fbbf24">Brilho: ${defect.brightness}% · Precisão: ±${Math.round(defect.accuracy)}m</span>
+    <span style="font-weight:800">Poste ${defect.poleId} • ${defect.poleDist}</span>
+    <span style="font-size:.8rem">Lat: ${defect.lat.toFixed(5)}, Lon: ${defect.lon.toFixed(5)} | KM ${defect.km ? defect.km.km.toFixed(2) : 'N/A'}</span>
+    <span style="color:#fbbf24;font-size:.8rem">Brilho: ${defect.brightness}% | Precisão: ±${Math.round(defect.accuracy)}m</span>
   `;
   
   const closeBtn = document.createElement('button');
@@ -942,7 +1045,17 @@ function resetInspection(){
   lumLeft.textContent = '—';
   lumCenter.textContent = '—';
   lumRight.textContent = '—';
+  lumLeftStatus.textContent = '—';
+  lumCenterStatus.textContent = '—';
+  lumRightStatus.textContent = '—';
   brightnessValue.textContent = '—';
+  document.getElementById('videoGpsCoord').textContent = '—';
+  document.getElementById('videoGpsAcc').textContent = '—';
+  document.getElementById('videoKM').textContent = '—';
+  document.getElementById('videoTime').textContent = '00:00';
+  document.getElementById('lumLeftBar').style.width = '0%';
+  document.getElementById('lumCenterBar').style.width = '0%';
+  document.getElementById('lumRightBar').style.width = '0%';
   initVideoCapture();
 }
 
