@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inspeção Rápida · Vídeo + KM + ID</title>
+<meta name="theme-color" content="#0b1020" />
+<style>
+  :root{
+    --bg:#0b1020; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --surface:#0f1630; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#60a5fa;
+    --shadow:0 10px 26px rgba(0,0,0,.45); --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1020 0%,#0a0e1b 100%);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;line-height:1.35;-webkit-font-smoothing:antialiased}
+  header{position:sticky;top:0;z-index:5;background:linear-gradient(90deg,#5a64ff,#00c2c9);padding:14px 16px;box-shadow:var(--shadow)}
+  h1{margin:0;font-size:clamp(1rem,2vw,1.2rem);letter-spacing:.06em;color:#0b1020;font-weight:1000}
+  main{max-width:1100px;margin:14px auto 24px;padding:0 16px;display:grid;gap:14px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#132042;color:#eaf2ff;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  button:disabled{opacity:.65;cursor:not-allowed}
+  .ok{background:#22c55e;color:#05220f;border-color:rgba(34,197,94,.6)}
+  .stop{background:#ef4444;border-color:#ef4444;color:#fff}
+  .sec{background:#1a244a}
+  .dim{opacity:.85}
+  .kv{display:flex;gap:12px;flex-wrap:wrap;color:#c9d6ff;font-size:.95rem}
+
+  /* Pré-visualização */
+  .previewWrap{ position:relative; border-top-left-radius:14px; border-top-right-radius:14px; overflow:hidden; background:#000; border-bottom:1px solid var(--border); }
+  #previewCanvas{ width:100%; height:auto; display:block; background:#000; }
+  .overlayMini{ position:absolute; top:8px; left:8px; background:rgba(0,0,0,.55); color:#fff; padding:6px 8px; border-radius:8px; font-size:12px; }
+
+  .hint{font-size:.9rem;color:#b7c6ff}
+</style>
+</head>
+<body>
+<header><h1>Inspeção Rápida · Vídeo + KM + ID</h1></header>
+<main>
+  <section class="card">
+    <div class="previewWrap">
+      <canvas id="previewCanvas" width="1280" height="720"></canvas>
+      <div class="overlayMini" id="statusOverlay">Pré-visualização</div>
+    </div>
+    <div class="pad">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button id="btnStart" class="ok">Iniciar (Câmera)</button>
+          <button id="btnMark" class="sec" disabled>Marcar POSTE APAGADO (E)</button>
+          <button id="btnExport" class="sec" disabled>Exportar eventos</button>
+          <button id="btnTorch" class="sec" disabled>Lanterna</button>
+          <button id="btnStop" class="stop" disabled>Parar & Salvar</button>
+        </div>
+        <span class="dim">Codec: <strong id="codecInfo">—</strong></span>
+      </div>
+      <div class="kv" style="margin-top:10px">
+        <span>GPS: <strong id="gpsInfo">—</strong></span>
+        <span>Vel: <strong id="velInfo">—</strong></span>
+        <span>KM aprox: <strong id="kmInfo">0.000</strong></span>
+        <span>Eventos: <strong id="evtCount">0</strong></span>
+      </div>
+      <p class="hint" style="margin-top:8px">Dica: deixe o celular fixo. Pressione <strong>E</strong> para marcar POSTE APAGADO durante a gravação. O vídeo sai com <strong>KM</strong>, <strong>ID</strong>, <strong>GPS</strong> e <strong>Velocidade</strong> estampados.</p>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h3 style="margin:0 0 10px">Fontes de dados (coloque os CSVs na mesma pasta)</h3>
+    <ul style="margin:0 0 4px 18px; line-height:1.4">
+      <li><code>dados.csv</code> — IDs NOX com colunas <em>id;latitude;longitude</em> (ou equivalentes)</li>
+      <li><code>SNVBR116SPRJ.csv</code> — pontos de KM com colunas <em>km;lat;lon</em></li>
+    </ul>
+    <small class="dim">Se o cabeçalho variar, o app tenta reconhecer nomes comuns (lat/latitude, lon/long/longitude).</small>
+  </section>
+</main>
+
+<script>
+/*********** Estado ***********/
+let dataset=[];          // IDs: {id,lat,lon}
+let kmDataset=[];        // KM:  {km,lat,lon}
+let lastPos=null;        // {lat,lon,acc,spd,head,ts}
+let lastCompute=0;       // throttle p/ nearest
+let eventos=[];          // eventos marcados
+
+/*********** UI ***********/
+const gpsInfo=document.getElementById('gpsInfo');
+const velInfo=document.getElementById('velInfo');
+const kmInfo=document.getElementById('kmInfo');
+const evtCount=document.getElementById('evtCount');
+const statusOverlay=document.getElementById('statusOverlay');
+
+/*********** Helpers ***********/
+function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
+function findColumnIndex(headers, candidates){ const map=headers.map(h=>normalizeStr(h)); for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; } for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } } return -1; }
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
+function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
+function kmh(ms){ if (ms==null || isNaN(ms)) return null; return ms*3.6; }
+
+function nearestID(lat,lon){ if(!dataset.length) return null; let best=null,bd=1e12; for(const p of dataset){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best?{...best,d:bd}:null; }
+function nearestKM(lat,lon){ if(!kmDataset.length) return null; let best=null,bd=1e12; for(const p of kmDataset){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best?{...best,d:bd}:null; }
+
+/*********** Dados ***********/
+async function loadIDs(){
+  try{
+    let resp=await fetch('dados.csv?v='+Date.now(),{cache:'no-store'});
+    if(!resp.ok){ try{ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(),{cache:'no-store'}); }catch(_){} }
+    if(!resp || !resp.ok){ console.warn('IDs CSV ausente'); return; }
+    let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2) return;
+    const head=lines.shift().split(';');
+    const iId=findColumnIndex(head,['id do nox','idnox','id']);
+    const iLat=findColumnIndex(head,['latitude','lat']);
+    const iLon=findColumnIndex(head,['longitude','lon','long']);
+    if(iId<0||iLat<0||iLon<0) return;
+    dataset = lines.map(l=>{ const r=l.split(';'); return { id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) }; })
+                   .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  }catch(e){ console.warn('Falha IDs',e); }
+}
+async function loadKMs(){
+  try{
+    const resp=await fetch('SNVBR116SPRJ.csv?v='+Date.now(),{cache:'no-store'});
+    if(!resp.ok){ console.warn('KM CSV ausente'); return; }
+    let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2) return;
+    const head=lines.shift().split(';');
+    const iKm=findColumnIndex(head,['km']);
+    const iLat=findColumnIndex(head,['lat','latitude']);
+    const iLon=findColumnIndex(head,['lon','long','longitude']);
+    if(iKm<0||iLat<0||iLon<0) return;
+    kmDataset = lines.map(l=>{ const r=l.split(';'); return { km:parsePt(r[iKm]), lat:parsePt(r[iLat]), lon:parsePt(r[iLon]) } })
+                     .filter(p=>Number.isFinite(p.km)&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  }catch(e){ console.warn('Falha KM',e); }
+}
+
+/*********** Vídeo + Overlay ***********/
+let recState={ mode:'idle', stream:null, recorder:null, chunks:[], canvas:null, ctx:null, videoEl:null, drawHandle:null, trackVideo:null, torchOn:false, watchId:null, lastGps:null, kmTotal:0, lastPoint:null, mime:null };
+let toastEvent=null; // {text, untilTs}
+
+function getSupportedMime(){ const prefs=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=h264','video/mp4']; for(const t of prefs){ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; } return 'video/webm'; }
+
+async function startRecording(){
+  if(!('MediaRecorder' in window) || !HTMLCanvasElement.prototype.captureStream){ alert('Navegador não suporta gravação com overlay.'); return; }
+  if(recState.mode==='recording') return;
+  eventos=[]; evtCount.textContent='0';
+  recState.kmTotal=0; recState.lastPoint=null; recState.lastGps=null; statusOverlay.textContent='Inicializando...';
+  const canvas=document.getElementById('previewCanvas'); const ctx=canvas.getContext('2d'); recState.canvas=canvas; recState.ctx=ctx;
+
+  // Câmera traseira com fallback
+  let stream=null, trackVideo=null;
+  try{
+    const c1={ video:{ facingMode:{exact:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:true };
+    const c2={ video:{ facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }, audio:true };
+    try{ stream=await navigator.mediaDevices.getUserMedia(c1);}catch(e){ stream=await navigator.mediaDevices.getUserMedia(c2);} trackVideo=stream.getVideoTracks()[0];
+  }catch(err){ alert('Não foi possível iniciar: '+err.message); return; }
+  recState.stream=stream; recState.trackVideo=trackVideo; document.getElementById('btnTorch').disabled=!(trackVideo && trackVideo.getCapabilities && trackVideo.getCapabilities().torch);
+
+  const video=document.createElement('video'); video.playsInline=true; video.srcObject=stream; await video.play(); recState.videoEl=video;
+  const st=trackVideo.getSettings?trackVideo.getSettings():{}; let vw=st.width||1280, vh=st.height||720; const W=1280, H=Math.round(W*(vh/vw || (720/1280))); canvas.width=W; canvas.height=H;
+
+  // GPS
+  if('geolocation' in navigator){ recState.watchId = navigator.geolocation.watchPosition(onGps, ()=>{}, { enableHighAccuracy:true, maximumAge:800, timeout:8000 }); }
+
+  function draw(){
+    const {ctx,canvas} = recState; if(!ctx) return;
+    try{ ctx.drawImage(video,0,0,canvas.width,canvas.height);}catch(e){}
+    const pad=18; ctx.save();
+    // TOP BAR: KM + Hora
+    const TOP=130; ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,canvas.width,TOP);
+    ctx.fillStyle='#fff'; ctx.textBaseline='middle';
+    ctx.font='800 28px system-ui,Segoe UI,Roboto'; ctx.textAlign='left'; ctx.fillText('INSPEÇÃO RÁPIDA', pad, 30);
+
+    let kmStrTop='—'; if(lastPos){ const nk=nearestKM(lastPos.lat,lastPos.lon); if(nk && Number.isFinite(nk.km)) kmStrTop=nk.km.toFixed(3)+' km'; }
+    ctx.textAlign='center'; ctx.font='900 56px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#7CFF9E'; ctx.fillText('KM: '+kmStrTop, canvas.width/2, 70);
+    ctx.textAlign='right'; ctx.font='800 26px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#E6F0FF'; ctx.fillText(new Date().toLocaleString(), canvas.width-pad, 30);
+
+    // BOTTOM BAR: ID + GPS + Vel
+    const BOT=130; ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,canvas.height-BOT,canvas.width,BOT);
+    let idStr='—'; if(lastPos && dataset.length){ const n=nearestID(lastPos.lat,lastPos.lon); if(n) idStr=`${n.id} · ${n.d<1000?Math.round(n.d)+' m':(n.d/1000).toFixed(2)+' km'}`; }
+    ctx.textAlign='left'; ctx.font='900 50px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#eaffee'; ctx.fillText('ID PRÓXIMO:', pad, canvas.height-BOT+48);
+    ctx.font='900 60px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#7CFF9E'; ctx.fillText(idStr, pad, canvas.height-BOT+106);
+
+    const g=recState.lastGps; const acc=g?.accuracy; const spd=g?.speed!=null? kmh(g.speed):null; const spdStr=spd!=null?(Math.round(spd)+' km/h'):'—';
+    const gpsStr=g? `${g.latitude.toFixed(5)}, ${g.longitude.toFixed(5)} (±${acc?Math.round(acc):'—'} m)`:'GPS —';
+    ctx.textAlign='right'; ctx.font='800 40px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#E6F0FF'; ctx.fillText('GPS:', canvas.width-pad, canvas.height-BOT+44);
+    ctx.font='900 42px ui-monospace,Consolas,Menlo,monospace'; ctx.fillStyle='#BBD7FF'; ctx.fillText(gpsStr, canvas.width-pad, canvas.height-BOT+90);
+    ctx.font='800 30px system-ui,Segoe UI,Roboto'; ctx.fillStyle='#FFE08A'; ctx.fillText('Vel: '+spdStr, canvas.width-pad, canvas.height-BOT+122);
+
+    // Toast de evento
+    const nowT=performance.now(); if(toastEvent && nowT<toastEvent.untilTs){ const txt=toastEvent.text; ctx.textAlign='center'; ctx.font='900 52px system-ui,Segoe UI,Roboto'; ctx.fillStyle='rgba(239,68,68,0.92)'; const boxH=86; const y=Math.round(canvas.height/2-boxH/2); ctx.fillRect(Math.round(canvas.width*.1), y, Math.round(canvas.width*.8), boxH); ctx.fillStyle='#fff'; ctx.fillText(txt, canvas.width/2, canvas.height/2); }
+
+    ctx.restore();
+    recState.drawHandle=requestAnimationFrame(draw);
+  }
+  draw();
+
+  // Gravação (bitrates modestos p/ agilidade)
+  const fps=30; const outStream=canvas.captureStream(fps); const aud=stream.getAudioTracks(); if(aud && aud[0]) outStream.addTrack(aud[0]);
+  const mime=getSupportedMime(); recState.mime=mime; document.getElementById('codecInfo').textContent=mime;
+  const mr=new MediaRecorder(outStream,{ mimeType:mime, videoBitsPerSecond: 3_000_000 }); recState.recorder=mr; recState.chunks=[]; mr.ondataavailable=(e)=>{ if(e.data && e.data.size>0) recState.chunks.push(e.data); }; mr.onstop=handleSave;
+  mr.start(800); // fragmentos curtos
+
+  // Enable UI
+  recState.mode='recording';
+  statusOverlay.textContent='Gravando...';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnStop').disabled=false;
+  document.getElementById('btnMark').disabled=false;
+  document.getElementById('btnExport').disabled=false;
+}
+
+function onGps(pos){
+  const c=pos.coords; const point={ latitude:c.latitude, longitude:c.longitude, accuracy:c.accuracy, speed:c.speed };
+  recState.lastGps=point; lastPos={ lat:c.latitude, lon:c.longitude, acc:c.accuracy, spd:c.speed, ts:Date.now() };
+  gpsInfo.textContent=`${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)} (±${Math.round(c.accuracy)}m)`;
+  const v=kmh(c.speed); velInfo.textContent= v!=null? (Math.round(v)+' km/h'):'—';
+  if(recState.lastPoint){ const okAcc=(recState.lastPoint.accuracy??50)<=50 && (c.accuracy??50)<=50; const d=hav(recState.lastPoint.latitude, recState.lastPoint.longitude, c.latitude, c.longitude)/1000; if(okAcc && d<0.3){ recState.kmTotal+=d; kmInfo.textContent=recState.kmTotal.toFixed(3); } }
+  recState.lastPoint=point;
+  // Throttle cálculos pesados (ID/KM são no draw, mas dependem de lastPos)
+  lastCompute=performance.now();
+}
+
+async function stopRecording(){ if(recState.mode!=='recording') return; statusOverlay.textContent='Finalizando...'; try{ recState.recorder.stop(); }catch(_){} if(recState.drawHandle) cancelAnimationFrame(recState.drawHandle); if(recState.watchId!=null){ try{ navigator.geolocation.clearWatch(recState.watchId);}catch(_){} recState.watchId=null; } if(recState.stream){ try{ recState.stream.getTracks().forEach(t=>t.stop()); }catch(_){} } recState.mode='idle'; document.getElementById('btnStart').disabled=false; document.getElementById('btnStop').disabled=true; document.getElementById('btnMark').disabled=true; }
+
+async function handleSave(){ const blob=new Blob(recState.chunks, { type: recState.mime || 'video/webm' }); const ts=new Date().toISOString().replace(/[:.]/g,'-'); const filename=`INSP_RAPIDA_${ts}.webm`; try{ const file=new File([blob], filename, { type: blob.type }); if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'Inspeção Rápida', text:`Eventos: ${eventos.length}` }); statusOverlay.textContent='Compartilhado'; return; } }catch(e){ console.warn('Share falhou',e); } if(window.showSaveFilePicker){ try{ const handle=await showSaveFilePicker({ suggestedName: filename, types:[{ description:'Vídeo', accept: { [blob.type]: ['.webm','.mp4'] } }] }); const writable=await handle.createWritable(); await writable.write(blob); await writable.close(); statusOverlay.textContent='Arquivo salvo'; return; }catch(e){ console.warn('Save picker cancelado',e); } } const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); statusOverlay.textContent='Download iniciado'; }
+
+function toggleTorch(){ try{ const t=recState.trackVideo; if(!t) return; const cap=t.getCapabilities && t.getCapabilities(); if(!cap || !cap.torch) return; recState.torchOn=!recState.torchOn; t.applyConstraints({ advanced:[{ torch: recState.torchOn }] }); }catch(e){ console.warn('Torch não suportado',e); } }
+
+function markEvent(){ if(recState.mode!=='recording') return; const now=new Date(); const tsIso=now.toISOString(); const tsLocal=now.toLocaleString(); let lat=null,lon=null,acc=null; if(recState.lastGps){ lat=recState.lastGps.latitude; lon=recState.lastGps.longitude; acc=recState.lastGps.accuracy; } else if (lastPos){ lat=lastPos.lat; lon=lastPos.lon; acc=lastPos.acc; } let km=null; if(lat!=null && lon!=null){ const nk=nearestKM(lat,lon); if(nk && Number.isFinite(nk.km)) km=nk.km; } let id=null,distId=null; if(lat!=null && lon!=null && dataset.length){ const n=nearestID(lat,lon); if(n){ id=n.id; distId=n.d; } } const ev={ tipo:'POSTE_APAGADO', tsIso, tsLocal, lat, lon, acc, km, id, distId }; eventos.push(ev); evtCount.textContent=String(eventos.length); const kmTxt = (km!=null && Number.isFinite(km)) ? km.toFixed(3)+' km' : 'KM —'; toastEvent={ text:`POSTE APAGADO • ${(id||'ID —')} • ${kmTxt}`, untilTs: performance.now()+2600 } }
+
+function exportEventos(){ if(!eventos.length){ alert('Nenhum evento marcado.'); return; } const ts=new Date().toISOString().replace(/[:.]/g,'-'); const header=['tipo','tsIso','tsLocal','lat','lon','acc','km','id','distId']; const rows=eventos.map(e=>[e.tipo,e.tsIso,e.tsLocal,e.lat,e.lon,e.acc,e.km,e.id,e.distId].map(v=> v==null?'':String(v).replace(/"/g,'""'))); const csv=header.join(';')+'\n'+rows.map(r=> r.map(v=> /[;"\n]/.test(v)?`"${v}"`:v).join(';')).join('\n'); const blobCsv=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blobCsv); a.download=`eventos_insp_${ts}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); }
+
+/*********** Controles ***********/
+const btnStart=document.getElementById('btnStart');
+const btnStop=document.getElementById('btnStop');
+const btnMark=document.getElementById('btnMark');
+const btnExport=document.getElementById('btnExport');
+const btnTorch=document.getElementById('btnTorch');
+tnStart.addEventListener('click', startRecording);
+btnStop.addEventListener('click', stopRecording);
+btnMark.addEventListener('click', markEvent);
+btnExport.addEventListener('click', exportEventos);
+btnTorch.addEventListener('click', toggleTorch);
+// Atalho teclado
+window.addEventListener('keydown', (e)=>{ if(e.key==='e' || e.key==='E') markEvent(); });
+
+/*********** Boot ***********/
+(async function boot(){ await Promise.all([loadIDs(), loadKMs()]); })();
+</script>
+</body>
+</html>
