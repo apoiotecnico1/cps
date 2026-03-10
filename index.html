@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ID GPS · IDs Próximos</title>
+<meta name="theme-color" content="#0b1020" />
+<style>
+  :root{
+    /* Paleta DARK (anil/índigo com neutros profundos) */
+    --brand:#5a64ff;     /* anil vivo para acentos/foco */
+    --brand2:#00c2c9;    /* ciano/verde-água de apoio */
+    --bg:#0b1020;        /* fundo principal */
+    --bg-2:#0f1630;      /* superfície inferior */
+    --fg:#e6ebff;        /* texto principal */
+    --muted:#a3b1d1;     /* texto secundário */
+    --border:#1e2647;    /* divisórias */
+    --surface:#0f1630;   /* cartões */
+    --ok:#22c55e;        /* estados de GPS */
+    --warn:#f59e0b;
+    --bad:#ef4444;
+    --btn:#22c55e;       /* botão principal (Whats) */
+    --focus:#82a0ff;     /* foco acessível */
+    --shadow:0 12px 28px rgba(2,6,23,.55);
+    --radius:14px;
+    --pill:#0c1f17;      /* pill do mais próximo */
+  }
+
+  /* Reset & base */
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 1200px at 20% -20%, #111b3f 0%, transparent 50%) no-repeat,
+      linear-gradient(180deg, #0b1020 0%, #0a0e1b 100%);
+    color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+    line-height:1.35; -webkit-font-smoothing:antialiased;
+  }
+
+  /* Header minimal — apenas “ID GPS” */
+  header{
+    background:linear-gradient(90deg,var(--brand),var(--brand2));
+    padding:16px 16px; box-shadow:var(--shadow)
+  }
+  .brand{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .dot-logo{width:12px;height:12px;border-radius:50%;background:#fff;opacity:.95}
+  .brand h1{
+    margin:0;font-weight:1000;letter-spacing:.06em;color:#0b1020;
+    font-size:clamp(1rem,1.9vw,1.15rem);
+  }
+
+  /* Status (GPS + diagnóstico) */
+  #status{max-width:1100px;margin:14px auto 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:0 16px}
+  .chip,.badge{
+    display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);
+    background:#0c1532;color:var(--muted);padding:10px 12px;border-radius:999px;font-weight:800;box-shadow:var(--shadow)
+  }
+  .dot{width:10px;height:10px;border-radius:50%}
+  .ok .dot{background:var(--ok)}   .ok{color:#bbf7d0}
+  .warn .dot{background:var(--warn)}.warn{color:#ffe7b0}
+  .bad .dot{background:var(--bad)}  .bad{color:#fecaca}
+  .badge{color:#c7d2fe}
+
+  /* Cards */
+  main{max-width:1100px;margin:14px auto 28px;display:grid;gap:16px;padding:0 16px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35)
+  }
+  .card h2{margin:0 0 12px 0;font-size:clamp(1.05rem,1.8vw,1.1rem);color:#e7ecff}
+
+  /* Ações */
+  .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  button{
+    padding:14px 18px;font-size:clamp(.95rem,1.6vw,1.02rem);font-weight:900;border:0;border-radius:12px;color:#0b1020;
+    cursor:pointer;transition:transform .08s ease, filter .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.4)
+  }
+  button:active{transform:translateY(1px)}
+  button:hover{filter:brightness(1.06)}
+  button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+  #btnSend{background:var(--btn)}
+  .opt{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
+  .opt input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand)}
+  .opt select{
+    padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+    background:#0a122a;color:#e6ebff;font-weight:800;cursor:pointer
+  }
+
+  /* Lista / Distância (discreta) */
+  ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+  li{
+    line-height:1.3;font-family:ui-monospace,Consolas,Menlo,monospace;
+    border:1px solid var(--border);border-radius:12px;padding:12px;background:#0b1433;
+    font-size:1.03rem;color:#edf2ff; display:flex; justify-content:space-between; gap:12px; align-items:center;
+    transition:box-shadow .15s ease,border-color .15s ease, background .15s ease
+  }
+  /* Destaque do MAIS PRÓXIMO */
+  li.nearest{
+    border-color:var(--btn);
+    box-shadow:0 0 0 3px rgba(22,163,74,.2) inset;
+    background:linear-gradient(0deg, rgba(22,163,74,.12), rgba(22,163,74,.02));
+  }
+  li.nearest .id-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--pill);
+    padding:4px 10px; border-radius:999px;
+    outline:1px solid rgba(34,197,94,.3)
+  }
+  li.nearest .id-badge .id-label{
+    font-weight:1000; letter-spacing:.02em; color:#b6ffce; font-size:1.08rem;
+  }
+  li.nearest .id-badge .flag{
+    padding:2px 8px; border-radius:999px; background:#22c55e; color:#05220f; font-weight:900; font-size:.72rem;
+  }
+
+  .id-label{font-weight:800}
+  .dist{
+    color:#9fb0d9; opacity:.85;
+    font-size:.78rem;   /* menor e discreta */
+    min-width:64px; text-align:right;
+  }
+
+  /* Skeleton */
+  .skeleton{
+    height:48px;border-radius:12px;background:
+      linear-gradient(90deg,#111a3a 25%,#0d1836 40%,#111a3a 60%);
+    background-size:200% 100%;animation:shimmer 1.1s infinite
+  }
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* Grid responsivo */
+  .col-4{grid-column:span 4}
+  .col-8{grid-column:span 8}
+  @media (max-width:900px){ .col-4,.col-8{grid-column:1/-1} }
+
+  /* Acessibilidade */
+  button:focus-visible, select:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="dot-logo" aria-hidden="true"></span>
+    <h1>ID GPS</h1>
+  </div>
+</header>
+
+<!-- Status: GPS + diagnóstico -->
+<div id="status" role="region" aria-label="Status do sistema">
+  <div id="gpsChip" class="chip bad" aria-live="polite">
+    <span class="dot"></span><span id="gpsText">GPS: aguardando…</span>
+  </div>
+  <div id="diag" class="badge" style="display:none" aria-live="polite">—</div>
+</div>
+
+<main>
+  <div class="grid">
+    <!-- Ações (principal) -->
+    <section class="card col-4" aria-label="Ações">
+      <h2>Ações</h2>
+
+      <div class="actions" style="margin-bottom:8px">
+        <button id="btnSend" disabled>Enviar ID por WhatsApp</button>
+      </div>
+
+      <div class="actions" style="gap:16px">
+        <label class="opt" title="Quantidade de IDs a enviar (padrão 10)">
+          <span style="opacity:.9">quantidade</span>
+          <select id="qty">
+            <option value="1">1</option>
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+
+        <label class="opt" title="Adicionar links do Google Maps junto com os IDs">
+          <input type="checkbox" id="chkMaps" />
+          <span>incluir links de mapa</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- IDs próximos -->
+    <section class="card col-8" aria-label="IDs mais próximos">
+      <h2>IDs próximos</h2>
+      <ul id="list" aria-live="polite">
+        <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
+        <li class="skeleton"></li><li class="skeleton"></li>
+      </ul>
+    </section>
+  
+    <section class="card col-12" aria-label="Videoauditoria (1080p, com áudio)">
+      <h2>🎥 Videoauditoria (1080p, com áudio)</h2>
+      <div class="previewWrap">
+        <canvas id="auditCanvas" width="1920" height="1080"></canvas>
+        <div class="overlayMini" id="auditOverlay">Pronto (clique em Iniciar)</div>
+      </div>
+      <div class="controls" style="margin-top:10px;">
+        <label class="opt"><span>Status</span>
+          <select id="auditStatus">
+            <option value="NORMAL">NORMAL</option>
+            <option value="SEM ILUMINAÇÃO">SEM ILUMINAÇÃO</option>
+            <option value="OSCILAÇÃO">OSCILAÇÃO</option>
+            <option value="INTERMITENTE">INTERMITENTE</option>
+          </select>
+        </label>
+        <button id="btnAuditStart" class="btn-ok">Iniciar Videoauditoria</button>
+        <select id="auditCamSelect" class="opt" title="Câmeras" style="min-width:200px"></select>
+        <button id="btnAuditFull" class="btn-sec">Tela cheia</button>
+        <label class="opt"><span>Zoom</span> <input type="range" id="auditZoom" min="1" max="1" step="0.1" value="1" disabled style="width:160px"></label>
+        <button id="btnAuditSnap" class="btn-sec" disabled>Capturar foto (PRINT)</button>
+        <button id="btnAuditMark" class="btn-sec" disabled>Marcar EVENTO (E)</button>
+        <button id="btnAuditStop" class="btn-stop" disabled>Parar & Salvar</button>
+        <button id="btnAuditReport" class="btn-sec" disabled>Gerar PDF da Auditoria</button>
+      </div>
+      <div class="kv" style="margin-top:6px;">
+        <span>GPS(Audit): <strong id="auditGpsInfo">—</strong></span>
+        <span>Velocidade: <strong id="auditVelInfo">—</strong></span>
+        <span>Eventos(Audit): <strong id="auditEvtCount">0</strong></span>
+        <span>Codec: <strong id="auditCodecInfo">—</strong></span>
+      </div>
+    </section>
+    
+</div>
+</main>
+
+<script>
+/* ===== Config do chip (visual) ===== */
+const ACC_GREEN=10, ACC_YELLOW=25;
+
+/* ===== Estado ===== */
+let dataset=[];           // {id,lat,lon}
+let lastPos=null;         // {lat,lon,acc,spd,head,ts}
+let lastRender=0;
+
+/* ===== Elements ===== */
+const gpsChip=document.getElementById('gpsChip');
+const gpsText=document.getElementById('gpsText');
+const diag=document.getElementById('diag');
+const btnSend=document.getElementById('btnSend');
+const chkMaps=document.getElementById('chkMaps');
+const qtySel=document.getElementById('qty');
+const listEl=document.getElementById('list');
+
+/* ===== Helpers ===== */
+function showDiag(msg){ diag.style.display='inline-flex'; diag.textContent=msg; }
+function normalizeStr(s){ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_ ]+/g,' ').replace(/\s+/g,' '); }
+function findColumnIndex(headers, candidates){
+  const map=headers.map(h=>normalizeStr(h));
+  for(const c of candidates){ const i=map.indexOf(c); if(i>=0) return i; }
+  for(const c of candidates){ for(let i=0;i<map.length;i++){ if(map[i].includes(c)) return i; } }
+  return -1;
+}
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d{1,}$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
+function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
+function nearestN(lat,lon,n=10){
+  if(!dataset.length) return [];
+  const arr=dataset.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));
+  arr.sort((a,b)=>a.d-b.d);
+  return arr.slice(0, Math.min(n,arr.length));
+}
+function fmtAcc(a){ return (a==null||!Number.isFinite(a))?'—':('±'+Math.round(a)+' m'); }
+function fmtHead(h){ return (h==null||!Number.isFinite(h))? null : Math.round(h)+'°'; }
+function fmtSpd(s){ return (s==null||!Number.isFinite(s))? null : Math.round(s*3.6)+' km/h'; }
+function nowBR(){ return new Date().toLocaleString('pt-BR'); }
+
+/* Distância — sempre em metros (discreta) */
+function fmtDistMeters(m){
+  if(!(Number.isFinite(m))) return '—';
+  return Math.round(m) + ' m';
+}
+
+/* ===== Chip e botões ===== */
+function updateGpsChip(){
+  if(!lastPos || lastPos.acc==null){ gpsChip.className='chip bad'; gpsText.textContent='GPS: buscando…'; return; }
+  const a=Math.round(lastPos.acc);
+  if(a<=ACC_GREEN){ gpsChip.className='chip ok';   gpsText.textContent=`GPS: OK (${fmtAcc(a)})`; }
+  else if(a<=ACC_YELLOW){ gpsChip.className='chip warn'; gpsText.textContent=`GPS: ajustando (${fmtAcc(a)})`; }
+  else { gpsChip.className='chip bad';  gpsText.textContent=`GPS: fraco (${fmtAcc(a)})`; }
+}
+function updateButtons(){
+  const baseOk=dataset.length>0, posOk=!!lastPos;
+  btnSend.disabled=!(baseOk && posOk);
+}
+
+/* ===== CSV Loader ===== */
+async function loadCSV(){
+  try{
+    let resp=await fetch('dados.csv?v='+Date.now(), {cache:'no-store'});
+    if(!resp.ok){ resp=await fetch('Dados_Completos_Grupo_2_all.csv?v='+Date.now(), {cache:'no-store'}); }
+    if(!resp.ok){ showDiag('❌ CSV não encontrado'); return; }
+
+    let text=await resp.text(); if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim()!==''); if(lines.length<2){ showDiag('❌ CSV vazio'); return; }
+
+    const head=lines.shift().split(';');
+    const iId=findColumnIndex(head,['id do nox','idnox','id']),
+          iLat=findColumnIndex(head,['latitude','lat']),
+          iLon=findColumnIndex(head,['longitude','lon','long']);
+    if(iId<0||iLat<0||iLon<0){ showDiag('❌ Cabeçalho inválido (ID/Latitude/Longitude)'); return; }
+
+    dataset=lines.map(l=>{ const r=l.split(';'); return {id:String(r[iId]||'').trim(), lat:parsePt(r[iLat]), lon:parsePt(r[iLon])}; })
+                 .filter(p=>p.id && Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+    if(!dataset.length){ showDiag('❌ Sem pontos válidos no CSV'); return; }
+
+    render(true); updateButtons();
+  }catch(e){ showDiag('❌ Erro ao carregar CSV'); }
+}
+
+/* ===== Render IDs (com distância — metros) ===== */
+function render(force=false){
+  const now=performance.now(); if(!force && now-lastRender<150) return; lastRender=now;
+  listEl.innerHTML=''; if(!lastPos||!dataset.length) return;
+
+  const qty = Number(qtySel.value || 10);
+  const items=nearestN(lastPos.lat,lastPos.lon,qty);
+  if(!items.length){ listEl.innerHTML='<li>—</li>'; return; }
+
+  const frag=document.createDocumentFragment();
+  items.forEach((o,idx)=>{
+    const li=document.createElement('li');
+
+    /* lado esquerdo: ID (com badge se for o mais próximo) */
+    const left = document.createElement('span');
+    const idSpan = document.createElement('span');
+    idSpan.className='id-label';
+    idSpan.textContent=o.id;
+
+    if(idx===0){
+      li.classList.add('nearest');
+      const pill = document.createElement('span');
+      pill.className='id-badge';
+      const flag = document.createElement('span');
+      flag.className='flag';
+      flag.textContent='PRÓXIMO';
+      pill.appendChild(idSpan);
+      pill.appendChild(flag);
+      left.appendChild(pill);
+    }else{
+      left.appendChild(idSpan);
+    }
+
+    /* lado direito: distância discreta */
+    const right = document.createElement('span');
+    right.className='dist';
+    right.textContent = fmtDistMeters(o.d);
+
+    li.appendChild(left);
+    li.appendChild(right);
+    frag.appendChild(li);
+  });
+  listEl.appendChild(frag);
+}
+
+/* ===== GPS ===== */
+function startGPS(){
+  if(!('geolocation' in navigator)){ showDiag('❌ Sem geolocalização no navegador'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      lastPos={ lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy,
+                spd:pos.coords.speed, head:pos.coords.heading, ts:Date.now() };
+      updateGpsChip(); updateButtons(); render(true);
+      navigator.geolocation.watchPosition(p=>{
+        lastPos={ lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy,
+                  spd:p.coords.speed, head:p.coords.heading, ts:Date.now() };
+        updateGpsChip(); updateButtons(); render();
+      },err=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
+    },
+    err=>{ showDiag('❗ Permita o GPS para listar os IDs próximos'); },
+    {enableHighAccuracy:true,maximumAge:0,timeout:10000}
+  );
+}
+
+/* ===== Enviar (IDs) ===== */
+btnSend.addEventListener('click', ()=>{
+  if(!lastPos) return;
+  const qty = Number(qtySel.value || 10);
+  const items=nearestN(lastPos.lat,lastPos.lon,qty); if(!items.length) return;
+
+  const accTxt=fmtAcc(lastPos.acc), head=fmtHead(lastPos.head), spd=fmtSpd(lastPos.spd);
+  let tx=`${nowBR()}\nGPS agora: Lat ${lastPos.lat.toFixed(6)}, Lon ${lastPos.lon.toFixed(6)} · Precisão ${accTxt}`;
+  if(spd) tx+=` · Vel ${spd}`; if(head) tx+=` · Curso ${head}`; tx+='\n';
+
+  // Padrão: somente IDs (sem distâncias)
+  items.forEach(o=> tx+=`ID: ${o.id}\n`);
+
+  // Opcional: links de mapa
+  if(chkMaps.checked){
+    tx+='\nLinks de mapa:\n';
+    items.forEach(o=> tx+=`ID: ${o.id} → https://maps.google.com/?q=${o.lat.toFixed(6)},${o.lon.toFixed(6)}\n`);
+  }
+
+  window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
+});
+
+/* ===== Eventos ===== */
+qtySel.addEventListener('change', ()=> render(true));
+
+/* ===== Boot ===== */
+(function boot(){
+  loadCSV();
+  startGPS();
+})();
+</script>
+
+<script>
+// ===== Cameras, Fullscreen, Zoom helpers =====
+async function listCameras(selectEl){ try{ const devs=await navigator.mediaDevices.enumerateDevices(); const cams=devs.filter(d=>d.kind==='videoinput'); selectEl.innerHTML=''; cams.forEach((d,i)=>{ const opt=document.createElement('option'); opt.value=d.deviceId; opt.textContent=d.label||('Câmera '+(i+1)); selectEl.appendChild(opt); }); return cams; }catch(e){ return []; } }
+function toggleFullscreen(el){ try{ if(!document.fullscreenElement){ el.requestFullscreen?.(); } else { document.exitFullscreen?.(); } }catch(e){} }
+function setupZoom(track, slider){ try{ const caps=track.getCapabilities?.(); if(caps && caps.zoom){ const st=track.getSettings?.(); slider.min=caps.zoom.min; slider.max=caps.zoom.max; slider.step=caps.zoom.step||0.1; slider.value= (st && st.zoom!=null)? st.zoom : caps.zoom.min; slider.disabled=false; slider.oninput=()=>{ track.applyConstraints({ advanced:[{ zoom: Number(slider.value)}] }); }; } else { slider.disabled=true; slider.parentElement.style.opacity=0.5; } }catch(e){ slider.disabled=true; } }
+</script>
+
+
+<script>
+// ===== Videoauditoria PRO (sem KM no topo; fullscreen + zoom + ID próximo grande) =====
+(function(){
+  const UI = { can: document.getElementById('auditCanvas'), overlay: document.getElementById('auditOverlay'), selCam: document.getElementById('auditCamSelect'), btnStart: document.getElementById('btnAuditStart'), btnStop: document.getElementById('btnAuditStop'), btnMark: document.getElementById('btnAuditMark'), btnSnap: document.getElementById('btnAuditSnap'), btnFull: document.getElementById('btnAuditFull'), zoom: document.getElementById('auditZoom'), statusSel: document.getElementById('auditStatus'), gpsInfo: document.getElementById('auditGpsInfo'), velInfo: document.getElementById('auditVelInfo'), evtCount: document.getElementById('auditEvtCount'), codecInfo: document.getElementById('auditCodecInfo') };
+  const S = { mode:'idle', stream:null, track:null, video:null, recorder:null, chunks:[], drawId:null, watchId:null, lastGps:null, mime:null };
+  function kmh(ms){ if(ms==null || isNaN(ms)) return null; return ms*3.6; }
+  function getNearestId(){ try{ if(!window.lastPos || !Array.isArray(window.dataset) || !dataset.length || typeof nearestN!=='function') return {id:'ID —', distText:'—'}; const n=nearestN(lastPos.lat,lastPos.lon,1)[0]; if(!n) return {id:'ID —', distText:'—'}; const d = n.d<1000? Math.round(n.d)+' m' : (n.d/1000).toFixed(2)+' km'; return {id:n.id, distText:d, lat:n.lat, lon:n.lon}; }catch{return {id:'ID —', distText:'—'};}}
+  function drawOverlay(){ try{ if(!UI.can) return; const c=UI.can, ctx=c.getContext('2d'); const pad=18; ctx.save();
+    // TOP BAR — título + data/hora (sem KM)
+    const TOP_H=86; ctx.fillStyle='rgba(0,0,0,0.70)'; ctx.fillRect(0,0,c.width,TOP_H);
+    ctx.textBaseline='middle'; ctx.fillStyle='#FFD166'; ctx.font='900 36px system-ui,Segoe UI,Roboto'; ctx.textAlign='left'; ctx.fillText('VIDEOAUDITORIA', pad, 30);
+    const nowStr=new Date().toLocaleString(); ctx.textAlign='right'; ctx.fillStyle='#E6F0FF'; ctx.font='800 24px system-ui,Segoe UI,Roboto'; ctx.fillText(nowStr, c.width - pad, 28);
+    // CENTER — ID grande + status (sem KM)
+    const near=getNearestId(); const status = UI.statusSel? UI.statusSel.value:'NORMAL';
+    const centerH = 110; const yC = Math.round(c.height*0.5 - centerH/2);
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(Math.round(c.width*0.08), yC, Math.round(c.width*0.84), centerH);
+    ctx.textAlign='center'; ctx.fillStyle='#E8FFF4'; ctx.font='900 64px system-ui,Segoe UI,Roboto'; ctx.fillText('ID: '+near.id, c.width/2, yC+66);
+    ctx.fillStyle= status==='NORMAL' ? '#B7F0C2' : '#FFD1D1'; ctx.font='800 30px system-ui,Segoe UI,Roboto'; ctx.fillText(status + ' · ' + near.distText, c.width/2, yC+104);
+    // BOTTOM — GPS + Vel + Curso
+    const g=S.lastGps; const acc=g?.accuracy; const spd=g?.speed!=null? kmh(g.speed):null; const spdStr=spd!=null?(Math.round(spd)+' km/h'):'—'; const head=g?.heading!=null ? (Math.round(g.heading)+'°') : '—';
+    const gpsStr=g? `${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)} (±${acc? Math.round(acc):'—'} m)`:'GPS —';
+    const BOT_H=120; ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,c.height-BOT_H,c.width,BOT_H);
+    ctx.textAlign='left'; ctx.fillStyle='#E6F0FF'; ctx.font='800 30px system-ui,Segoe UI,Roboto'; ctx.fillText('GPS:', pad, c.height-BOT_H+40);
+    ctx.fillStyle='#BBD7FF'; ctx.font='900 36px ui-monospace,Consolas,Menlo,monospace'; ctx.fillText(gpsStr, pad+80, c.height-BOT_H+42);
+    ctx.textAlign='right'; ctx.fillStyle='#FFE08A'; ctx.font='800 28px system-ui,Segoe UI,Roboto'; ctx.fillText(`Vel: ${spdStr} · Curso: ${head}`, c.width - pad, c.height-BOT_H+96);
+    ctx.restore(); }catch(e){}
+  }
+  function drawLoop(){ S.drawId = requestAnimationFrame(drawLoop); if(!S.video||!UI.can) return; const c=UI.can, ctx=c.getContext('2d'); if(S.video.videoWidth && S.video.videoHeight){ if(c.width!==S.video.videoWidth || c.height!==S.video.videoHeight){ c.width=S.video.videoWidth; c.height=S.video.videoHeight; } } try{ ctx.drawImage(S.video,0,0,c.width,c.height);}catch(e){} drawOverlay(); }
+  async function start(){ try{ if(!UI.can||!UI.overlay) return; if(window.updateIdChip) updateIdChip(); const devId = UI.selCam && UI.selCam.value ? { exact: UI.selCam.value } : undefined; const constraints = { video:{ width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30, max:30}, facingMode: devId? undefined:'environment', deviceId: devId }, audio:true };
+    const stream=await navigator.mediaDevices.getUserMedia(constraints); S.stream=stream; S.track=stream.getVideoTracks()[0]; const v=document.createElement('video'); v.playsInline=true; v.srcObject=stream; await v.play(); S.video=v; if(UI.zoom) setupZoom(S.track, UI.zoom);
+    if('geolocation' in navigator){ S.watchId=navigator.geolocation.watchPosition(p=>{ S.lastGps={ latitude:p.coords.latitude, longitude:p.coords.longitude, accuracy:p.coords.accuracy, speed:p.coords.speed, heading:p.coords.heading }; if(UI.gpsInfo) UI.gpsInfo.textContent=`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)} (±${Math.round(p.coords.accuracy)}m)`; if(UI.velInfo){ const vkm=kmh(p.coords.speed); UI.velInfo.textContent= vkm!=null? (Math.round(vkm)+' km/h'):'—'; } if(window.updateIdChip) updateIdChip(); }, ()=>{}, { enableHighAccuracy:true, maximumAge:800, timeout:8000 }); }
+    cancelAnimationFrame(S.drawId); drawLoop(); const fps=30; const outStream=UI.can.captureStream(fps); const aT=stream.getAudioTracks(); if(aT && aT[0]) outStream.addTrack(aT[0]); const mime=(MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported('video/webm;codecs=vp8'))? 'video/webm;codecs=vp8':'video/webm'; S.mime=mime; if(UI.codecInfo) UI.codecInfo.textContent=mime; const mr=new MediaRecorder(outStream,{ mimeType:mime, videoBitsPerSecond: 5_000_000 }); S.recorder=mr; S.chunks=[]; mr.ondataavailable=(e)=>{ if(e.data && e.data.size>0) S.chunks.push(e.data); };
+    mr.onstop=async()=>{ try{ const blob=new Blob(S.chunks, { type: S.mime||'video/webm' }); const ts=new Date().toISOString().replace(/[:.]/g,'-'); const filename=`INSP_VIDEOAUDITORIA_1080p_${ts}.webm`; const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); }catch(e){} };
+    mr.start(1000); S.mode='recording'; UI.overlay.textContent='Gravando...'; if(UI.btnStart) UI.btnStart.disabled=true; if(UI.btnStop) UI.btnStop.disabled=false; if(UI.btnMark) UI.btnMark.disabled=false; if(UI.btnSnap) UI.btnSnap.disabled=false; if(UI.btnAuditReport) UI.btnAuditReport.disabled=false; }
+    catch(e){ if(UI.overlay) UI.overlay.textContent='Erro ao iniciar câmera/mic'; }
+  }
+  function stop(){ try{ if(S.recorder){ try{ S.recorder.stop(); }catch{} } if(S.drawId){ cancelAnimationFrame(S.drawId); S.drawId=null; } if(S.watchId!=null){ try{ navigator.geolocation.clearWatch(S.watchId);}catch{} S.watchId=null; } if(S.stream){ try{ S.stream.getTracks().forEach(t=>t.stop()); }catch{} S.stream=null; } S.mode='idle'; if(UI.overlay) UI.overlay.textContent='Pronto (clique em Iniciar)'; if(UI.btnStart) UI.btnStart.disabled=false; if(UI.btnStop) UI.btnStop.disabled=true; if(UI.btnMark) UI.btnMark.disabled=true; if(UI.btnSnap) UI.btnSnap.disabled=true; }catch(e){} }
+  function captureFrame(label='PRINT'){ try{ if(!UI.can) return null; const dataUrl=UI.can.toDataURL('image/jpeg',0.9); const nowL=new Date().toLocaleString(); const near=getNearestId(); const g=S.lastGps; const gpsStr=g? `${g.latitude.toFixed(6)}, ${g.longitude.toFixed(6)} (±${g.accuracy?Math.round(g.accuracy):'—'} m)`:'GPS —'; const spd=g && g.speed!=null ? (Math.round(kmh(g.speed))+' km/h'):'—'; const status = UI.statusSel? UI.statusSel.value : 'NORMAL'; const gpsLat=g? g.latitude:null, gpsLon=g? g.longitude:null; window.auditFotos = window.auditFotos||[]; window.auditFotos.push({ dataUrl, tsLocal: nowL, kmLbl:'', idText: near.id, gpsStr, velStr: spd, status, dist: near.distText, gpsLat, gpsLon }); return dataUrl; }catch(e){ return null; } }
+  function mark(tipo='POSTE_APAGADO'){ try{ if(S.mode!=='recording') return; const now=new Date(); const tsIso=now.toISOString(); const tsLocal=now.toLocaleString(); let lat=null,lon=null,acc=null; if(S.lastGps){ lat=S.lastGps.latitude; lon=S.lastGps.longitude; acc=S.lastGps.accuracy; } else if(window.lastPos){ lat=lastPos.lat; lon=lastPos.lon; acc=lastPos.acc; } const near=getNearestId(); const photo=captureFrame('EVENTO'); window.auditEventos = window.auditEventos||[]; window.auditEventos.push({ tipo, tsIso, tsLocal, lat, lon, acc, km:null, id: near.id, distId: (near.distText?.endsWith(' m')? Number(near.distText.split(' ')[0]): null), photo }); if(UI.evtCount) UI.evtCount.textContent=String(window.auditEventos.length||0); }catch(e){} }
+  async function generatePdf(){ try{ const cover=document.createElement('canvas'); cover.width=1240; cover.height=1754; const c=cover.getContext('2d'); c.fillStyle='#0b1020'; c.fillRect(0,0,cover.width,cover.height); c.fillStyle='#e6ebff'; c.font='900 44px system-ui,Segoe UI,Roboto'; c.fillText('Relatório de Videoauditoria', 60, 90); c.font='700 26px system-ui,Segoe UI,Roboto'; c.fillStyle='#93c5fd'; c.fillText(new Date().toLocaleString(), 60, 130); c.fillStyle='#cdd7f5'; c.font='800 28px system-ui,Segoe UI,Roboto'; c.fillText('Eventos:', 60, 180); c.font='400 22px system-ui,Segoe UI,Roboto'; let y=210; const lineH=28; const maxWidth=cover.width-120; const list=window.auditEventos||[]; if(!list.length){ c.fillText('— Nenhum evento marcado —', 60, y); y+=lineH; } else { list.forEach((ev,idx)=>{ const gpsTxt=(ev.lat!=null && ev.lon!=null)? `${ev.lat.toFixed(5)}, ${ev.lon.toFixed(5)} (±${ev.acc?Math.round(ev.acc):'—'}m)` : '—'; const dTxt = ev.distId!=null? ev.distId+' m':'—'; const row = `${idx+1}. ${ev.tsLocal} • ${ev.tipo.replace('_',' ')} • ID ${ev.id||'—'} (${dTxt}) • GPS ${gpsTxt}`; wrapText(c,row,60,y,maxWidth,lineH); y+=lineH* (Math.ceil(c.measureText(row).width/maxWidth)); }); } function wrapText(ctx,text,x,y,maxW,lh){ const w=text.split(' '); let line=''; for(let n=0;n<w.length;n++){ const test=line+w[n]+' '; if(ctx.measureText(test).width>maxW && n>0){ ctx.fillText(line,x,y); line=w[n]+' '; y+=lh; } else { line=test; } } ctx.fillText(line,x,y); } const pages=[]; pages.push({ dataUrl: cover.toDataURL('image/jpeg',0.9), w:1240, h:1754 }); for (const ev of (window.auditEventos||[])){ if(ev.photo){ pages.push({ dataUrl: ev.photo, w:1920, h:1080 }); } } for (const f of (window.auditFotos||[])){ pages.push({ dataUrl: f.dataUrl, w:1920, h:1080 }); } if(!pages.length){ alert('Sem páginas para gerar no PDF.'); return; } const pdfBlob=(typeof makePdfFromJpegs==='function')? makePdfFromJpegs(pages): null; if(!pdfBlob){ alert('PDF: função ausente.'); return; } const name='Relatorio_Videoauditoria_'+ new Date().toISOString().replace(/[:.]/g,'-') + '.pdf'; const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); }catch(e){} }
+  // Expor e eventos
+  window.startAudit=start; window.stopAudit=stop; window.auditCaptureFrame=captureFrame; window.auditMark=mark; window.generateAuditPdf=generatePdf;
+  if(UI.btnStart){ UI.btnStart.addEventListener('click', async ()=>{ try{ const sel=UI.selCam; if(sel && !sel.options.length) await listCameras(sel); }catch(e){} start(); }); }
+  if(UI.btnStop){ UI.btnStop.addEventListener('click', ()=> stop()); }
+  if(UI.btnMark){ UI.btnMark.addEventListener('click', ()=> mark('POSTE_APAGADO')); }
+  if(UI.btnSnap){ UI.btnSnap.addEventListener('click', ()=> captureFrame('PRINT')); }
+  if(UI.btnFull){ UI.btnFull.addEventListener('click', ()=> toggleFullscreen(document.querySelector("section[aria-label='Videoauditoria (1080p, com áudio)'] .previewWrap"))); }
+  // Duplo-toque para fullscreen
+  const wrap = document.querySelector("section[aria-label='Videoauditoria (1080p, com áudio)'] .previewWrap"); if(wrap){ let last=0; wrap.addEventListener('touchend', ()=>{ const now=Date.now(); if(now-last<280){ try{ toggleFullscreen(wrap); }catch(e){} } last=now; }, {passive:true}); }
+})();
+</script>
+
+</body>
+</html>
