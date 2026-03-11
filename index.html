@@ -11,8 +11,8 @@
     --btn:#22c55e; --btn2:#1e40af;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:#0b1020;color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial; padding:16px}
-  h1{margin:0 0 12px 0;text-align:center;font-size:1.8rem}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:16px}
+  h1{margin:0 0 12px;text-align:center;font-size:1.8rem}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin:0 auto 16px;max-width:1024px;box-shadow:0 8px 22px rgba(0,0,0,.35)}
   #vid{width:100%;display:block;background:#000;border-radius:12px}
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:12px}
@@ -35,23 +35,23 @@
 
 <h1>📸 Inspeção Fotográfica</h1>
 
-<!-- Estado do sistema -->
+<!-- Estado -->
 <div class="card">
   <div class="status">
     <span id="chipCsv" class="chip bad"><span class="dot"></span><span>CSV: carregando…</span></span>
     <span id="chipCam" class="chip bad"><span class="dot"></span><span>Câmera: aguardando…</span></span>
     <span id="chipGps" class="chip bad"><span class="dot"></span><span>GPS: aguardando…</span></span>
   </div>
-  <small class="hint">O botão de captura habilita automaticamente quando CSV + Câmera + GPS estiverem prontos.</small>
+  <small class="hint">O botão habilita quando CSV + Câmera + GPS estiverem prontos.</small>
 </div>
 
-<!-- Pré-visualização (com margem, centralizado) -->
+<!-- Prévia -->
 <div class="card">
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="can" width="1280" height="720" hidden></canvas>
 </div>
 
-<!-- Dados calculados em tempo real -->
+<!-- Dados ao vivo -->
 <div class="card">
   <div class="kv">
     <div>KM: <b id="kmTxt">—</b></div>
@@ -73,246 +73,292 @@
 
 <script>
 /* =========================
-   1) CSVs (auto, GitHub Pages)
+   Utilitários numéricos
    ========================= */
-let dataset = [];   // IDs
-let kmDataset = []; // KMs
-let csvReady = false;
-
 function parsePt(v){
   if(v==null) return NaN;
   const s = String(v).trim();
   return /,\d+$/.test(s) ? Number(s.replace(/\./g,'').replace(',','.')) : Number(s);
 }
-function cleanLine(l){ // remove BOM e espaços
-  return l.replace(/^\uFEFF/, '').trim();
+function hav(a,b,c,d){
+  const R=6371000, x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
+  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u));
 }
-async function loadIDs(){
-  const txt = await fetch('./Dados_Completos_Grupo_2_all.csv', {cache:'no-store'}).then(r=>r.text());
-  const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-  // Semicolon esperado; cabeçalho exemplo: ID do NOX;Latitude;Longitude;...
-  const head = lines[0].split(';');
-  const h = head.map(s => s.toLowerCase());
-  const iId  = h.findIndex(x => x.includes('id') && !x.includes('latitude') && !x.includes('longitude'));
-  const iLat = h.findIndex(x => x.includes('lat'));
-  const iLon = h.findIndex(x => x.includes('lon'));
-  dataset = lines.slice(1).map(l=>{
-    const c=l.split(';');
-    return { id:String(c[iId]||'').trim(), lat:parsePt(c[iLat]), lon:parsePt(c[iLon]) };
-  }).filter(p=>p.id && isFinite(p.lat) && isFinite(p.lon) && p.lat!==0 && p.lon!==0);
+function fmtKm(v){
+  let K=Math.floor(v), m=Math.round((v-K)*1000);
+  if(m>=1000){m-=1000;K+=1}
+  return `KM ${K}+${String(m).padStart(3,'0')}`;
+}
+function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
+
+/* =========================
+   Estado e chips
+   ========================= */
+const chipCsv = document.getElementById('chipCsv');
+const chipCam = document.getElementById('chipCam');
+const chipGps = document.getElementById('chipGps');
+function setChip(el, state, text){
+  el.className = `chip ${state}`;
+  el.lastElementChild.textContent = text;
 }
 
-function takeFirstValidTriplet(c){
-  // Alguns CSVs de KM vêm no formato: KM;LAT;LONG;;;;;KM;LAT;LONG
-  // Pega o primeiro trio válido; se não der, tenta o segundo trio.
-  const t1 = {km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2])};
-  if(isFinite(t1.km) && isFinite(t1.lat) && isFinite(t1.lon)) return t1;
-  const t2 = {km:parsePt(c[7]), lat:parsePt(c[8]), lon:parsePt(c[9])};
-  if(isFinite(t2.km) && isFinite(t2.lat) && isFinite(t2.lon)) return t2;
+/* =========================
+   Bases e estruturas
+   ========================= */
+let dataset = [];    // IDs válidos
+let kmPoints = [];   // KM decimado (~5m mínimo)
+let csvReady=false, camReady=false, gpsReady=false;
+let lastPos=null;
+
+const kmTxt=document.getElementById('kmTxt');
+const idTxt=document.getElementById('idTxt');
+const btnFoto=document.getElementById('btnFoto');
+const btnDownload=document.getElementById('btnDownload');
+function maybeEnable(){ btnFoto.disabled = !(csvReady && camReady && gpsReady); }
+
+/* ====== Grid geográfico (IDs + KM) para buscas rápidas ====== */
+const CELL = 0.005; // ~550 m
+const idGrid = new Map();
+const kmGrid = new Map();
+function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
+function gridInsert(grid, p){
+  const k=cellKey(p.lat,p.lon);
+  const a=grid.get(k); a ? a.push(p) : grid.set(k,[p]);
+}
+function gridCands(grid, lat,lon, minCount=60, maxR=5){
+  const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL);
+  const out=[];
+  for(let r=0;r<=maxR && out.length<minCount;r++){
+    for(let dy=-r;dy<=r;dy++){
+      const y=ky+dy;
+      for(let dx=-r;dx<=r;dx++){
+        if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+        const a=grid.get(`${y},${kx+dx}`);
+        if(a) out.push(...a);
+      }
+    }
+  }
+  return out.length ? out : [];
+}
+
+/* =========================
+   1) Carregar CSVs (GitHub Pages)
+   ========================= */
+async function loadIDs(){
+  const txt = await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
+  const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  const head = lines[0].split(';').map(h=>h.toLowerCase());
+  const iId  = head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long'));
+  const iLat = head.findIndex(h=>h.includes('lat'));
+  const iLon = head.findIndex(h=>h.includes('lon'));
+  dataset = [];
+  for(let i=1;i<lines.length;i++){
+    const c = lines[i].split(';');
+    const id  = String(c[iId]||'').trim();
+    const lat = parsePt(c[iLat]);
+    const lon = parsePt(c[iLon]);
+    if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if(lat===0 && lon===0) continue;
+    if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; // limpa outliers (há linhas assim no seu CSV)
+    const p = {id, lat, lon};
+    dataset.push(p);
+  }
+  // popula grid de IDs
+  idGrid.clear();
+  for(const p of dataset) gridInsert(idGrid,p);
+}
+
+function pickTrio(c){
+  // CSV de KM no formato: KM;LAT;LONG;;;;;KM;LAT;LONG (2 blocos por linha)
+  // Pegamos preferencialmente o 1º trio válido; se não, tentamos o 2º.
+  const t1={km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2])};
+  if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1;
+  const t2={km:parsePt(c[7]), lat:parsePt(c[8]), lon:parsePt(c[9])};
+  if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2;
   return null;
 }
 
-async function loadKMs(){
-  const txt = await fetch('./SNVBR116SPRJ.csv', {cache:'no-store'}).then(r=>r.text());
+async function loadKM(){
+  const txt = await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
   const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-  kmDataset = [];
-  for(const l of lines){
-    const c=l.split(';');
-    // Linha pode ser: "KM;LAT;LONG;;;;;KM;LAT;LONG" (cabeçalho) ou dados
-    if (isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // provavelmente cabeçalho
-    const t = takeFirstValidTriplet(c);
-    if (t) kmDataset.push(t);
+
+  kmPoints = [];
+  let lastKeep=null;
+  const MIN_STEP = 5; // metros (alvo)
+
+  for(let i=0;i<lines.length;i++){
+    const c = lines[i].split(';');
+    // pula cabeçalho e linhas sem número
+    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
+    const t = pickTrio(c);
+    if(!t) continue;
+    if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
+
+    // Decimação por distância: mantém ponto se não houver anterior
+    // ou se a distância ao último mantido for >= 5 m.
+    if(!lastKeep){
+      kmPoints.push(t);
+      lastKeep=t;
+    }else{
+      const d = hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon);
+      if(d >= MIN_STEP){
+        kmPoints.push(t);
+        lastKeep=t;
+      }
+    }
   }
+
+  // popula grid de KM
+  kmGrid.clear();
+  for(const p of kmPoints) gridInsert(kmGrid,p);
 }
 
 async function loadCSVs(){
   try{
-    await Promise.all([loadIDs(), loadKMs()]);
-    csvReady = dataset.length>0 && kmDataset.length>0;
-    setChip(csvReady ? chipCsv : chipCsv, csvReady ? 'ok' : 'bad', csvReady ? `CSV: OK (IDs ${dataset.length} · KM ${kmDataset.length})` : 'CSV: erro');
-    maybeEnableCapture();
+    await Promise.all([loadIDs(), loadKM()]);
+    csvReady = dataset.length>0 && kmPoints.length>0;
+    setChip(chipCsv, csvReady?'ok':'bad',
+      csvReady? `CSV: OK (IDs ${dataset.length} · KM ${kmPoints.length})`
+               : 'CSV: erro');
   }catch(e){
-    setChip(chipCsv, 'bad', 'CSV: erro ao carregar');
-  }
+    csvReady=false; setChip(chipCsv,'bad','CSV: erro ao carregar');
+  }finally{ maybeEnable(); }
 }
 
 /* =========================
-   2) GEO
+   2) Busca de vizinhos
    ========================= */
-function hav(a,b,c,d){
-  const R=6371000;
-  const x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
-  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u));
+function nearestN(lat,lon,n=5){
+  if(!dataset.length) return [];
+  const cand = gridCands(idGrid,lat,lon,Math.max(60, n*20));
+  const arr = cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}));
+  arr.sort((a,b)=>a.d-b.d);
+  return arr.slice(0,n);
 }
-function nearestKM(lat, lon){
-  let best=null, bd=Infinity;
-  for (const p of kmDataset){
-    const d = hav(lat,lon,p.lat,p.lon);
+function nearestKM(lat,lon){
+  if(!kmPoints.length) return null;
+  const cand = gridCands(kmGrid,lat,lon,120);
+  if(!cand.length) return null;
+  let best=null,bd=Infinity;
+  for(const p of cand){
+    const d=hav(lat,lon,p.lat,p.lon);
     if(d<bd){ bd=d; best=p; }
   }
   return best;
 }
-function nearestN(lat, lon, n){
-  return dataset
-    .map(p=>({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}))
-    .sort((a,b)=>a.d-b.d)
-    .slice(0,n);
-}
-function fmtKm(v){
-  let K=Math.floor(v);
-  let m=Math.round((v-K)*1000);
-  if(m>=1000){m-=1000;K+=1}
-  return `KM ${K}+${String(m).padStart(3,'0')}`;
-}
 
 /* =========================
-   3) CÂMERA
+   3) Câmera (HTTPS)
    ========================= */
-const vid = document.getElementById('vid');
-let camReady = false;
-
+const vid=document.getElementById('vid');
 async function startCamera(){
   try{
     const st = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'}},
-      audio:false
+      video:{facingMode:{ideal:'environment'}}, audio:false
     });
     vid.srcObject = st;
-    // só marca pronto quando metadados de tamanho chegaram
     await new Promise(res=>{
-      if (vid.readyState >= 1 && vid.videoWidth) return res();
-      vid.onloadedmetadata = ()=>res();
-      setTimeout(res, 2000); // fallback
+      if(vid.readyState>=1 && vid.videoWidth) return res();
+      vid.onloadedmetadata=()=>res();
+      setTimeout(res,2000);
     });
-    camReady = !!vid.videoWidth;
-    setChip(chipCam, camReady ? 'ok':'bad', camReady ? 'Câmera: OK' : 'Câmera: erro');
-    maybeEnableCapture();
+    camReady = !!vid.videoWidth; setChip(chipCam, camReady?'ok':'bad', camReady?'Câmera: OK':'Câmera: erro');
   }catch(e){
-    camReady = false;
-    setChip(chipCam, 'bad', 'Câmera: erro');
-  }
+    camReady=false; setChip(chipCam,'bad','Câmera: erro');
+  }finally{ maybeEnable(); }
 }
 
 /* =========================
-   4) GPS
+   4) GPS (HTTPS)
    ========================= */
-let lastPos = null;
-const kmTxt = document.getElementById('kmTxt');
-const idTxt = document.getElementById('idTxt');
-let gpsReady = false;
-
-function setChip(el, state, text){
-  el.className = `chip ${state}`;
-  el.querySelector('.dot'); // mantém o pontinho
-  el.lastElementChild.textContent = text;
-}
-
 function startGPS(){
   if(!('geolocation' in navigator)){
-    setChip(chipGps, 'bad', 'GPS: não disponível');
-    return;
+    setChip(chipGps,'bad','GPS: não disponível'); return;
   }
   navigator.geolocation.getCurrentPosition(p=>{
-    lastPos = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady = true;
-    setChip(chipGps, 'ok', `GPS: OK (±${Math.round(p.coords.accuracy)} m)`);
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady=true; setChip(chipGps,'ok',`GPS: OK (±${Math.round(p.coords.accuracy)} m)`);
     updateDerived();
     navigator.geolocation.watchPosition(pos=>{
-      lastPos = {lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
       updateDerived();
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:500, timeout:15000});
-    maybeEnableCapture();
+    maybeEnable();
   }, ()=>{
-    setChip(chipGps, 'bad', 'GPS: negado');
+    gpsReady=false; setChip(chipGps,'bad','GPS: negado');
   }, {enableHighAccuracy:true, timeout:12000});
 }
 
 function updateDerived(){
   if(!(csvReady && lastPos)) return;
-  const nk = nearestKM(lastPos.lat,lastPos.lon);
-  kmTxt.textContent = nk ? fmtKm(nk.km) : '—';
+  const km = nearestKM(lastPos.lat,lastPos.lon);
+  document.getElementById('kmTxt').textContent = km? fmtKm(km.km) : '—';
   const ids = nearestN(lastPos.lat,lastPos.lon,5);
-  idTxt.textContent = ids.length ? ids.map(o=>o.id).join(', ') : '—';
+  document.getElementById('idTxt').textContent = ids.length ? ids.map(o=>o.id).join(', ') : '—';
 }
 
 /* =========================
-   5) Captura da Foto (com estampa KM + IDs + data)
+   5) Captura da foto + estampa
    ========================= */
-const can  = document.getElementById('can');
-const ctx  = can.getContext('2d',{alpha:false});
-const foto = document.getElementById('foto');
-const btnFoto = document.getElementById('btnFoto');
-const btnDownload = document.getElementById('btnDownload');
+const can=document.getElementById('can');
+const ctx=can.getContext('2d',{alpha:false});
+const foto=document.getElementById('foto');
 
-function maybeEnableCapture(){
-  btnFoto.disabled = !(csvReady && camReady && gpsReady);
-}
+btnFoto.onclick=()=>{
+  if(!(csvReady && camReady && gpsReady && lastPos)) return;
 
-btnFoto.onclick = ()=>{
-  if(!(csvReady && camReady && gpsReady && lastPos)){ return; }
+  const w=vid.videoWidth||1280, h=vid.videoHeight||720;
+  can.width=w; can.height=h;
 
-  const w = vid.videoWidth || 1280, h = vid.videoHeight || 720;
-  can.width = w; can.height = h;
-
-  // Desenha o vídeo
   ctx.drawImage(vid, 0, 0, w, h);
 
   // Faixa inferior
-  ctx.fillStyle = 'rgba(0,0,0,.60)';
   const bandH = Math.max(160, Math.round(h*0.16));
+  ctx.fillStyle='rgba(0,0,0,.62)';
   ctx.fillRect(0, h-bandH, w, bandH);
 
-  // KM + Data/hora (lado esquerdo)
-  const kmObj = nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr = kmObj ? fmtKm(kmObj.km) : 'KM —';
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'left';
-  ctx.font = `900 ${Math.round(h*0.06)}px system-ui`;
-  ctx.fillText(kmStr, 20, h - bandH + Math.round(bandH*0.55));
-
-  ctx.font = `700 ${Math.round(h*0.035)}px system-ui`;
+  // KM + data/hora
+  const km = nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr = km? fmtKm(km.km) : 'KM —';
+  ctx.fillStyle='#fff';
+  ctx.textAlign='left';
+  ctx.font=`900 ${Math.round(h*0.06)}px system-ui`;
+  ctx.fillText(kmStr, 20, h - bandH + Math.round(bandH*0.56));
+  ctx.font=`700 ${Math.round(h*0.035)}px system-ui`;
   ctx.fillText(new Date().toLocaleString(), 20, h - Math.round(bandH*0.22));
 
-  // IDs (lado direito, pequenos)
+  // IDs (direita)
   const ids = nearestN(lastPos.lat,lastPos.lon,5);
-  ctx.textAlign = 'right';
-  ctx.font = `600 ${Math.round(h*0.03)}px system-ui`;
-  ids.forEach((e,i)=>{
-    ctx.fillText(e.id, w-20, h - bandH + 28 + i*28);
-  });
+  ctx.textAlign='right';
+  ctx.font=`600 ${Math.round(h*0.03)}px system-ui`;
+  ids.forEach((e,i)=> ctx.fillText(e.id, w-20, h - bandH + 30 + i*28));
 
-  foto.src = can.toDataURL('image/jpeg', 0.92);
-  btnDownload.disabled = true; // habilita após a imagem carregar
-  foto.onload = ()=>{ btnDownload.disabled = false; };
+  foto.src = can.toDataURL('image/jpeg',0.92);
+  btnDownload.disabled = true;
+  foto.onload = ()=>{ btnDownload.disabled=false; };
 };
 
-btnDownload.onclick = ()=>{
+btnDownload.onclick=()=>{
   if(!foto.src) return;
   const a=document.createElement('a');
   a.href=foto.src;
   a.download='INSPECAO_FOTO.jpg';
-  document.body.appendChild(a);
   a.click();
-  a.remove();
 };
 
 /* =========================
-   6) Boot
+   6) Inicialização
    ========================= */
-const chipCsv = document.getElementById('chipCsv');
-const chipCam = document.getElementById('chipCam');
-const chipGps = document.getElementById('chipGps');
-
-setChip(chipCsv, 'bad', 'CSV: carregando…');
-setChip(chipCam, 'bad', 'Câmera: aguardando…');
-setChip(chipGps, 'bad', 'GPS: aguardando…');
-
 (async function boot(){
+  setChip(chipCsv,'bad','CSV: carregando…');
+  setChip(chipCam,'bad','Câmera: aguardando…');
+  setChip(chipGps,'bad','GPS: aguardando…');
   await loadCSVs();
   startCamera();
   startGPS();
 })();
 </script>
+
 </body>
 </html>
