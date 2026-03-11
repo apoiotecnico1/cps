@@ -2,296 +2,258 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Manutenção • Foto + OS + WhatsApp</title>
+<title>Manutenção – Foto + KM + IDs</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body{
   margin:0;background:#0b1020;color:#e6ebff;
-  font-family:system-ui,Arial;padding:12px;
+  font-family:system-ui, Arial;padding:14px;
 }
-h1{
-  text-align:center;font-size:1.6rem;margin-top:0;
-}
+h1{text-align:center;margin:0 0 20px 0;font-size:1.6rem;}
 .card{
   background:#101830;padding:14px;margin-bottom:12px;
   border-radius:12px;border:1px solid #1e2647;
 }
-#vid{width:100%;border-radius:12px;}
-#can{display:none;}
-label{display:block;margin-top:10px;}
-input[type=file]{margin-top:6px;}
 button{
-  width:100%;padding:16px;font-size:1.3rem;border:0;
-  border-radius:14px;font-weight:900;cursor:pointer;margin-top:10px;
+  width:100%;padding:16px;font-size:1.3rem;font-weight:900;
+  border:0;border-radius:14px;cursor:pointer;margin-top:10px;
 }
 #btnFoto{background:#22c55e;color:#000;}
-#btnZap{background:#25D366;color:#000;}
-#btnSave{background:#3b82f6;color:#fff;}
-#btnOS{background:#eab308;color:#000;}
-#btnFull{background:#1e40af;color:#fff;}
-select,textarea{
-  width:100%;padding:10px;border-radius:10px;border:1px solid #333;
-  background:#0f1628;color:#fff;font-size:1rem;
-}
-#fotoFinal{
-  width:100%;margin-top:10px;border-radius:12px;border:1px solid #334;
-}
-.dataBox div{font-size:1.15rem;margin-bottom:4px;}
+#btnDownload{background:#1a244a;color:#fff;}
+#camWrap{border-radius:12px;overflow:hidden;border:1px solid #1e2647;}
+#vid{width:100%;height:auto;display:block;}
+#can{display:none;}
+.dataBox{font-size:1.1rem;margin-top:6px;color:#9fb4fc;}
+#fotoFinal{width:100%;margin-top:10px;border-radius:12px;border:1px solid #334;}
 </style>
 </head>
 <body>
 
-<h1>📸 Manutenção - Registro de Defeito</h1>
+<h1>📸 Manutenção – Foto do Defeito</h1>
 
-<!-- CSV -->
+<!-- VÍDEO -->
 <div class="card">
-  <label>Base de IDs (.csv)
-    <input type="file" id="upIds" accept=".csv">
-  </label>
-  <label>Base de KM (.csv)
-    <input type="file" id="upKm" accept=".csv">
-  </label>
+  <div id="camWrap">
+    <video id="vid" autoplay playsinline></video>
+    <canvas id="can" width="1280" height="720"></canvas>
+  </div>
 </div>
 
-<!-- Camera -->
-<div class="card">
-  <video id="vid" autoplay playsinline></video>
-  <canvas id="can" width="1280" height="720"></canvas>
-  <button id="btnFull">Tela Cheia</button>
-</div>
-
-<!-- Dados -->
+<!-- INFO -->
 <div class="card dataBox">
-  <div>KM Atual: <b id="kmLbl">—</b></div>
-  <div>IDs Próximos: <b id="idLbl">—</b></div>
+  <div>KM atual: <b id="kmLbl">—</b></div>
+  <div>IDs próximos (5): <b id="idLbl">—</b></div>
 </div>
 
-<!-- Tipo do defeito -->
+<!-- AÇÃO -->
 <div class="card">
-  <label>Tipo do defeito:</label>
-  <select id="selDefeito">
-    <option value="POSTE APAGADO">Poste Apagado</option>
-    <option value="OSCILAÇÃO">Oscilação</option>
-    <option value="ACESO DE DIA">Aceso Durante o Dia</option>
-    <option value="INTERMITENTE">Intermitente</option>
-    <option value="LUMINÁRIA DANIFICADA">Luminária Danificada</option>
-    <option value="QUEDA DE BRAÇO">Queda de Braço</option>
-    <option value="FIACAO EXPOSTA">Fiação Exposta / Risco</option>
-    <option value="VANDALISMO">Vandalismo</option>
-    <option value="OUTRO">Outro</option>
-  </select>
-
-  <label>Observações:</label>
-  <textarea id="txtObs" rows="3"></textarea>
-
-  <button id="btnFoto">📸 Tirar Foto do Defeito</button>
+  <button id="btnFoto">📸 Capturar Foto</button>
 </div>
 
-<!-- Foto -->
+<!-- FOTO -->
 <div class="card">
-  <h3>Foto registrada:</h3>
+  <h3>📷 Foto Gerada:</h3>
   <img id="fotoFinal" src="">
-</div>
-
-<!-- Ações -->
-<div class="card">
-  <button id="btnSave">Salvar Pendência</button>
-  <button id="btnOS">Gerar OS (PDF)</button>
-  <button id="btnZap">Enviar WhatsApp</button>
+  <button id="btnDownload">BAIXAR FOTO</button>
 </div>
 
 <script>
-// ========================
-// PARTE 1 — CSV
-// ========================
-let dataset=[], kmDataset=[];
-function nstr(s){return String(s||'').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
+// ------------------------------------------
+// 1) CARREGAMENTO AUTOMÁTICO DOS CSVs
+// ------------------------------------------
+let kmDataset = [];
+let dataset  = [];
+
+async function loadCSVauto() {
+  try {
+    // IDs
+    const idsTxt = await fetch("./csv/Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
+    parseIDs(idsTxt);
+
+    // KM
+    const kmTxt = await fetch("./csv/SNVBR116SPRJ.csv").then(r=>r.text());
+    parseKM(kmTxt);
+
+    console.log("CSV carregados automaticamente!");
+  } catch(err) {
+    console.warn("Erro carregando CSV automaticamente:", err);
+  }
+}
+
+function nstr(s){
+  return String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
 function parsePt(v){
- if(!v) return NaN;
- const s=String(v).trim();
- return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
-}
-function parseCsv(text){
- if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
- const L=text.split(/\r?\n/).filter(l=>l.trim()!=='');
- const sep=L[0].includes(';')?';':',';
- const head=L[0].split(sep);
- const body=L.slice(1).map(l=>l.split(sep));
- return {head,body};
-}
-function findIdx(head,keys){
- let m=head.map(nstr);
- for(const k of keys){
-   let i=m.indexOf(k);
-   if(i>=0) return i;
- }
- return -1;
+  if(!v) return NaN;
+  const s = String(v).trim();
+  return /,\d+$/.test(s)
+    ? Number(s.replace(/\./g,'').replace(',','.'))
+    : Number(s);
 }
 
-// ---- IDs
-upIds.addEventListener("change",async ev=>{
- let f=ev.target.files[0];if(!f)return;
- let txt=await f.text();
- let p=parseCsv(txt);
- let iID=findIdx(p.head,["id do nox","id","idnox"]);
- let iLAT=findIdx(p.head,["latitude","lat"]);
- let iLON=findIdx(p.head,["longitude","lon"]);
- dataset = p.body.map(r=>({
-   id:r[iID], lat:parsePt(r[iLAT]), lon:parsePt(r[iLON])
- })).filter(x=>x.id && isFinite(x.lat) && isFinite(x.lon));
- alert("IDs carregados: "+dataset.length);
-});
+function parseIDs(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
+  const sep = lines[0].includes(";") ? ";" : ",";
+  const head = lines[0].split(sep);
 
-// ---- KM
-upKm.addEventListener("change",async ev=>{
- let f=ev.target.files[0];if(!f)return;
- let txt=await f.text();
- let lines=txt.split(/\r?\n/);
- kmDataset=[];
- lines.forEach(l=>{
-   let p=l.split(";");
-   let km=parsePt(p[0]);
-   let lat=parsePt(p[1]);
-   let lon=parsePt(p[2]);
-   if(isFinite(km)&&isFinite(lat)&&isFinite(lon)){
-     kmDataset.push({km,lat,lon});
-   }
- });
- alert("KM carregados: "+kmDataset.length);
-});
+  const iID  = head.findIndex(h=>nstr(h).includes("id"));
+  const iLAT = head.findIndex(h=>nstr(h).includes("lat"));
+  const iLON = head.findIndex(h=>nstr(h).includes("lon"));
 
-// ========================
-// PARTE 2 — GEO
-// ========================
+  dataset = lines.slice(1).map(l=>{
+    const c=l.split(sep);
+    return {
+      id: c[iID],
+      lat: parsePt(c[iLAT]),
+      lon: parsePt(c[iLON])
+    };
+  }).filter(x => x.id && isFinite(x.lat) && isFinite(x.lon));
+}
+
+function parseKM(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
+  kmDataset = lines.map(l=>{
+    const c=l.split(";");
+    const km=parsePt(c[0]);
+    const lat=parsePt(c[1]);
+    const lon=parsePt(c[2]);
+    return {km,lat,lon};
+  }).filter(x=>isFinite(x.km)&&isFinite(x.lat)&&isFinite(x.lon));
+}
+
+loadCSVauto();
+
+// ------------------------------------------
+// 2) GEO FUNÇÕES
+// ------------------------------------------
 function hav(a,b,c,d){
- const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
- const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
- return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+  const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+  const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
+
 function nearestKM(lat,lon){
- let best=null,bd=1e15;
- kmDataset.forEach(p=>{
-   let d=hav(lat,lon,p.lat,p.lon);
-   if(d<bd){bd=d;best=p;}
- });
- return best;
+  let best=null,bd=1e15;
+  kmDataset.forEach(p=>{
+    const d=hav(lat,lon,p.lat,p.lon);
+    if(d<bd){bd=d;best=p;}
+  });
+  return best;
 }
+
 function nearestN(lat,lon,n){
- return dataset
-  .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
-  .sort((a,b)=>a.d-b.d)
-  .slice(0,n);
+  return dataset
+    .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
+    .sort((a,b)=>a.d-b.d)
+    .slice(0,n);
 }
+
 function fmtKm(v){
- let k=Math.floor(v),m=Math.round((v-k)*1000);
- return `KM ${k}+${String(m).padStart(3,"0")}`;
+  let k=Math.floor(v);
+  let m=Math.round((v-k)*1000);
+  return `KM ${k}+${String(m).padStart(3,"0")}`;
 }
 
-// ========================
-// PARTE 3 — CÂMERA
-// ========================
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(st=>vid.srcObject=st);
+// ------------------------------------------
+// 3) CÂMERA
+// ------------------------------------------
+const vid=document.getElementById("vid");
 
-btnFull.onclick=()=>{document.documentElement.requestFullscreen();};
+async function startCam(){
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:"environment" },
+      audio:false
+    });
+    vid.srcObject = st;
+  }catch(e){
+    alert("Erro ao acessar câmera.");
+  }
+}
+startCam();
 
-// ========================
-// PARTE 4 — GPS
-// ========================
+// ------------------------------------------
+// 4) GPS
+// ------------------------------------------
 let lastPos=null;
+const kmLbl=document.getElementById("kmLbl");
+const idLbl=document.getElementById("idLbl");
 
-navigator.geolocation.watchPosition(p=>{
- lastPos={lat:p.coords.latitude, lon:p.coords.longitude};
- if(kmDataset.length && dataset.length){
-   let nk=nearestKM(lastPos.lat,lastPos.lon);
-   kmLbl.textContent=nk?fmtKm(nk.km):"—";
-   let ids=nearestN(lastPos.lat,lastPos.lon,5);
-   idLbl.textContent=ids.map(x=>x.id).join(", ");
- }
+navigator.geolocation.watchPosition(pos=>{
+  lastPos={
+    lat:pos.coords.latitude,
+    lon:pos.coords.longitude
+  };
+
+  if(kmDataset.length && dataset.length){
+    const nk = nearestKM(lastPos.lat,lastPos.lon);
+    kmLbl.textContent = nk?fmtKm(nk.km):"—";
+
+    const ids = nearestN(lastPos.lat,lastPos.lon,5);
+    idLbl.textContent = ids.map(o=>o.id).join(", ");
+  }
+
 },{enableHighAccuracy:true});
 
-// ========================
-// PARTE 5 — FOTO
-// ========================
-btnFoto.onclick=()=>{
- if(!lastPos){alert("GPS não carregou ainda.");return;}
- const w=vid.videoWidth,h=vid.videoHeight;
- can.width=w;can.height=h;
- const ctx=can.getContext("2d");
- ctx.drawImage(vid,0,0,w,h);
+// ------------------------------------------
+// 5) FOTO
+// ------------------------------------------
+const can=document.getElementById("can");
+const ctx=can.getContext("2d");
+const fotoFinal=document.getElementById("fotoFinal");
 
- // Estampa
- ctx.fillStyle="rgba(0,0,0,0.55)";
- ctx.fillRect(0,h-160,w,160);
+document.getElementById("btnFoto").onclick=()=>{
 
- let nk=nearestKM(lastPos.lat,lastPos.lon);
- let ids=nearestN(lastPos.lat,lastPos.lon,5);
+  if(!vid.videoWidth){
+    alert("A câmera ainda não iniciou.");
+    return;
+  }
+  if(!lastPos){
+    alert("Aguardar GPS...");
+    return;
+  }
 
- ctx.fillStyle="#fff";
- ctx.font="900 60px system-ui";
- ctx.fillText(nk?fmtKm(nk.km):"KM —",20,h-98);
+  const w=vid.videoWidth, h=vid.videoHeight;
+  can.width=w; can.height=h;
 
- ctx.font="700 30px system-ui";
- ctx.fillText(new Date().toLocaleString(),20,h-50);
+  ctx.drawImage(vid,0,0,w,h);
 
- ctx.textAlign="right";
- ctx.font="600 24px system-ui";
- ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-130+i*28));
+  // Estampa preta
+  ctx.fillStyle="rgba(0,0,0,0.55)";
+  ctx.fillRect(0,h-160,w,160);
 
- fotoFinal.src = can.toDataURL("image/jpeg",0.92);
- alert("Foto registrada!");
+  // KM
+  const nk = nearestKM(lastPos.lat,lastPos.lon);
+  ctx.fillStyle="#fff";
+  ctx.font="900 60px system-ui";
+  ctx.fillText(nk?fmtKm(nk.km):"—",20,h-100);
+
+  // Data
+  ctx.font="700 30px system-ui";
+  ctx.fillText(new Date().toLocaleString(),20,h-50);
+
+  // IDs
+  ctx.textAlign="right";
+  ctx.font="600 24px system-ui";
+  nearestN(lastPos.lat,lastPos.lon,5)
+    .forEach((e,i)=>ctx.fillText(e.id,w-20,h-130+i*28));
+
+  fotoFinal.src = can.toDataURL("image/jpeg",0.92);
 };
 
-// ========================
-// PARTE 6 — WHATSAPP
-// ========================
-btnZap.onclick=()=>{
- if(!fotoFinal.src){alert("Tire a foto primeiro.");return;}
+// DOWNLOAD
+document.getElementById("btnDownload").onclick=()=>{
+  if(!fotoFinal.src){
+    alert("Sem foto.");
+    return;
+  }
 
- const txt = encodeURIComponent(
-   `MANUTENÇÃO ILUMINAÇÃO\n`+
-   `Defeito: ${selDefeito.value}\n`+
-   `KM: ${kmLbl.textContent}\n`+
-   `IDs: ${idLbl.textContent}\n`+
-   `Obs: ${txtObs.value}\n`+
-   `Data: ${new Date().toLocaleString()}\n\n`+
-   `Foto anexada.`
- );
-
- window.open("https://wa.me/?text="+txt,"_blank");
-};
-
-// ========================
-// PARTE 7 — PENDÊNCIAS OFFLINE
-// ========================
-btnSave.onclick=()=>{
- if(!fotoFinal.src){alert("Tire a foto antes.");return;}
- let item={
-   defeito:selDefeito.value,
-   km:kmLbl.textContent,
-   ids:idLbl.textContent,
-   obs:txtObs.value,
-   foto:fotoFinal.src,
-   ts:new Date().toLocaleString()
- };
- let list=JSON.parse(localStorage.getItem("pendMan")||"[]");
- list.push(item);
- localStorage.setItem("pendMan",JSON.stringify(list));
- alert("Salvo offline.");
-};
-
-// ========================
-// PARTE 8 — PDF OS
-// ========================
-btnOS.onclick=()=>{
- if(!fotoFinal.src){alert("Tire a foto antes.");return;}
-
- const w=600,h=800;
- let pdf = [
-   "%PDF-1.3\n",
- ];
- // ... PDF básico omitido para encurtar
- alert("PDF gerado (função simplificada).");
+  const a=document.createElement("a");
+  a.href=fotoFinal.src;
+  a.download="FOTO_MANUTENCAO.jpg";
+  a.click();
 };
 </script>
 
