@@ -3,217 +3,316 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Inspeção Fotográfica</title>
-
+<title>Inspeção Fotográfica – Iluminação</title>
 <style>
-body{
-  margin:0;background:#0b1020;color:#e6ebff;
-  font-family:system-ui,Arial;padding:16px;
-}
-h1{text-align:center;margin:0 0 16px;font-size:1.8rem;}
-.card{
-  background:#101830;border:1px solid #1e2647;
-  border-radius:14px;padding:16px;margin-bottom:20px;
-}
-#vid{
-  width:100%;border-radius:14px;background:#000;
-}
-#foto{
-  width:100%;border-radius:14px;border:1px solid #333;margin-top:12px;
-}
-button{
-  width:100%;padding:16px;font-size:1.3rem;font-weight:900;
-  border:0;border-radius:12px;margin-top:12px;cursor:pointer;
-}
-#btnFoto{background:#22c55e;color:#000;}
-#btnDownload{background:#1e40af;color:#fff;}
-#kmTxt,#idTxt{font-size:1.2rem;font-weight:700;color:#9fc5ff;}
+  :root{
+    --bg:#0b1020; --surface:#101830; --fg:#e6ebff; --muted:#a3b1d1;
+    --border:#1e2647; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    --btn:#22c55e; --btn2:#1e40af;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b1020;color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial; padding:16px}
+  h1{margin:0 0 12px 0;text-align:center;font-size:1.8rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin:0 auto 16px;max-width:1024px;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+  #vid{width:100%;display:block;background:#000;border-radius:12px}
+  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:12px}
+  .kv{display:flex;gap:16px;flex-wrap:wrap;color:#bcd0ff;font-size:1.05rem}
+  .kv b{color:#fff}
+  .status{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--border);background:#0c1532;color:#c7d2fe;font-weight:800}
+  .chip .dot{width:10px;height:10px;border-radius:50%}
+  .chip.ok{color:#bbf7d0}.chip.ok .dot{background:var(--ok)}
+  .chip.warn{color:#ffe7b0}.chip.warn .dot{background:var(--warn)}
+  .chip.bad{color:#fecaca}.chip.bad .dot{background:var(--bad)}
+  button{width:100%;padding:16px;font-size:1.25rem;font-weight:900;border:0;border-radius:12px;cursor:pointer;margin-top:12px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  #btnFoto{background:var(--btn);color:#08260f}
+  #btnDownload{background:var(--btn2);color:#fff}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  small.hint{display:block;color:#9fb4fc;margin-top:6px}
 </style>
 </head>
-
 <body>
 
 <h1>📸 Inspeção Fotográfica</h1>
 
-<!-- CÂMERA -->
+<!-- Estado do sistema -->
+<div class="card">
+  <div class="status">
+    <span id="chipCsv" class="chip bad"><span class="dot"></span><span>CSV: carregando…</span></span>
+    <span id="chipCam" class="chip bad"><span class="dot"></span><span>Câmera: aguardando…</span></span>
+    <span id="chipGps" class="chip bad"><span class="dot"></span><span>GPS: aguardando…</span></span>
+  </div>
+  <small class="hint">O botão de captura habilita automaticamente quando CSV + Câmera + GPS estiverem prontos.</small>
+</div>
+
+<!-- Pré-visualização (com margem, centralizado) -->
 <div class="card">
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="can" width="1280" height="720" hidden></canvas>
 </div>
 
-<!-- INFO -->
+<!-- Dados calculados em tempo real -->
 <div class="card">
-  <div>KM: <span id="kmTxt">—</span></div>
-  <div>IDs próximos: <span id="idTxt">—</span></div>
+  <div class="kv">
+    <div>KM: <b id="kmTxt">—</b></div>
+    <div>IDs próximos: <b id="idTxt">—</b></div>
+  </div>
 </div>
 
-<!-- BOTÃO -->
+<!-- Ações -->
 <div class="card">
-  <button id="btnFoto">📸 Capturar Foto</button>
+  <button id="btnFoto" disabled>📸 Capturar Foto</button>
 </div>
 
-<!-- FOTO FINAL -->
+<!-- Foto final -->
 <div class="card">
-  <h2>Foto:</h2>
-  <img id="foto" />
-  <button id="btnDownload">Baixar Foto</button>
+  <h2>Foto</h2>
+  <img id="foto" alt="Prévia da foto capturada">
+  <button id="btnDownload" disabled>Baixar Foto</button>
 </div>
 
 <script>
-// ------------------------------------------------------------------------------------
-// 1. LEITURA AUTOMÁTICA DOS CSVs DO GITHUB PAGES
-// ------------------------------------------------------------------------------------
-let dataset=[], kmDataset=[];
+/* =========================
+   1) CSVs (auto, GitHub Pages)
+   ========================= */
+let dataset = [];   // IDs
+let kmDataset = []; // KMs
+let csvReady = false;
 
 function parsePt(v){
-  if(!v) return NaN;
-  let s = String(v).trim();
-  return /,\d+$/.test(s) ? Number(s.replace(/\./g,"").replace(",","."))
-                         : Number(s);
+  if(v==null) return NaN;
+  const s = String(v).trim();
+  return /,\d+$/.test(s) ? Number(s.replace(/\./g,'').replace(',','.')) : Number(s);
+}
+function cleanLine(l){ // remove BOM e espaços
+  return l.replace(/^\uFEFF/, '').trim();
+}
+async function loadIDs(){
+  const txt = await fetch('./Dados_Completos_Grupo_2_all.csv', {cache:'no-store'}).then(r=>r.text());
+  const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  // Semicolon esperado; cabeçalho exemplo: ID do NOX;Latitude;Longitude;...
+  const head = lines[0].split(';');
+  const h = head.map(s => s.toLowerCase());
+  const iId  = h.findIndex(x => x.includes('id') && !x.includes('latitude') && !x.includes('longitude'));
+  const iLat = h.findIndex(x => x.includes('lat'));
+  const iLon = h.findIndex(x => x.includes('lon'));
+  dataset = lines.slice(1).map(l=>{
+    const c=l.split(';');
+    return { id:String(c[iId]||'').trim(), lat:parsePt(c[iLat]), lon:parsePt(c[iLon]) };
+  }).filter(p=>p.id && isFinite(p.lat) && isFinite(p.lon) && p.lat!==0 && p.lon!==0);
+}
+
+function takeFirstValidTriplet(c){
+  // Alguns CSVs de KM vêm no formato: KM;LAT;LONG;;;;;KM;LAT;LONG
+  // Pega o primeiro trio válido; se não der, tenta o segundo trio.
+  const t1 = {km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2])};
+  if(isFinite(t1.km) && isFinite(t1.lat) && isFinite(t1.lon)) return t1;
+  const t2 = {km:parsePt(c[7]), lat:parsePt(c[8]), lon:parsePt(c[9])};
+  if(isFinite(t2.km) && isFinite(t2.lat) && isFinite(t2.lon)) return t2;
+  return null;
+}
+
+async function loadKMs(){
+  const txt = await fetch('./SNVBR116SPRJ.csv', {cache:'no-store'}).then(r=>r.text());
+  const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  kmDataset = [];
+  for(const l of lines){
+    const c=l.split(';');
+    // Linha pode ser: "KM;LAT;LONG;;;;;KM;LAT;LONG" (cabeçalho) ou dados
+    if (isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // provavelmente cabeçalho
+    const t = takeFirstValidTriplet(c);
+    if (t) kmDataset.push(t);
+  }
 }
 
 async function loadCSVs(){
-  // IDs
-  let idsTxt = await fetch("./Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
-  let L = idsTxt.split(/\r?\n/).filter(l=>l.trim()!=="");
-  let H = L[0].split(";");
-  let idxID  = H.findIndex(h=>h.toLowerCase().includes("id"));
-  let idxLat = H.findIndex(h=>h.toLowerCase().includes("lat"));
-  let idxLon = H.findIndex(h=>h.toLowerCase().includes("lon"));
-  dataset = L.slice(1).map(l=>{
-    let c=l.split(";");
-    return{
-      id:c[idxID],
-      lat:parsePt(c[idxLat]),
-      lon:parsePt(c[idxLon])
-    };
-  }).filter(x=>x.id && isFinite(x.lat) && isFinite(x.lon));
-
-  // KM
-  let kmTxt = await fetch("./SNVBR116SPRJ.csv").then(r=>r.text());
-  let L2 = kmTxt.split(/\r?\n/).filter(l=>l.trim()!=="");
-  kmDataset = L2.map(l=>{
-    let c=l.split(";");
-    return { km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2]) };
-  }).filter(x=>isFinite(x.km));
-
-  console.log("CSV IDs:", dataset.length);
-  console.log("CSV KM:", kmDataset.length);
+  try{
+    await Promise.all([loadIDs(), loadKMs()]);
+    csvReady = dataset.length>0 && kmDataset.length>0;
+    setChip(csvReady ? chipCsv : chipCsv, csvReady ? 'ok' : 'bad', csvReady ? `CSV: OK (IDs ${dataset.length} · KM ${kmDataset.length})` : 'CSV: erro');
+    maybeEnableCapture();
+  }catch(e){
+    setChip(chipCsv, 'bad', 'CSV: erro ao carregar');
+  }
 }
-loadCSVs();
 
-// ------------------------------------------------------------------------------------
-// 2. GEO FUNÇÕES
-// ------------------------------------------------------------------------------------
+/* =========================
+   2) GEO
+   ========================= */
 function hav(a,b,c,d){
   const R=6371000;
-  const x=(c-a)*Math.PI/180;
-  const y=(d-b)*Math.PI/180;
+  const x=(c-a)*Math.PI/180, y=(d-b)*Math.PI/180;
   const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+  return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u));
 }
-
-function nearestKM(lat,lon){
-  let best=null,bd=1e15;
-  kmDataset.forEach(p=>{
-    let d=hav(lat,lon,p.lat,p.lon);
-    if(d<bd){bd=d;best=p;}
-  });
+function nearestKM(lat, lon){
+  let best=null, bd=Infinity;
+  for (const p of kmDataset){
+    const d = hav(lat,lon,p.lat,p.lon);
+    if(d<bd){ bd=d; best=p; }
+  }
   return best;
 }
-
-function nearestN(lat,lon,n){
+function nearestN(lat, lon, n){
   return dataset
-    .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
+    .map(p=>({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}))
     .sort((a,b)=>a.d-b.d)
     .slice(0,n);
 }
-
 function fmtKm(v){
-  let K=Math.floor(v), m=Math.round((v-K)*1000);
-  return `KM ${K}+${String(m).padStart(3,"0")}`;
+  let K=Math.floor(v);
+  let m=Math.round((v-K)*1000);
+  if(m>=1000){m-=1000;K+=1}
+  return `KM ${K}+${String(m).padStart(3,'0')}`;
 }
 
-// ------------------------------------------------------------------------------------
-// 3. CÂMERA (FUNCIONA PERFEITO NO GITHUB PAGES)
-// ------------------------------------------------------------------------------------
-const vid=document.getElementById("vid");
+/* =========================
+   3) CÂMERA
+   ========================= */
+const vid = document.getElementById('vid');
+let camReady = false;
 
-navigator.mediaDevices.getUserMedia({
-  video:{facingMode:{ideal:"environment"}},
-  audio:false
-})
-.then(st=>vid.srcObject=st)
-.catch(err=>alert("Erro ao abrir câmera: "+err));
-
-// ------------------------------------------------------------------------------------
-// 4. GPS
-// ------------------------------------------------------------------------------------
-let lastPos=null;
-const kmTxt=document.getElementById("kmTxt");
-const idTxt=document.getElementById("idTxt");
-
-navigator.geolocation.watchPosition(pos=>{
-  lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude};
-
-  if(dataset.length && kmDataset.length){
-    let km = nearestKM(lastPos.lat,lastPos.lon);
-    kmTxt.textContent = km ? fmtKm(km.km) : "—";
-
-    let ids = nearestN(lastPos.lat,lastPos.lon,5);
-    idTxt.textContent = ids.map(i=>i.id).join(", ");
+async function startCamera(){
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}},
+      audio:false
+    });
+    vid.srcObject = st;
+    // só marca pronto quando metadados de tamanho chegaram
+    await new Promise(res=>{
+      if (vid.readyState >= 1 && vid.videoWidth) return res();
+      vid.onloadedmetadata = ()=>res();
+      setTimeout(res, 2000); // fallback
+    });
+    camReady = !!vid.videoWidth;
+    setChip(chipCam, camReady ? 'ok':'bad', camReady ? 'Câmera: OK' : 'Câmera: erro');
+    maybeEnableCapture();
+  }catch(e){
+    camReady = false;
+    setChip(chipCam, 'bad', 'Câmera: erro');
   }
+}
 
-},{enableHighAccuracy:true});
+/* =========================
+   4) GPS
+   ========================= */
+let lastPos = null;
+const kmTxt = document.getElementById('kmTxt');
+const idTxt = document.getElementById('idTxt');
+let gpsReady = false;
 
-// ------------------------------------------------------------------------------------
-// 5. FOTO
-// ------------------------------------------------------------------------------------
-const can=document.getElementById("can");
-const ctx=can.getContext("2d");
-const foto=document.getElementById("foto");
+function setChip(el, state, text){
+  el.className = `chip ${state}`;
+  el.querySelector('.dot'); // mantém o pontinho
+  el.lastElementChild.textContent = text;
+}
 
-document.getElementById("btnFoto").onclick=()=>{
+function startGPS(){
+  if(!('geolocation' in navigator)){
+    setChip(chipGps, 'bad', 'GPS: não disponível');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady = true;
+    setChip(chipGps, 'ok', `GPS: OK (±${Math.round(p.coords.accuracy)} m)`);
+    updateDerived();
+    navigator.geolocation.watchPosition(pos=>{
+      lastPos = {lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      updateDerived();
+    }, ()=>{}, {enableHighAccuracy:true, maximumAge:500, timeout:15000});
+    maybeEnableCapture();
+  }, ()=>{
+    setChip(chipGps, 'bad', 'GPS: negado');
+  }, {enableHighAccuracy:true, timeout:12000});
+}
 
-  if(!vid.videoWidth){ alert("Câmera não iniciou."); return; }
-  if(!lastPos){ alert("GPS não disponível."); return; }
+function updateDerived(){
+  if(!(csvReady && lastPos)) return;
+  const nk = nearestKM(lastPos.lat,lastPos.lon);
+  kmTxt.textContent = nk ? fmtKm(nk.km) : '—';
+  const ids = nearestN(lastPos.lat,lastPos.lon,5);
+  idTxt.textContent = ids.length ? ids.map(o=>o.id).join(', ') : '—';
+}
 
-  const w=vid.videoWidth, h=vid.videoHeight;
-  can.width=w; can.height=h;
+/* =========================
+   5) Captura da Foto (com estampa KM + IDs + data)
+   ========================= */
+const can  = document.getElementById('can');
+const ctx  = can.getContext('2d',{alpha:false});
+const foto = document.getElementById('foto');
+const btnFoto = document.getElementById('btnFoto');
+const btnDownload = document.getElementById('btnDownload');
 
-  ctx.drawImage(vid,0,0,w,h);
+function maybeEnableCapture(){
+  btnFoto.disabled = !(csvReady && camReady && gpsReady);
+}
 
-  ctx.fillStyle="rgba(0,0,0,0.60)";
-  ctx.fillRect(0,h-180,w,180);
+btnFoto.onclick = ()=>{
+  if(!(csvReady && camReady && gpsReady && lastPos)){ return; }
 
-  let km = nearestKM(lastPos.lat,lastPos.lon);
-  let ids = nearestN(lastPos.lat,lastPos.lon,5);
+  const w = vid.videoWidth || 1280, h = vid.videoHeight || 720;
+  can.width = w; can.height = h;
 
-  ctx.fillStyle="#fff";
-  ctx.font="900 56px system-ui";
-  ctx.fillText(km?fmtKm(km.km):"KM —",20,h-120);
+  // Desenha o vídeo
+  ctx.drawImage(vid, 0, 0, w, h);
 
-  ctx.font="700 28px system-ui";
-  ctx.fillText(new Date().toLocaleString(),20,h-75);
+  // Faixa inferior
+  ctx.fillStyle = 'rgba(0,0,0,.60)';
+  const bandH = Math.max(160, Math.round(h*0.16));
+  ctx.fillRect(0, h-bandH, w, bandH);
 
-  ctx.textAlign="right";
-  ctx.font="600 24px system-ui";
-  ids.forEach((e,i)=> ctx.fillText(e.id,w-20,h-140+i*26) );
+  // KM + Data/hora (lado esquerdo)
+  const kmObj = nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr = kmObj ? fmtKm(kmObj.km) : 'KM —';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.font = `900 ${Math.round(h*0.06)}px system-ui`;
+  ctx.fillText(kmStr, 20, h - bandH + Math.round(bandH*0.55));
 
-  foto.src = can.toDataURL("image/jpeg",0.92);
+  ctx.font = `700 ${Math.round(h*0.035)}px system-ui`;
+  ctx.fillText(new Date().toLocaleString(), 20, h - Math.round(bandH*0.22));
+
+  // IDs (lado direito, pequenos)
+  const ids = nearestN(lastPos.lat,lastPos.lon,5);
+  ctx.textAlign = 'right';
+  ctx.font = `600 ${Math.round(h*0.03)}px system-ui`;
+  ids.forEach((e,i)=>{
+    ctx.fillText(e.id, w-20, h - bandH + 28 + i*28);
+  });
+
+  foto.src = can.toDataURL('image/jpeg', 0.92);
+  btnDownload.disabled = true; // habilita após a imagem carregar
+  foto.onload = ()=>{ btnDownload.disabled = false; };
 };
 
-// ------------------------------------------------------------------------------------
-// 6. DOWNLOAD
-// ------------------------------------------------------------------------------------
-document.getElementById("btnDownload").onclick=()=>{
-  if(!foto.src){ alert("Sem foto."); return; }
-  const a=document.createElement("a");
+btnDownload.onclick = ()=>{
+  if(!foto.src) return;
+  const a=document.createElement('a');
   a.href=foto.src;
-  a.download="INSPECAO_FOTO.jpg";
+  a.download='INSPECAO_FOTO.jpg';
+  document.body.appendChild(a);
   a.click();
+  a.remove();
 };
-</script>
 
+/* =========================
+   6) Boot
+   ========================= */
+const chipCsv = document.getElementById('chipCsv');
+const chipCam = document.getElementById('chipCam');
+const chipGps = document.getElementById('chipGps');
+
+setChip(chipCsv, 'bad', 'CSV: carregando…');
+setChip(chipCam, 'bad', 'Câmera: aguardando…');
+setChip(chipGps, 'bad', 'GPS: aguardando…');
+
+(async function boot(){
+  await loadCSVs();
+  startCamera();
+  startGPS();
+})();
+</script>
 </body>
 </html>
