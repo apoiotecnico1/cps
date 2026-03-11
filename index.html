@@ -2,47 +2,42 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Manutenção – Foto + KM + IDs</title>
+<title>Inspeção Fotográfica – Iluminação</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
 body{
   margin:0;background:#0b1020;color:#e6ebff;
-  font-family:system-ui, Arial;padding:14px;
+  font-family:system-ui,Arial;padding:12px;
 }
-h1{text-align:center;margin:0 0 20px 0;font-size:1.6rem;}
+h1{text-align:center;margin:0 0 15px 0;font-size:1.6rem;}
 .card{
   background:#101830;padding:14px;margin-bottom:12px;
   border-radius:12px;border:1px solid #1e2647;
 }
 button{
   width:100%;padding:16px;font-size:1.3rem;font-weight:900;
-  border:0;border-radius:14px;cursor:pointer;margin-top:10px;
+  border:0;border-radius:14px;margin-top:10px;cursor:pointer;
 }
 #btnFoto{background:#22c55e;color:#000;}
-#btnDownload{background:#1a244a;color:#fff;}
-#camWrap{border-radius:12px;overflow:hidden;border:1px solid #1e2647;}
-#vid{width:100%;height:auto;display:block;}
-#can{display:none;}
-.dataBox{font-size:1.1rem;margin-top:6px;color:#9fb4fc;}
-#fotoFinal{width:100%;margin-top:10px;border-radius:12px;border:1px solid #334;}
+#btnDownload{background:#1e40af;color:#fff;}
+#vid{width:100%;border-radius:12px;}
+#foto{width:100%;border-radius:12px;border:1px solid #334;margin-top:10px;}
 </style>
 </head>
+
 <body>
 
-<h1>📸 Manutenção – Foto do Defeito</h1>
+<h1>📸 Inspeção Fotográfica</h1>
 
 <!-- VÍDEO -->
 <div class="card">
-  <div id="camWrap">
-    <video id="vid" autoplay playsinline></video>
-    <canvas id="can" width="1280" height="720"></canvas>
-  </div>
+  <video id="vid" autoplay playsinline></video>
+  <canvas id="can" width="1280" height="720" hidden></canvas>
 </div>
 
 <!-- INFO -->
-<div class="card dataBox">
-  <div>KM atual: <b id="kmLbl">—</b></div>
+<div class="card">
+  <div>KM: <b id="kmLbl">—</b></div>
   <div>IDs próximos (5): <b id="idLbl">—</b></div>
 </div>
 
@@ -53,87 +48,74 @@ button{
 
 <!-- FOTO -->
 <div class="card">
-  <h3>📷 Foto Gerada:</h3>
-  <img id="fotoFinal" src="">
-  <button id="btnDownload">BAIXAR FOTO</button>
+  <h3>Foto Gerada:</h3>
+  <img id="foto">
+  <button id="btnDownload">Baixar Foto</button>
 </div>
 
+
 <script>
-// ------------------------------------------
-// 1) CARREGAMENTO AUTOMÁTICO DOS CSVs
-// ------------------------------------------
+// =====================================================================
+// 1. CARREGAR CSV AUTOMATICAMENTE
+// =====================================================================
 let kmDataset = [];
 let dataset  = [];
 
-async function loadCSVauto() {
-  try {
-    // IDs
-    const idsTxt = await fetch("./csv/Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
+async function loadCSV(){
+  try{
+    let idsTxt = await fetch("./csv/Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
+    let kmTxt  = await fetch("./csv/SNVBR116SPRJ.csv").then(r=>r.text());
     parseIDs(idsTxt);
-
-    // KM
-    const kmTxt = await fetch("./csv/SNVBR116SPRJ.csv").then(r=>r.text());
     parseKM(kmTxt);
-
-    console.log("CSV carregados automaticamente!");
-  } catch(err) {
-    console.warn("Erro carregando CSV automaticamente:", err);
+    console.log("CSV carregados.");
+  }catch(e){
+    alert("CSV não encontrados. Use a pasta /csv/");
   }
 }
-
-function nstr(s){
-  return String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-}
-
+function nstr(s){return String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
 function parsePt(v){
   if(!v) return NaN;
-  const s = String(v).trim();
-  return /,\d+$/.test(s)
-    ? Number(s.replace(/\./g,'').replace(',','.'))
-    : Number(s);
+  const s=String(v).trim();
+  return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
 }
+// IDs
+function parseIDs(txt){
+  const L = txt.split(/\r?\n/).filter(l=>l.trim()!=="");
+  const sep = L[0].includes(";")?";":",";
+  const H = L[0].split(sep);
+  let iID  = H.findIndex(h=>nstr(h).includes("id"));
+  let iLAT = H.findIndex(h=>nstr(h).includes("lat"));
+  let iLON = H.findIndex(h=>nstr(h).includes("lon"));
 
-function parseIDs(text){
-  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
-  const sep = lines[0].includes(";") ? ";" : ",";
-  const head = lines[0].split(sep);
-
-  const iID  = head.findIndex(h=>nstr(h).includes("id"));
-  const iLAT = head.findIndex(h=>nstr(h).includes("lat"));
-  const iLON = head.findIndex(h=>nstr(h).includes("lon"));
-
-  dataset = lines.slice(1).map(l=>{
+  dataset = L.slice(1).map(l=>{
     const c=l.split(sep);
     return {
-      id: c[iID],
-      lat: parsePt(c[iLAT]),
-      lon: parsePt(c[iLON])
+      id:c[iID],
+      lat:parsePt(c[iLAT]),
+      lon:parsePt(c[iLON])
     };
-  }).filter(x => x.id && isFinite(x.lat) && isFinite(x.lon));
+  }).filter(x=>x.id && isFinite(x.lat)&&isFinite(x.lon));
 }
-
-function parseKM(text){
-  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
-  kmDataset = lines.map(l=>{
+// KM
+function parseKM(txt){
+  const L = txt.split(/\r?\n/).filter(l=>l.trim()!=="");
+  kmDataset = L.map(l=>{
     const c=l.split(";");
-    const km=parsePt(c[0]);
-    const lat=parsePt(c[1]);
-    const lon=parsePt(c[2]);
-    return {km,lat,lon};
+    return { km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2]) };
   }).filter(x=>isFinite(x.km)&&isFinite(x.lat)&&isFinite(x.lon));
 }
+loadCSV();
 
-loadCSVauto();
-
-// ------------------------------------------
-// 2) GEO FUNÇÕES
-// ------------------------------------------
+// =====================================================================
+// 2. GEO
+// =====================================================================
 function hav(a,b,c,d){
-  const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
+  const R=6371000;
+  const x=(c-a)*Math.PI/180;
+  const y=(d-b)*Math.PI/180;
   const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
-
 function nearestKM(lat,lon){
   let best=null,bd=1e15;
   kmDataset.forEach(p=>{
@@ -142,117 +124,90 @@ function nearestKM(lat,lon){
   });
   return best;
 }
-
 function nearestN(lat,lon,n){
   return dataset
     .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
     .sort((a,b)=>a.d-b.d)
     .slice(0,n);
 }
-
 function fmtKm(v){
-  let k=Math.floor(v);
-  let m=Math.round((v-k)*1000);
-  return `KM ${k}+${String(m).padStart(3,"0")}`;
+  let k=Math.floor(v),m=Math.round((v-k)*1000);
+  return `KM ${k}+${String(m).padStart(3,'0')}`;
 }
 
-// ------------------------------------------
-// 3) CÂMERA
-// ------------------------------------------
+// =====================================================================
+// 3. CÂMERA
+// =====================================================================
 const vid=document.getElementById("vid");
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(st=>vid.srcObject=st)
+.catch(()=>alert("Erro ao acessar câmera."));
 
-async function startCam(){
-  try{
-    const st = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:"environment" },
-      audio:false
-    });
-    vid.srcObject = st;
-  }catch(e){
-    alert("Erro ao acessar câmera.");
-  }
-}
-startCam();
-
-// ------------------------------------------
-// 4) GPS
-// ------------------------------------------
+// =====================================================================
+// 4. GPS
+// =====================================================================
 let lastPos=null;
 const kmLbl=document.getElementById("kmLbl");
 const idLbl=document.getElementById("idLbl");
 
-navigator.geolocation.watchPosition(pos=>{
-  lastPos={
-    lat:pos.coords.latitude,
-    lon:pos.coords.longitude
-  };
+navigator.geolocation.watchPosition(p=>{
+  lastPos = { lat:p.coords.latitude, lon:p.coords.longitude };
 
-  if(kmDataset.length && dataset.length){
+  if(dataset.length && kmDataset.length){
     const nk = nearestKM(lastPos.lat,lastPos.lon);
-    kmLbl.textContent = nk?fmtKm(nk.km):"—";
+    kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
 
     const ids = nearestN(lastPos.lat,lastPos.lon,5);
-    idLbl.textContent = ids.map(o=>o.id).join(", ");
+    idLbl.textContent = ids.map(x=>x.id).join(", ");
   }
-
 },{enableHighAccuracy:true});
 
-// ------------------------------------------
-// 5) FOTO
-// ------------------------------------------
+// =====================================================================
+// 5. FOTO
+// =====================================================================
 const can=document.getElementById("can");
 const ctx=can.getContext("2d");
-const fotoFinal=document.getElementById("fotoFinal");
+const foto=document.getElementById("foto");
 
-document.getElementById("btnFoto").onclick=()=>{
+btnFoto.onclick=()=>{
 
-  if(!vid.videoWidth){
-    alert("A câmera ainda não iniciou.");
-    return;
-  }
-  if(!lastPos){
-    alert("Aguardar GPS...");
-    return;
-  }
+  if(!vid.videoWidth){ alert("Câmera não iniciou."); return; }
+  if(!lastPos){ alert("Aguardando GPS."); return; }
 
   const w=vid.videoWidth, h=vid.videoHeight;
   can.width=w; can.height=h;
 
   ctx.drawImage(vid,0,0,w,h);
 
-  // Estampa preta
+  // faixa inferior
   ctx.fillStyle="rgba(0,0,0,0.55)";
   ctx.fillRect(0,h-160,w,160);
 
-  // KM
   const nk = nearestKM(lastPos.lat,lastPos.lon);
+  const ids = nearestN(lastPos.lat,lastPos.lon,5);
+
   ctx.fillStyle="#fff";
-  ctx.font="900 60px system-ui";
-  ctx.fillText(nk?fmtKm(nk.km):"—",20,h-100);
+  ctx.font="900 58px system-ui";
+  ctx.fillText(nk?fmtKm(nk.km):"KM —",20,h-105);
 
-  // Data
   ctx.font="700 30px system-ui";
-  ctx.fillText(new Date().toLocaleString(),20,h-50);
+  ctx.fillText(new Date().toLocaleString(),20,h-55);
 
-  // IDs
   ctx.textAlign="right";
   ctx.font="600 24px system-ui";
-  nearestN(lastPos.lat,lastPos.lon,5)
-    .forEach((e,i)=>ctx.fillText(e.id,w-20,h-130+i*28));
+  ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-130+i*28));
 
-  fotoFinal.src = can.toDataURL("image/jpeg",0.92);
+  foto.src = can.toDataURL("image/jpeg",0.92);
 };
 
-// DOWNLOAD
-document.getElementById("btnDownload").onclick=()=>{
-  if(!fotoFinal.src){
-    alert("Sem foto.");
-    return;
-  }
-
+// =====================================================================
+// 6. DOWNLOAD
+// =====================================================================
+btnDownload.onclick=()=>{
+  if(!foto.src){ alert("Nenhuma foto."); return; }
   const a=document.createElement("a");
-  a.href=fotoFinal.src;
-  a.download="FOTO_MANUTENCAO.jpg";
+  a.href=foto.src;
+  a.download="INSPECAO_FOTO.jpg";
   a.click();
 };
 </script>
