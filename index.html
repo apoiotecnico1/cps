@@ -2,44 +2,35 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Manutenção – Foto + WhatsApp</title>
+<title>Foto Manutenção · KM + IDs · WhatsApp</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-  margin:0;background:#0b1020;color:#e6ebff;
-  font-family:system-ui,Arial;padding:10px;
-}
-h1{text-align:center;margin:0 0 20px 0;font-size:1.6rem;}
-
+body{margin:0;background:#0b1020;color:#e6ebff;font-family:system-ui,Arial;padding:10px;}
+h1{text-align:center;font-size:1.7rem;margin:0 0 10px 0;}
 .card{
   background:#101830;padding:14px;margin-bottom:12px;
   border-radius:12px;border:1px solid #1e2647;
 }
-
 #vid{width:100%;border-radius:12px;}
 #can{display:none;}
-
-button{
-  width:100%;padding:18px;font-size:1.4rem;
-  border:0;border-radius:14px;font-weight:900;
-  cursor:pointer;margin-top:10px;
-}
+button{width:100%;padding:18px;font-size:1.4rem;border:0;border-radius:14px;font-weight:900;cursor:pointer;margin-top:10px;}
 #btnFoto{background:#22c55e;color:#000;}
 #btnZap{background:#25D366;color:#000;}
-
-#fotoFinal{
-  width:100%;margin-top:10px;border-radius:12px;
-  border:1px solid #334;
-}
-
-.dataBox div{font-size:1.1rem;margin-bottom:4px;}
+.dataBox div{font-size:1.15rem;margin-bottom:6px;}
+#fotoFinal{width:100%;margin-top:10px;border-radius:12px;border:1px solid #334;}
+input[type=file]{margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<h1>📸 Foto para Manutenção</h1>
+<h1>📸 Manutenção de Iluminação</h1>
+
+<div class="card">
+  <label>Base de IDs (.csv)<br><input type="file" id="upIds" accept=".csv"></label><br>
+  <label>Base de KM (.csv)<br><input type="file" id="upKm" accept=".csv"></label>
+</div>
 
 <div class="card">
   <video id="vid" autoplay playsinline></video>
@@ -48,34 +39,100 @@ button{
 
 <div class="card dataBox">
   <div>KM: <b id="kmLbl">—</b></div>
-  <div>IDs Próximos: <b id="idLbl">—</b></div>
+  <div>IDs Próximos (5): <b id="idLbl">—</b></div>
 </div>
 
 <div class="card">
   <button id="btnFoto">📸 Registrar Defeito</button>
-  <button id="btnZap">📤 Enviar pelo WhatsApp</button>
+  <button id="btnZap">📤 Enviar WhatsApp</button>
 </div>
 
 <div class="card">
-  <h3>Prévia:</h3>
+  <h3>Prévia da Foto:</h3>
   <img id="fotoFinal" src="">
 </div>
 
 <script>
-// ==== DADOS FICTÍCIOS (substituir pelo CSV real em produção) ====
-let kmDataset=[
-  {km:73.200,lat:-22.9000,lon:-45.3500},
-  {km:73.800,lat:-22.9050,lon:-45.3550}
-];
-let dataset=[
-  {id:"P12111",lat:-22.9005,lon:-45.3507},
-  {id:"P12112",lat:-22.9010,lon:-45.3511},
-  {id:"P12113",lat:-22.9020,lon:-45.3520},
-  {id:"P12114",lat:-22.9030,lon:-45.3530},
-  {id:"P12115",lat:-22.9040,lon:-45.3540}
-];
+// =============================
+// CSV LOADING
+// =============================
+let dataset = [];
+let kmDataset = [];
+let lastPos = null;
 
-// ==== GEO FUNÇÕES ====
+function nstr(s){
+ return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function parsePt(v){
+ if(!v) return NaN;
+ const s = String(v).trim();
+ return /,\d+$/.test(s)
+   ? Number(s.replace(/\./g,'').replace(',','.'))
+   : Number(s);
+}
+
+function parseCsv(txt){
+ if(txt.charCodeAt(0)===0xFEFF) txt = txt.slice(1);
+ const L = txt.split(/\r?\n/).filter(l=>l.trim()!=='');
+ const sep = L[0].includes(';') ? ';' : ',';
+ const head = L[0].split(sep);
+ const body = L.slice(1).map(l => l.split(sep));
+ return { head, body };
+}
+
+function findIdx(head, keys){
+ const h2 = head.map(nstr);
+ for(const k of keys){
+   let i = h2.indexOf(k);
+   if(i>=0) return i;
+ }
+ return -1;
+}
+
+document.getElementById('upIds').addEventListener('change', async ev=>{
+ const f = ev.target.files[0]; if(!f) return;
+ const text = await f.text();
+ const p = parseCsv(text);
+
+ const iID  = findIdx(p.head, ["id","id do nox","idnox"]);
+ const iLAT = findIdx(p.head, ["lat","latitude"]);
+ const iLON = findIdx(p.head, ["lon","longitude","long"]);
+
+ if(iID<0||iLAT<0||iLON<0){ alert("CSV de IDs não reconhecido."); return; }
+
+ dataset = p.body.map(r=>({
+   id: String(r[iID]).trim(),
+   lat: parsePt(r[iLAT]),
+   lon: parsePt(r[iLON])
+ })).filter(x => x.id && isFinite(x.lat) && isFinite(x.lon));
+
+ alert("IDs carregados: "+dataset.length);
+});
+
+document.getElementById('upKm').addEventListener('change', async ev=>{
+ const f = ev.target.files[0]; if(!f) return;
+ const text = await f.text();
+ const p = parseCsv(text);
+
+ const iKM  = findIdx(p.head, ["km"]);
+ const iLAT = findIdx(p.head, ["lat","latitude"]);
+ const iLON = findIdx(p.head, ["lon","longitude","long"]);
+
+ if(iKM<0||iLAT<0||iLON<0){ alert("CSV de KM não reconhecido."); return; }
+
+ kmDataset = p.body.map(r=>({
+   km: parsePt(r[iKM]),
+   lat: parsePt(r[iLAT]),
+   lon: parsePt(r[iLON])
+ })).filter(x => isFinite(x.km) && isFinite(x.lat) && isFinite(x.lon));
+
+ alert("KM carregados: "+kmDataset.length);
+});
+
+// =============================
+// GEO FUNÇÕES
+// =============================
 function hav(a,b,c,d){
  const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
  const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
@@ -85,93 +142,106 @@ function hav(a,b,c,d){
 function nearestKM(lat,lon){
  let best=null,bd=1/0;
  kmDataset.forEach(p=>{
-   const d=hav(lat,lon,p.lat,p.lon);
-   if(d<bd){bd=d;best=p;}
+   const d = hav(lat,lon,p.lat,p.lon);
+   if(d<bd){ bd=d; best=p; }
  });
  return best;
 }
 
 function nearestN(lat,lon,n){
  return dataset
-   .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
+   .map(p => ({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
    .sort((a,b)=>a.d-b.d)
    .slice(0,n);
 }
 
 function fmtKm(v){
- let k=Math.floor(v),m=Math.round((v-k)*1000);
+ let k=Math.floor(v);
+ let m=Math.round((v-k)*1000);
  return `KM ${k}+${String(m).padStart(3,'0')}`;
 }
 
-// === CÂMERA ===
+// =============================
+// CÂMERA
+// =============================
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(st=>vid.srcObject=st);
 
-let lastPos=null;
-
-// === GPS ===
+// =============================
+// GPS POSIÇÃO ATUAL
+// =============================
 navigator.geolocation.watchPosition(p=>{
- lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
+ lastPos = { lat:p.coords.latitude, lon:p.coords.longitude };
 
- const nk=nearestKM(lastPos.lat,lastPos.lon);
- kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
+ if(dataset.length && kmDataset.length){
+   const km = nearestKM(lastPos.lat,lastPos.lon);
+   kmLbl.textContent = km ? fmtKm(km.km) : "—";
 
- const near=nearestN(lastPos.lat,lastPos.lon,5);
- idLbl.textContent = near.map(x=>x.id).join(", ");
+   const ids = nearestN(lastPos.lat,lastPos.lon,5);
+   idLbl.textContent = ids.map(x=>x.id).join(", ");
+ }
 
 },{enableHighAccuracy:true});
 
-// === FOTO ===
-btnFoto.onclick = async ()=>{
- if(!lastPos){ alert("Aguardando GPS..."); return; }
+// =============================
+// FOTO MANUTENÇÃO
+// =============================
+btnFoto.onclick = ()=>{
+ if(!lastPos){ alert("GPS ainda não carregou."); return; }
+ if(!dataset.length || !kmDataset.length){
+   alert("Carregue os CSVs primeiro!");
+   return;
+ }
 
- const w=vid.videoWidth, h=vid.videoHeight;
- can.width=w; can.height=h;
- const ctx=can.getContext("2d");
+ const w = vid.videoWidth;
+ const h = vid.videoHeight;
+ can.width = w;
+ can.height = h;
+
+ const ctx = can.getContext("2d");
  ctx.drawImage(vid,0,0,w,h);
 
- // Estampa
- ctx.fillStyle="rgba(0,0,0,0.55)";
- ctx.fillRect(0, h-160, w, 160);
+ const km = nearestKM(lastPos.lat,lastPos.lon);
+ const ids = nearestN(lastPos.lat,lastPos.lon,5);
 
- const nk=nearestKM(lastPos.lat,lastPos.lon);
- let kmTxt=nk?fmtKm(nk.km):"KM —";
- let near=nearestN(lastPos.lat,lastPos.lon,5);
+ // ESTAMPA
+ ctx.fillStyle="rgba(0,0,0,0.55)";
+ ctx.fillRect(0,h-160,w,160);
 
  ctx.fillStyle="#fff";
  ctx.font="900 60px system-ui";
- ctx.fillText(kmTxt, 20, h-98);
+ ctx.fillText(km ? fmtKm(km.km) : "KM —", 20, h-98);
 
  ctx.font="700 30px system-ui";
  ctx.fillText(new Date().toLocaleString(), 20, h-50);
 
  ctx.textAlign="right";
  ctx.font="600 24px system-ui";
- near.forEach((n,i)=>ctx.fillText(n.id, w-20, h-130+i*28));
+ ids.forEach((n,i)=>ctx.fillText(n.id, w-20, h-130+i*28));
 
  fotoFinal.src = can.toDataURL("image/jpeg",0.92);
- alert("Foto capturada!");
+ alert("Foto registrada!");
 };
 
-// === WHATSAPP ===
+// =============================
+// WHATSAPP
+// =============================
 btnZap.onclick = ()=>{
- if(!fotoFinal.src){ alert("Tire a foto primeiro."); return; }
+ if(!fotoFinal.src){
+   alert("Tire a foto primeiro.");
+   return;
+ }
 
- const nk = kmLbl.textContent;
- const ids = idLbl.textContent;
  const texto = encodeURIComponent(
-   `*MANUTENÇÃO ILUMINAÇÃO*\n`+
-   `Defeito registrado.\n\n`+
-   `📍 ${nk}\n`+
-   `🚧 IDs próximos: ${ids}\n`+
-   `🕒 ${new Date().toLocaleString()}\n\n`+
-   `Foto enviada anexa.`
+   `*MANUTENÇÃO ILUMINAÇÃO*\n` +
+   `Defeito registrado.\n\n` +
+   `📍 ${kmLbl.textContent}\n` +
+    `🚧 IDs próximos: ${idLbl.textContent}\n` +
+   `🕒 ${new Date().toLocaleString()}\n\n` +
+   `Foto capturada no local.`
  );
 
- // link padrão whatsapp
- const url = "https://wa.me/?text=" + texto;
-
- window.open(url, "_blank");
+ window.open("https://wa.me/?text="+texto, "_blank");
 };
 </script>
 
