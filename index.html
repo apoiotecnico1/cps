@@ -1,111 +1,110 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<title>Inspeção Fotográfica – Manutenção</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inspeção Fotográfica</title>
 
 <style>
 body{
   margin:0;background:#0b1020;color:#e6ebff;
-  font-family:system-ui,Arial;padding:12px;
+  font-family:system-ui,Arial;padding:16px;
 }
-h1{text-align:center;font-size:1.6rem;margin-top:0;}
+h1{text-align:center;margin:0 0 16px;font-size:1.8rem;}
 .card{
-  background:#101830;padding:14px;margin-bottom:12px;
-  border-radius:12px;border:1px solid #1e2647;
+  background:#101830;border:1px solid #1e2647;
+  border-radius:14px;padding:16px;margin-bottom:20px;
+}
+#vid{
+  width:100%;border-radius:14px;background:#000;
+}
+#foto{
+  width:100%;border-radius:14px;border:1px solid #333;margin-top:12px;
 }
 button{
   width:100%;padding:16px;font-size:1.3rem;font-weight:900;
-  border:0;border-radius:14px;cursor:pointer;margin-top:10px;
+  border:0;border-radius:12px;margin-top:12px;cursor:pointer;
 }
 #btnFoto{background:#22c55e;color:#000;}
 #btnDownload{background:#1e40af;color:#fff;}
-#vid{width:100%;border-radius:12px;}
-#foto{width:100%;border-radius:12px;border:1px solid #333;margin-top:10px;}
+#kmTxt,#idTxt{font-size:1.2rem;font-weight:700;color:#9fc5ff;}
 </style>
 </head>
+
 <body>
 
 <h1>📸 Inspeção Fotográfica</h1>
 
+<!-- CÂMERA -->
 <div class="card">
-  <video id="vid" autoplay muted playsinline></video>
+  <video id="vid" autoplay playsinline muted></video>
   <canvas id="can" width="1280" height="720" hidden></canvas>
 </div>
 
+<!-- INFO -->
 <div class="card">
-  <div>KM: <b id="kmLbl">—</b></div>
-  <div>IDs próximos: <b id="idLbl">—</b></div>
+  <div>KM: <span id="kmTxt">—</span></div>
+  <div>IDs próximos: <span id="idTxt">—</span></div>
 </div>
 
+<!-- BOTÃO -->
 <div class="card">
-  <button id="btnFoto">📸 Tirar Foto</button>
+  <button id="btnFoto">📸 Capturar Foto</button>
 </div>
 
+<!-- FOTO FINAL -->
 <div class="card">
-  <h3>Foto:</h3>
-  <img id="foto">
-  <button id="btnDownload">Baixar</button>
+  <h2>Foto:</h2>
+  <img id="foto" />
+  <button id="btnDownload">Baixar Foto</button>
 </div>
 
 <script>
-// ======================================================================
-// 1) CSVs reais (carregamento automático)
-// ======================================================================
+// ------------------------------------------------------------------------------------
+// 1. LEITURA AUTOMÁTICA DOS CSVs DO GITHUB PAGES
+// ------------------------------------------------------------------------------------
 let dataset=[], kmDataset=[];
 
 function parsePt(v){
   if(!v) return NaN;
-  let s=String(v).trim();
-  return /,\d+$/.test(s) ? Number(s.replace(/\./g,'').replace(',','.'))
+  let s = String(v).trim();
+  return /,\d+$/.test(s) ? Number(s.replace(/\./g,"").replace(",","."))
                          : Number(s);
 }
 
-function loadCSVs(){
-  fetch("./csv/Dados_Completos_Grupo_2_all.csv")
-    .then(r=>r.text())
-    .then(txt=>parseIDs(txt));
-
-  fetch("./csv/SNVBR116SPRJ.csv")
-    .then(r=>r.text())
-    .then(txt=>parseKMs(txt));
-}
-
-function parseIDs(text){
-  let L=text.split(/\r?\n/).filter(x=>x.trim()!=="");
-  let H=L[0].split(";");
-  let idxID=H.findIndex(h=>h.toLowerCase().includes("id"));
-  let idxLat=H.findIndex(h=>h.toLowerCase().includes("lat"));
-  let idxLon=H.findIndex(h=>h.toLowerCase().includes("lon"));
-
+async function loadCSVs(){
+  // IDs
+  let idsTxt = await fetch("./Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
+  let L = idsTxt.split(/\r?\n/).filter(l=>l.trim()!=="");
+  let H = L[0].split(";");
+  let idxID  = H.findIndex(h=>h.toLowerCase().includes("id"));
+  let idxLat = H.findIndex(h=>h.toLowerCase().includes("lat"));
+  let idxLon = H.findIndex(h=>h.toLowerCase().includes("lon"));
   dataset = L.slice(1).map(l=>{
     let c=l.split(";");
-    return {
+    return{
       id:c[idxID],
       lat:parsePt(c[idxLat]),
       lon:parsePt(c[idxLon])
     };
-  }).filter(p=>p.id && isFinite(p.lat) && isFinite(p.lon));
+  }).filter(x=>x.id && isFinite(x.lat) && isFinite(x.lon));
 
-  console.log("IDs carregados:", dataset.length);
-}
-
-function parseKMs(text){
-  let L=text.split(/\r?\n/).filter(x=>x.trim()!=="");
-  kmDataset = L.map(l=>{
+  // KM
+  let kmTxt = await fetch("./SNVBR116SPRJ.csv").then(r=>r.text());
+  let L2 = kmTxt.split(/\r?\n/).filter(l=>l.trim()!=="");
+  kmDataset = L2.map(l=>{
     let c=l.split(";");
     return { km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2]) };
   }).filter(x=>isFinite(x.km));
 
-  console.log("KM carregados:", kmDataset.length);
+  console.log("CSV IDs:", dataset.length);
+  console.log("CSV KM:", kmDataset.length);
 }
-
 loadCSVs();
 
-// ======================================================================
-// 2) Geometria
-// ======================================================================
+// ------------------------------------------------------------------------------------
+// 2. GEO FUNÇÕES
+// ------------------------------------------------------------------------------------
 function hav(a,b,c,d){
   const R=6371000;
   const x=(c-a)*Math.PI/180;
@@ -118,7 +117,7 @@ function nearestKM(lat,lon){
   let best=null,bd=1e15;
   kmDataset.forEach(p=>{
     let d=hav(lat,lon,p.lat,p.lon);
-    if(d<bd){ bd=d; best=p; }
+    if(d<bd){bd=d;best=p;}
   });
   return best;
 }
@@ -131,55 +130,50 @@ function nearestN(lat,lon,n){
 }
 
 function fmtKm(v){
-  let k=Math.floor(v),m=Math.round((v-k)*1000);
-  return `KM ${k}+${String(m).padStart(3,'0')}`;
+  let K=Math.floor(v), m=Math.round((v-K)*1000);
+  return `KM ${K}+${String(m).padStart(3,"0")}`;
 }
 
-// ======================================================================
-// 3) Câmera (corrigido / compatível)
-// ======================================================================
+// ------------------------------------------------------------------------------------
+// 3. CÂMERA (FUNCIONA PERFEITO NO GITHUB PAGES)
+// ------------------------------------------------------------------------------------
 const vid=document.getElementById("vid");
 
-async function startCam(){
-  try{
-    const st = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ideal:"environment"} }
-    });
-    vid.srcObject = st;
-  }catch(e){
-    alert("Erro ao abrir câmera.");
-  }
-}
-startCam();
+navigator.mediaDevices.getUserMedia({
+  video:{facingMode:{ideal:"environment"}},
+  audio:false
+})
+.then(st=>vid.srcObject=st)
+.catch(err=>alert("Erro ao abrir câmera: "+err));
 
-// ======================================================================
-// 4) GPS
-// ======================================================================
+// ------------------------------------------------------------------------------------
+// 4. GPS
+// ------------------------------------------------------------------------------------
 let lastPos=null;
-const kmLbl=document.getElementById("kmLbl");
-const idLbl=document.getElementById("idLbl");
+const kmTxt=document.getElementById("kmTxt");
+const idTxt=document.getElementById("idTxt");
 
 navigator.geolocation.watchPosition(pos=>{
   lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude};
 
-  if(kmDataset.length && dataset.length){
-    let nk=nearestKM(lastPos.lat,lastPos.lon);
-    kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
+  if(dataset.length && kmDataset.length){
+    let km = nearestKM(lastPos.lat,lastPos.lon);
+    kmTxt.textContent = km ? fmtKm(km.km) : "—";
 
-    let ids=nearestN(lastPos.lat,lastPos.lon,5);
-    idLbl.textContent = ids.map(i=>i.id).join(", ");
+    let ids = nearestN(lastPos.lat,lastPos.lon,5);
+    idTxt.textContent = ids.map(i=>i.id).join(", ");
   }
 
 },{enableHighAccuracy:true});
 
-// ======================================================================
-// 5) FOTO funcional
-// ======================================================================
+// ------------------------------------------------------------------------------------
+// 5. FOTO
+// ------------------------------------------------------------------------------------
 const can=document.getElementById("can");
 const ctx=can.getContext("2d");
 const foto=document.getElementById("foto");
 
-btnFoto.onclick=()=>{
+document.getElementById("btnFoto").onclick=()=>{
 
   if(!vid.videoWidth){ alert("Câmera não iniciou."); return; }
   if(!lastPos){ alert("GPS não disponível."); return; }
@@ -189,30 +183,30 @@ btnFoto.onclick=()=>{
 
   ctx.drawImage(vid,0,0,w,h);
 
-  ctx.fillStyle="rgba(0,0,0,0.55)";
-  ctx.fillRect(0,h-160,w,160);
+  ctx.fillStyle="rgba(0,0,0,0.60)";
+  ctx.fillRect(0,h-180,w,180);
 
-  let nk=nearestKM(lastPos.lat,lastPos.lon);
-  let ids=nearestN(lastPos.lat,lastPos.lon,5);
+  let km = nearestKM(lastPos.lat,lastPos.lon);
+  let ids = nearestN(lastPos.lat,lastPos.lon,5);
 
   ctx.fillStyle="#fff";
-  ctx.font="900 60px system-ui";
-  ctx.fillText(nk?fmtKm(nk.km):"KM —",20,h-105);
+  ctx.font="900 56px system-ui";
+  ctx.fillText(km?fmtKm(km.km):"KM —",20,h-120);
 
-  ctx.font="700 30px system-ui";
-  ctx.fillText(new Date().toLocaleString(),20,h-55);
+  ctx.font="700 28px system-ui";
+  ctx.fillText(new Date().toLocaleString(),20,h-75);
 
   ctx.textAlign="right";
   ctx.font="600 24px system-ui";
-  ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-130+i*28));
+  ids.forEach((e,i)=> ctx.fillText(e.id,w-20,h-140+i*26) );
 
   foto.src = can.toDataURL("image/jpeg",0.92);
 };
 
-// ======================================================================
-// 6) DOWNLOAD
-// ======================================================================
-btnDownload.onclick=()=>{
+// ------------------------------------------------------------------------------------
+// 6. DOWNLOAD
+// ------------------------------------------------------------------------------------
+document.getElementById("btnDownload").onclick=()=>{
   if(!foto.src){ alert("Sem foto."); return; }
   const a=document.createElement("a");
   a.href=foto.src;
