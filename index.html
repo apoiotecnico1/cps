@@ -72,9 +72,49 @@
     h1{font-size:1.2rem}
     button{flex:1 1 140px}
   }
+
+  /* ===== Painel de SENHA (cadeado) ===== */
+  #lock{
+    position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85));
+    display:flex; align-items:center; justify-content:center; z-index:9999;
+  }
+  .lock-card{
+    width:min(92vw,420px);
+    background:#0f1533; border:1px solid #263166; border-radius:14px; padding:18px;
+    box-shadow:0 10px 28px rgba(0,0,0,.6); text-align:center;
+  }
+  .lock-card h2{margin:0 0 4px; font-size:1.2rem}
+  .lock-card p{margin:0 0 12px; color:#b9c7ff; font-size:.95rem}
+  .lock-row{display:flex; gap:8px; align-items:center; justify-content:center; margin:10px 0}
+  #pwd{
+    flex:1 1 auto; padding:12px; border:1px solid #2a3a7a; border-radius:10px;
+    background:#0b1130; color:#e6ebff; font-size:1rem; outline:none;
+  }
+  #btnEnter{
+    padding:12px 16px; border:0; border-radius:10px; background:#22c55e; color:#072414; font-weight:900; cursor:pointer;
+  }
+  #rememberWrap{display:flex; align-items:center; gap:8px; justify-content:center; color:#cbd5ff; font-size:.9rem; margin-top:6px}
+  #err{color:#ff9aa2; font-size:.9rem; min-height:1.2em; margin-top:8px}
 </style>
 </head>
 <body>
+
+<!-- ===== CAD EADO (SENHA) ===== -->
+<div id="lock">
+  <div class="lock-card">
+    <h2>🔒 Acesso restrito</h2>
+    <p>Digite a senha para continuar.</p>
+    <div class="lock-row">
+      <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" />
+      <button id="btnEnter">Entrar</button>
+    </div>
+    <label id="rememberWrap">
+      <input id="remember" type="checkbox" />
+      Lembrar nesta sessão
+    </label>
+    <div id="err"></div>
+  </div>
+</div>
 
 <h1>📸 Inspeção Fotográfica</h1>
 
@@ -118,7 +158,7 @@
     <button id="btnClear" disabled>🧹 Limpar lista (próximo relatório)</button>
   </div>
 
-  <!-- ✅ NOVO: opção de limpeza automática após PDF -->
+  <!-- Limpeza automática após PDF -->
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
     <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
     Limpar automaticamente a lista depois de salvar/enviar o PDF
@@ -141,6 +181,45 @@
 </div>
 
 <script>
+/* =========================
+   Cadeado (Senha: nox)
+   ========================= */
+const LOCK = {
+  panel: document.getElementById('lock'),
+  input: document.getElementById('pwd'),
+  btn:   document.getElementById('btnEnter'),
+  err:   document.getElementById('err'),
+  remember: document.getElementById('remember'),
+  key:   'session_unlocked'
+};
+function showError(msg){ LOCK.err.textContent = msg || ''; }
+function tryUnlock(){
+  const v = (LOCK.input.value||'').trim();
+  if(v === 'nox'){ // senha simples (requisito do usuário)
+    if(LOCK.remember.checked){
+      sessionStorage.setItem(LOCK.key,'1');
+    }
+    LOCK.panel.style.display='none';
+    showError('');
+    boot(); // inicia o app só após desbloquear
+  }else{
+    showError('Senha incorreta.');
+    LOCK.input.focus();
+    LOCK.input.select();
+  }
+}
+LOCK.btn.addEventListener('click', tryUnlock);
+LOCK.input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
+(function gate(){
+  if(sessionStorage.getItem(LOCK.key)==='1'){
+    LOCK.panel.style.display='none';
+    boot(); // já desbloqueado nesta sessão
+  }else{
+    // foca o campo e aguarda senha
+    LOCK.input.focus();
+  }
+})();
+
 /* =========================
    Utilitários
    ========================= */
@@ -550,7 +629,7 @@ btnPdf.onclick=async ()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='RELATORIO_INSPECAO.pdf';
   document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
 
-  // ✅ Limpar automaticamente (se marcado)
+  // Limpar automaticamente (se marcado)
   if (autoClear?.checked) { await clearList(true); }
 };
 
@@ -582,14 +661,12 @@ btnSharePdf.onclick=async ()=>{
   try{
     if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
       await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
-      // ✅ Limpagem automática se marcado
-      if (autoClear?.checked) { await clearList(true); }
+      if (autoClear?.checked) { await clearList(true); } // limpa após envio
     }else{
       const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
-      // ✅ Limpagem automática se marcado
-      if (autoClear?.checked) { await clearList(true); }
+      if (autoClear?.checked) { await clearList(true); } // limpa após fallback
     }
   }catch(e){
     alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
@@ -619,7 +696,7 @@ btnSharePhotos.onclick=async ()=>{
 };
 
 /* =========================
-   Boot + restauração
+   Boot + restauração (chamado após senha)
    ========================= */
 async function restoreSavedPhotos(){
   const rows=await dbGetAll(); if(!rows.length) return;
@@ -633,7 +710,7 @@ async function restoreSavedPhotos(){
 function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
 function ready(){ return csvReady && camReady && gpsReady; }
 
-(async function boot(){
+async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
   await loadCSVs();                      // CSVs
   await enumerateCameras();              // lista câmeras
@@ -642,7 +719,7 @@ function ready(){ return csvReady && camReady && gpsReady; }
   db=await openDB(); await restoreSavedPhotos();
   const tick=()=>{ setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
   tick();
-})();
+}
 </script>
 
 </body>
