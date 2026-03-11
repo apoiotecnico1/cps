@@ -2,104 +2,86 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Foto de Manutenção · KM + IDs Próximos</title>
+<title>Manutenção – Foto + WhatsApp</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body{
-  margin:0;
-  background:#0b1020;
-  color:#e6ebff;
-  font-family:system-ui, Arial;
-  padding:14px;
+  margin:0;background:#0b1020;color:#e6ebff;
+  font-family:system-ui,Arial;padding:10px;
 }
-h1{margin:0 0 10px 0;text-align:center;}
+h1{text-align:center;margin:0 0 20px 0;font-size:1.6rem;}
+
 .card{
-  background:#101830;
-  padding:14px;
-  margin-bottom:12px;
-  border-radius:12px;
-  border:1px solid #1e2647;
+  background:#101830;padding:14px;margin-bottom:12px;
+  border-radius:12px;border:1px solid #1e2647;
 }
+
+#vid{width:100%;border-radius:12px;}
+#can{display:none;}
+
 button{
-  width:100%;
-  padding:16px;
-  font-size:1.2rem;
-  font-weight:900;
-  border:0;
-  border-radius:14px;
-  background:#22c55e;
-  cursor:pointer;
+  width:100%;padding:18px;font-size:1.4rem;
+  border:0;border-radius:14px;font-weight:900;
+  cursor:pointer;margin-top:10px;
 }
-#camWrap{
-  position:relative;
-  border-radius:12px;
-  overflow:hidden;
-  border:1px solid #1e2647;
-}
-canvas{width:100%;display:block;background:#000;}
-.dataBox{
-  font-size:1rem;
-  color:#9fb4fc;
-  margin-top:6px;
-}
+#btnFoto{background:#22c55e;color:#000;}
+#btnZap{background:#25D366;color:#000;}
+
 #fotoFinal{
-  width:100%;
-  margin-top:10px;
-  border-radius:12px;
+  width:100%;margin-top:10px;border-radius:12px;
   border:1px solid #334;
 }
+
+.dataBox div{font-size:1.1rem;margin-bottom:4px;}
 </style>
 </head>
 
 <body>
 
-<h1>📸 Foto de Manutenção</h1>
+<h1>📸 Foto para Manutenção</h1>
 
 <div class="card">
-  <div id="camWrap">
-    <video id="vid" autoplay playsinline style="width:100%;"></video>
-    <canvas id="can" width="1280" height="720" hidden></canvas>
-  </div>
+  <video id="vid" autoplay playsinline></video>
+  <canvas id="can" width="1280" height="720"></canvas>
 </div>
 
 <div class="card dataBox">
-  <div>KM atual: <b id="kmLbl">—</b></div>
-  <div>IDs próximos (5): <b id="idLbl">—</b></div>
+  <div>KM: <b id="kmLbl">—</b></div>
+  <div>IDs Próximos: <b id="idLbl">—</b></div>
 </div>
 
 <div class="card">
-  <button id="btnFoto">TIRAR FOTO PARA MANUTENÇÃO</button>
+  <button id="btnFoto">📸 Registrar Defeito</button>
+  <button id="btnZap">📤 Enviar pelo WhatsApp</button>
 </div>
 
 <div class="card">
-  <h3>📷 Foto Gerada:</h3>
+  <h3>Prévia:</h3>
   <img id="fotoFinal" src="">
-  <button id="btnDownload" style="background:#1a244a;margin-top:10px">BAIXAR FOTO</button>
 </div>
 
 <script>
-// ==== DADOS DE TESTE ====
-// Você pode substituir pelo CSV real posteriormente
-let kmDataset = [
-  {km: 73.100, lat:-22.90000, lon:-45.35000},
-  {km: 73.500, lat:-22.90300, lon:-45.35500},
-  {km: 74.000, lat:-22.90600, lon:-45.36000}
+// ==== DADOS FICTÍCIOS (substituir pelo CSV real em produção) ====
+let kmDataset=[
+  {km:73.200,lat:-22.9000,lon:-45.3500},
+  {km:73.800,lat:-22.9050,lon:-45.3550}
 ];
-let dataset = [
-  {id:"P12345", lat:-22.90301, lon:-45.35501},
-  {id:"P12346", lat:-22.90350, lon:-45.35580},
-  {id:"P12347", lat:-22.90410, lon:-45.35630},
-  {id:"P12348", lat:-22.90500, lon:-45.35720},
-  {id:"P12349", lat:-22.90600, lon:-45.35810}
+let dataset=[
+  {id:"P12111",lat:-22.9005,lon:-45.3507},
+  {id:"P12112",lat:-22.9010,lon:-45.3511},
+  {id:"P12113",lat:-22.9020,lon:-45.3520},
+  {id:"P12114",lat:-22.9030,lon:-45.3530},
+  {id:"P12115",lat:-22.9040,lon:-45.3540}
 ];
 
-// ==== GEO ====
+// ==== GEO FUNÇÕES ====
 function hav(a,b,c,d){
  const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;
  const u=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
  return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
+
 function nearestKM(lat,lon){
  let best=null,bd=1/0;
  kmDataset.forEach(p=>{
@@ -108,87 +90,88 @@ function nearestKM(lat,lon){
  });
  return best;
 }
+
 function nearestN(lat,lon,n){
  return dataset
-   .map(p=>({id:p.id, lat:p.lat, lon:p.lon, d:hav(lat,lon,p.lat,p.lon)}))
+   .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
    .sort((a,b)=>a.d-b.d)
    .slice(0,n);
 }
+
 function fmtKm(v){
- let k=Math.floor(v), m=Math.round((v-k)*1000);
+ let k=Math.floor(v),m=Math.round((v-k)*1000);
  return `KM ${k}+${String(m).padStart(3,'0')}`;
 }
 
-// ==== CÂMERA ====
-const vid=document.getElementById("vid");
-const can=document.getElementById("can");
-const c2=can.getContext("2d");
-const fotoFinal=document.getElementById("fotoFinal");
-const kmLbl=document.getElementById("kmLbl");
-const idLbl=document.getElementById("idLbl");
+// === CÂMERA ===
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(st=>vid.srcObject=st);
+
 let lastPos=null;
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(st=>{
-  vid.srcObject=st;
-});
-
-// ==== GPS ====
+// === GPS ===
 navigator.geolocation.watchPosition(p=>{
-  lastPos = {
-    lat:p.coords.latitude,
-    lon:p.coords.longitude
-  };
+ lastPos={lat:p.coords.latitude,lon:p.coords.longitude};
 
-  // atualizar KM
-  const nk = nearestKM(lastPos.lat,lastPos.lon);
-  kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
+ const nk=nearestKM(lastPos.lat,lastPos.lon);
+ kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
 
-  // atualizar IDs
-  const near = nearestN(lastPos.lat,lastPos.lon,5);
-  idLbl.textContent = near.map(x=>x.id).join(", ");
+ const near=nearestN(lastPos.lat,lastPos.lon,5);
+ idLbl.textContent = near.map(x=>x.id).join(", ");
 
 },{enableHighAccuracy:true});
 
-// ==== FOTO PARA MANUTENÇÃO ====
-document.getElementById("btnFoto").onclick = async () => {
-  if(!lastPos){ alert("GPS sem posição ainda."); return; }
+// === FOTO ===
+btnFoto.onclick = async ()=>{
+ if(!lastPos){ alert("Aguardando GPS..."); return; }
 
-  can.width = vid.videoWidth;
-  can.height = vid.videoHeight;
-  c2.drawImage(vid,0,0,can.width,can.height);
+ const w=vid.videoWidth, h=vid.videoHeight;
+ can.width=w; can.height=h;
+ const ctx=can.getContext("2d");
+ ctx.drawImage(vid,0,0,w,h);
 
-  // Estampa
-  c2.fillStyle="rgba(0,0,0,0.65)";
-  c2.fillRect(0, can.height-150, can.width, 150);
+ // Estampa
+ ctx.fillStyle="rgba(0,0,0,0.55)";
+ ctx.fillRect(0, h-160, w, 160);
 
-  const nk = nearestKM(lastPos.lat,lastPos.lon);
-  const kmTxt = nk ? fmtKm(nk.km) : "KM —";
-  const near = nearestN(lastPos.lat,lastPos.lon,5);
+ const nk=nearestKM(lastPos.lat,lastPos.lon);
+ let kmTxt=nk?fmtKm(nk.km):"KM —";
+ let near=nearestN(lastPos.lat,lastPos.lon,5);
 
-  c2.fillStyle="#fff";
-  c2.font="900 56px system-ui";
-  c2.fillText(kmTxt, 20, can.height-90);
+ ctx.fillStyle="#fff";
+ ctx.font="900 60px system-ui";
+ ctx.fillText(kmTxt, 20, h-98);
 
-  c2.font="800 24px system-ui";
-  c2.fillText(new Date().toLocaleString(), 20, can.height-45);
+ ctx.font="700 30px system-ui";
+ ctx.fillText(new Date().toLocaleString(), 20, h-50);
 
-  c2.textAlign="right";
-  c2.font="600 22px system-ui";
-  near.forEach((n,i)=>{
-    c2.fillText(n.id, can.width-20, can.height-120 + i*22);
-  });
+ ctx.textAlign="right";
+ ctx.font="600 24px system-ui";
+ near.forEach((n,i)=>ctx.fillText(n.id, w-20, h-130+i*28));
 
-  fotoFinal.src = can.toDataURL("image/jpeg",0.92);
+ fotoFinal.src = can.toDataURL("image/jpeg",0.92);
+ alert("Foto capturada!");
 };
 
-// ==== DOWNLOAD ====
-document.getElementById("btnDownload").onclick = () => {
-  if(!fotoFinal.src){ alert("Nenhuma foto gerada."); return; }
-  const a=document.createElement("a");
-  a.href=fotoFinal.src;
-  a.download="FOTO_MANUTENCAO.jpg";
-  a.click();
+// === WHATSAPP ===
+btnZap.onclick = ()=>{
+ if(!fotoFinal.src){ alert("Tire a foto primeiro."); return; }
+
+ const nk = kmLbl.textContent;
+ const ids = idLbl.textContent;
+ const texto = encodeURIComponent(
+   `*MANUTENÇÃO ILUMINAÇÃO*\n`+
+   `Defeito registrado.\n\n`+
+   `📍 ${nk}\n`+
+   `🚧 IDs próximos: ${ids}\n`+
+   `🕒 ${new Date().toLocaleString()}\n\n`+
+   `Foto enviada anexa.`
+ );
+
+ // link padrão whatsapp
+ const url = "https://wa.me/?text=" + texto;
+
+ window.open(url, "_blank");
 };
 </script>
 
