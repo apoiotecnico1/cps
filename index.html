@@ -2,113 +2,110 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Inspeção Fotográfica – Iluminação</title>
+<title>Inspeção Fotográfica – Manutenção</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body{
   margin:0;background:#0b1020;color:#e6ebff;
   font-family:system-ui,Arial;padding:12px;
 }
-h1{text-align:center;margin:0 0 15px 0;font-size:1.6rem;}
+h1{text-align:center;font-size:1.6rem;margin-top:0;}
 .card{
   background:#101830;padding:14px;margin-bottom:12px;
   border-radius:12px;border:1px solid #1e2647;
 }
 button{
   width:100%;padding:16px;font-size:1.3rem;font-weight:900;
-  border:0;border-radius:14px;margin-top:10px;cursor:pointer;
+  border:0;border-radius:14px;cursor:pointer;margin-top:10px;
 }
 #btnFoto{background:#22c55e;color:#000;}
 #btnDownload{background:#1e40af;color:#fff;}
 #vid{width:100%;border-radius:12px;}
-#foto{width:100%;border-radius:12px;border:1px solid #334;margin-top:10px;}
+#foto{width:100%;border-radius:12px;border:1px solid #333;margin-top:10px;}
 </style>
 </head>
-
 <body>
 
 <h1>📸 Inspeção Fotográfica</h1>
 
-<!-- VÍDEO -->
 <div class="card">
-  <video id="vid" autoplay playsinline></video>
+  <video id="vid" autoplay muted playsinline></video>
   <canvas id="can" width="1280" height="720" hidden></canvas>
 </div>
 
-<!-- INFO -->
 <div class="card">
   <div>KM: <b id="kmLbl">—</b></div>
-  <div>IDs próximos (5): <b id="idLbl">—</b></div>
+  <div>IDs próximos: <b id="idLbl">—</b></div>
 </div>
 
-<!-- AÇÃO -->
 <div class="card">
-  <button id="btnFoto">📸 Capturar Foto</button>
+  <button id="btnFoto">📸 Tirar Foto</button>
 </div>
 
-<!-- FOTO -->
 <div class="card">
-  <h3>Foto Gerada:</h3>
+  <h3>Foto:</h3>
   <img id="foto">
-  <button id="btnDownload">Baixar Foto</button>
+  <button id="btnDownload">Baixar</button>
 </div>
-
 
 <script>
-// =====================================================================
-// 1. CARREGAR CSV AUTOMATICAMENTE
-// =====================================================================
-let kmDataset = [];
-let dataset  = [];
+// ======================================================================
+// 1) CSVs reais (carregamento automático)
+// ======================================================================
+let dataset=[], kmDataset=[];
 
-async function loadCSV(){
-  try{
-    let idsTxt = await fetch("./csv/Dados_Completos_Grupo_2_all.csv").then(r=>r.text());
-    let kmTxt  = await fetch("./csv/SNVBR116SPRJ.csv").then(r=>r.text());
-    parseIDs(idsTxt);
-    parseKM(kmTxt);
-    console.log("CSV carregados.");
-  }catch(e){
-    alert("CSV não encontrados. Use a pasta /csv/");
-  }
-}
-function nstr(s){return String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");}
 function parsePt(v){
   if(!v) return NaN;
-  const s=String(v).trim();
-  return /,\d+$/.test(s)?Number(s.replace(/\./g,'').replace(',','.')):Number(s);
+  let s=String(v).trim();
+  return /,\d+$/.test(s) ? Number(s.replace(/\./g,'').replace(',','.'))
+                         : Number(s);
 }
-// IDs
-function parseIDs(txt){
-  const L = txt.split(/\r?\n/).filter(l=>l.trim()!=="");
-  const sep = L[0].includes(";")?";":",";
-  const H = L[0].split(sep);
-  let iID  = H.findIndex(h=>nstr(h).includes("id"));
-  let iLAT = H.findIndex(h=>nstr(h).includes("lat"));
-  let iLON = H.findIndex(h=>nstr(h).includes("lon"));
+
+function loadCSVs(){
+  fetch("./csv/Dados_Completos_Grupo_2_all.csv")
+    .then(r=>r.text())
+    .then(txt=>parseIDs(txt));
+
+  fetch("./csv/SNVBR116SPRJ.csv")
+    .then(r=>r.text())
+    .then(txt=>parseKMs(txt));
+}
+
+function parseIDs(text){
+  let L=text.split(/\r?\n/).filter(x=>x.trim()!=="");
+  let H=L[0].split(";");
+  let idxID=H.findIndex(h=>h.toLowerCase().includes("id"));
+  let idxLat=H.findIndex(h=>h.toLowerCase().includes("lat"));
+  let idxLon=H.findIndex(h=>h.toLowerCase().includes("lon"));
 
   dataset = L.slice(1).map(l=>{
-    const c=l.split(sep);
+    let c=l.split(";");
     return {
-      id:c[iID],
-      lat:parsePt(c[iLAT]),
-      lon:parsePt(c[iLON])
+      id:c[idxID],
+      lat:parsePt(c[idxLat]),
+      lon:parsePt(c[idxLon])
     };
-  }).filter(x=>x.id && isFinite(x.lat)&&isFinite(x.lon));
-}
-// KM
-function parseKM(txt){
-  const L = txt.split(/\r?\n/).filter(l=>l.trim()!=="");
-  kmDataset = L.map(l=>{
-    const c=l.split(";");
-    return { km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2]) };
-  }).filter(x=>isFinite(x.km)&&isFinite(x.lat)&&isFinite(x.lon));
-}
-loadCSV();
+  }).filter(p=>p.id && isFinite(p.lat) && isFinite(p.lon));
 
-// =====================================================================
-// 2. GEO
-// =====================================================================
+  console.log("IDs carregados:", dataset.length);
+}
+
+function parseKMs(text){
+  let L=text.split(/\r?\n/).filter(x=>x.trim()!=="");
+  kmDataset = L.map(l=>{
+    let c=l.split(";");
+    return { km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2]) };
+  }).filter(x=>isFinite(x.km));
+
+  console.log("KM carregados:", kmDataset.length);
+}
+
+loadCSVs();
+
+// ======================================================================
+// 2) Geometria
+// ======================================================================
 function hav(a,b,c,d){
   const R=6371000;
   const x=(c-a)*Math.PI/180;
@@ -116,55 +113,68 @@ function hav(a,b,c,d){
   const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
   return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
 }
+
 function nearestKM(lat,lon){
   let best=null,bd=1e15;
   kmDataset.forEach(p=>{
-    const d=hav(lat,lon,p.lat,p.lon);
-    if(d<bd){bd=d;best=p;}
+    let d=hav(lat,lon,p.lat,p.lon);
+    if(d<bd){ bd=d; best=p; }
   });
   return best;
 }
+
 function nearestN(lat,lon,n){
   return dataset
     .map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)}))
     .sort((a,b)=>a.d-b.d)
     .slice(0,n);
 }
+
 function fmtKm(v){
   let k=Math.floor(v),m=Math.round((v-k)*1000);
   return `KM ${k}+${String(m).padStart(3,'0')}`;
 }
 
-// =====================================================================
-// 3. CÂMERA
-// =====================================================================
+// ======================================================================
+// 3) Câmera (corrigido / compatível)
+// ======================================================================
 const vid=document.getElementById("vid");
-navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-.then(st=>vid.srcObject=st)
-.catch(()=>alert("Erro ao acessar câmera."));
 
-// =====================================================================
-// 4. GPS
-// =====================================================================
+async function startCam(){
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ideal:"environment"} }
+    });
+    vid.srcObject = st;
+  }catch(e){
+    alert("Erro ao abrir câmera.");
+  }
+}
+startCam();
+
+// ======================================================================
+// 4) GPS
+// ======================================================================
 let lastPos=null;
 const kmLbl=document.getElementById("kmLbl");
 const idLbl=document.getElementById("idLbl");
 
-navigator.geolocation.watchPosition(p=>{
-  lastPos = { lat:p.coords.latitude, lon:p.coords.longitude };
+navigator.geolocation.watchPosition(pos=>{
+  lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude};
 
-  if(dataset.length && kmDataset.length){
-    const nk = nearestKM(lastPos.lat,lastPos.lon);
+  if(kmDataset.length && dataset.length){
+    let nk=nearestKM(lastPos.lat,lastPos.lon);
     kmLbl.textContent = nk ? fmtKm(nk.km) : "—";
 
-    const ids = nearestN(lastPos.lat,lastPos.lon,5);
-    idLbl.textContent = ids.map(x=>x.id).join(", ");
+    let ids=nearestN(lastPos.lat,lastPos.lon,5);
+    idLbl.textContent = ids.map(i=>i.id).join(", ");
   }
+
 },{enableHighAccuracy:true});
 
-// =====================================================================
-// 5. FOTO
-// =====================================================================
+// ======================================================================
+// 5) FOTO funcional
+// ======================================================================
 const can=document.getElementById("can");
 const ctx=can.getContext("2d");
 const foto=document.getElementById("foto");
@@ -172,22 +182,21 @@ const foto=document.getElementById("foto");
 btnFoto.onclick=()=>{
 
   if(!vid.videoWidth){ alert("Câmera não iniciou."); return; }
-  if(!lastPos){ alert("Aguardando GPS."); return; }
+  if(!lastPos){ alert("GPS não disponível."); return; }
 
   const w=vid.videoWidth, h=vid.videoHeight;
   can.width=w; can.height=h;
 
   ctx.drawImage(vid,0,0,w,h);
 
-  // faixa inferior
   ctx.fillStyle="rgba(0,0,0,0.55)";
   ctx.fillRect(0,h-160,w,160);
 
-  const nk = nearestKM(lastPos.lat,lastPos.lon);
-  const ids = nearestN(lastPos.lat,lastPos.lon,5);
+  let nk=nearestKM(lastPos.lat,lastPos.lon);
+  let ids=nearestN(lastPos.lat,lastPos.lon,5);
 
   ctx.fillStyle="#fff";
-  ctx.font="900 58px system-ui";
+  ctx.font="900 60px system-ui";
   ctx.fillText(nk?fmtKm(nk.km):"KM —",20,h-105);
 
   ctx.font="700 30px system-ui";
@@ -200,11 +209,11 @@ btnFoto.onclick=()=>{
   foto.src = can.toDataURL("image/jpeg",0.92);
 };
 
-// =====================================================================
-// 6. DOWNLOAD
-// =====================================================================
+// ======================================================================
+// 6) DOWNLOAD
+// ======================================================================
 btnDownload.onclick=()=>{
-  if(!foto.src){ alert("Nenhuma foto."); return; }
+  if(!foto.src){ alert("Sem foto."); return; }
   const a=document.createElement("a");
   a.href=foto.src;
   a.download="INSPECAO_FOTO.jpg";
