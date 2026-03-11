@@ -13,6 +13,8 @@
   body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:16px}
   h1{margin:0 0 12px;text-align:center;font-size:1.8rem}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin:0 auto 16px;max-width:1024px;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+
+  /* Vídeo (toque para fotografar) */
   #wrap{position:relative;border-radius:12px;overflow:hidden}
   #vid{width:100%;display:block;background:#000;border-radius:12px}
   #can{display:none}
@@ -22,12 +24,15 @@
     font-weight:900;letter-spacing:.02em;text-align:center;pointer-events:none;
   }
   .ov .msg{background:rgba(0,0,0,.55);padding:10px 14px;border-radius:12px}
+
+  /* Ações e galeria */
   .row{display:flex;gap:12px;flex-wrap:wrap}
-  button{flex:1 1 200px;padding:14px;font-size:1.02rem;font-weight:900;border:0;border-radius:12px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  button{flex:1 1 220px;padding:14px;font-size:1.02rem;font-weight:900;border:0;border-radius:12px;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.35)}
   #btnDownload{background:var(--btn2);color:#fff}
   #btnPdf{background:var(--btn3);color:#000}
   #btnClear{background:var(--btn4);color:#fff}
   button:disabled{opacity:.55;cursor:not-allowed}
+
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:12px}
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
   .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
@@ -52,11 +57,11 @@
 <div class="card">
   <div class="row">
     <button id="btnDownload" disabled>Baixar Última Foto</button>
-    <button id="btnPdf" disabled>📄 Salvar Relatório (PDF) – Lista</button>
+    <button id="btnPdf" disabled>📄 Salvar Relatório (PDF) – Lista (Leve)</button>
     <button id="btnClear" disabled>🗑️ Limpar Lista</button>
   </div>
   <small style="display:block;color:#9fb4fc;margin-top:6px">
-    Toque na imagem do vídeo para capturar. O PDF é gerado com todas as fotos da lista, na ordem.
+    Toque na imagem do vídeo para capturar. O PDF é gerado com todas as fotos da lista, reduzidas para ~800px (relatório leve).
   </small>
 </div>
 
@@ -114,7 +119,7 @@ const wrap=document.getElementById('wrap');
 const ov=document.getElementById('ov');
 const ovMsg=document.getElementById('ovMsg');
 
-const photos=[]; // {url,w,h,ts,kmStr,idsTxt}
+const photos=[]; // {url,w,h,ts,kmStr,idsTxt,filename}
 
 function setOv(text, show=true){ ovMsg.textContent=text; ov.style.display= show?'flex':'none'; }
 function ready(){ return csvReady && camReady && gpsReady; }
@@ -142,6 +147,7 @@ function gridCands(grid,lat,lon,minCount=60,maxR=5){
 }
 
 async function loadIDs(){
+  // Formato confirmado no seu CSV: "ID do NOX;Latitude;Longitude" (linhas 0;0 são filtradas). [1](https://grupoccr-my.sharepoint.com/personal/claudio_santos_motiva_com_br/_layouts/15/Doc.aspx?sourcedoc=%7B277CA3E9-D09D-4A4A-9E9C-96C3E23F0943%7D&file=Dados_Completos_Grupo_2_all.csv&action=default&mobileredirect=true)
   const txt = await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
   const lines = txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
   const head = lines[0].split(';').map(h=>h.toLowerCase());
@@ -161,6 +167,7 @@ async function loadIDs(){
 }
 
 function pickTrio(c){
+  // Seu KM tem 2 trios por linha (KM;LAT;LONG;;;;;KM;LAT;LONG). Usamos o 1º trio válido. [2](https://grupoccr-my.sharepoint.com/personal/claudio_santos_motiva_com_br/_layouts/15/Doc.aspx?sourcedoc=%7BC37E4513-8C4F-4C0D-A7BB-D5CCAC63B0E2%7D&file=SNVBR116SPRJ.csv&action=default&mobileredirect=true)
   const t1={km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2])};
   if(Number.isFinite(t1.km) && Number.isFinite(t1.lat) && Number.isFinite(t1.lon)) return t1;
   const t2={km:parsePt(c[7]), lat:parsePt(c[8]), lon:parsePt(c[9])};
@@ -175,7 +182,7 @@ async function loadKM(){
   kmPoints=[]; let lastKeep=null; const MIN_STEP=5; // metros
   for(let i=0;i<lines.length;i++){
     const c = lines[i].split(';');
-    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // provavelmente cabeçalho
+    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // pula cabeçalho
     const t = pickTrio(c);
     if(!t) continue;
     if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
@@ -274,6 +281,7 @@ function updateListUI(){
 
 async function capture(){
   if(!ready() || !lastPos){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
+
   const w=vid.videoWidth||1280, h=vid.videoHeight||720;
   can.width=w; can.height=h;
 
@@ -286,8 +294,8 @@ async function capture(){
   ctx.fillRect(0,h-bandH,w,bandH);
 
   // dados
-  const km = nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr = km? fmtKm(km.km) : 'KM —';
+  const kmObj = nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr = kmObj ? fmtKm(kmObj.km) : 'KM —';
   const ids = nearestN(lastPos.lat,lastPos.lon,5);
   const ts = new Date().toLocaleString();
 
@@ -295,7 +303,7 @@ async function capture(){
   ctx.fillStyle='#fff';
   ctx.textAlign='left';
   ctx.font=`900 ${Math.round(h*0.06)}px system-ui`;
-  ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.56));
+  ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.55));
   ctx.font=`700 ${Math.round(h*0.035)}px system-ui`;
   ctx.fillText(ts,20,h-Math.round(bandH*0.22));
 
@@ -305,26 +313,39 @@ async function capture(){
 
   const url=can.toDataURL('image/jpeg',0.92);
   foto.src=url;
+
+  // nome do arquivo baseado no KM
+  const safeKm = kmStr.replace('KM ','').replace('+','_');
+  const fname = `KM_${safeKm}.jpg`;
+  foto.dataset.filename = fname;
+
   btnDownload.disabled=true;
   foto.onload=()=>{ btnDownload.disabled=false; };
 
-  photos.push({url,w,h,ts,kmStr,idsTxt:ids.map(e=>e.id).join(', ')});
+  photos.push({url,w,h,ts,kmStr,idsTxt:ids.map(e=>e.id).join(', '), filename: fname});
   updateListUI();
 
-  // feedback visual rápido
-  ov.style.background='linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.25))';
+  // feedback
   setOv('Foto capturada', true);
-  setTimeout(()=>{ setOv('Toque na imagem para capturar', true); ov.style.background='linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.45))'; }, 800);
+  setTimeout(()=> setOv('Toque na imagem para capturar', true), 900);
 }
 
 wrap.addEventListener('click', ()=>{ if(ready()) capture(); });
 
 /* =========================
-   PDF simples (fotos em páginas A4)
+   PDF (LEVE): redimensiona cada foto para ~800px (maior lado)
    ========================= */
 btnPdf.onclick=async ()=>{
   if(!photos.length) return;
-  const blob=await makePdfFromPhotos(photos,'RELATORIO_INSPECAO');
+
+  // Converte a lista para versões reduzidas (800px máx), mantendo proporção.
+  const scaled = [];
+  for(const p of photos){
+    const s = await downscaleDataURL(p.url, 800, 0.85); // 800px e qualidade 0.85
+    scaled.push({url:s.dataUrl, w:s.w, h:s.h});
+  }
+
+  const blob=await makePdfFromScaledPhotos(scaled,'RELATORIO_INSPECAO_LEVE');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='RELATORIO_INSPECAO.pdf';
@@ -335,7 +356,9 @@ btnPdf.onclick=async ()=>{
 btnDownload.onclick=()=>{
   if(!foto.src) return;
   const a=document.createElement('a');
-  a.href=foto.src; a.download='INSPECAO_FOTO.jpg'; a.click();
+  a.href=foto.src;
+  a.download = foto.dataset.filename || 'INSPECAO_FOTO.jpg';
+  a.click();
 };
 
 btnClear.onclick=()=>{
@@ -344,37 +367,111 @@ btnClear.onclick=()=>{
   photos.length=0; updateListUI();
 };
 
-/* ====== PDF builder (mínimo, sem libs) ====== */
-async function makePdfFromPhotos(arr,nameBase){
-  const PW=595,PH=842,M=36,enc=new TextEncoder();
-  const parts=[enc.encode('%PDF-1.3\n')]; const xref=[0];
-  const offset=()=>parts.reduce((a,b)=>a+b.length,0);
-  const push=txt=>{const b=enc.encode(txt); xref.push(offset()); parts.push(b); return xref.length-1;}
-  const pushStream=(h,bin)=>{const hb=enc.encode(h); xref.push(offset()); parts.push(hb); parts.push(bin); parts.push(enc.encode('endstream\nendobj\n')); return xref.length-1;}
+/* ====== Downscale para JPEG (retorna {dataUrl,w,h}) ====== */
+function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const {width:W,height:H}=img;
+      let w=W, h=H;
+      if(Math.max(W,H) > maxDim){
+        if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); }
+        else{ h=maxDim; w=Math.round(W*(maxDim/H)); }
+      }
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      const cx=c.getContext('2d');
+      cx.drawImage(img,0,0,w,h);
+      const dataUrl=c.toDataURL('image/jpeg',quality);
+      resolve({dataUrl,w,h});
+    };
+    img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0});
+    img.src = srcUrl;
+  });
+}
+
+/* ====== PDF builder (sequencial, com xref correto) ====== */
+async function makePdfFromScaledPhotos(arr,nameBase){
+  const PW=595, PH=842, M=36;
+  const enc=new TextEncoder();
+  const parts=[ enc.encode('%PDF-1.4\n') ];
+  const xref=[0];
+  let objNo=0;
+
+  const getOffset=()=>parts.reduce((a,b)=>a+b.length,0);
+
+  function addObj(body){
+    objNo++;
+    xref.push(getOffset());
+    parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`));
+    return objNo;
+  }
+
+  function addStream(dict, binUint8){
+    objNo++;
+    xref.push(getOffset());
+    // Monta dict com /Length do stream binário
+    const head = `${objNo} 0 obj\n${dict.replace('>>','')} /Length ${binUint8.length} >>\nstream\n`;
+    parts.push(enc.encode(head));
+    parts.push(binUint8);
+    parts.push(enc.encode(`\nendstream\nendobj\n`));
+    return objNo;
+  }
+
   const pageNums=[];
+
+  // Primeiro criamos as páginas (cada foto em 1 página)
   for(let i=0;i<arr.length;i++){
-    const p=arr[i], bin=dataURLtoUint8Array(p.url);
-    const imgW=p.w||1280, imgH=p.h||720, maxW=PW-2*M, maxH=PH-2*M;
-    let dw=maxW, dh=Math.round(imgH*(maxW/imgW)); if(dh>maxH){dh=maxH; dw=Math.round(imgW*(maxH/imgH))}
+    const p=arr[i];
+    const imgBin = dataURLtoUint8Array(p.url);
+    const imgW=p.w||800, imgH=p.h||450; // já reduzidos
+
+    // Encaixe na A4 (margens)
+    const maxW=PW-2*M, maxH=PH-2*M;
+    let dw=maxW, dh=Math.round(imgH*(maxW/imgW));
+    if(dh>maxH){ dh=maxH; dw=Math.round(imgW*(maxH/imgH)); }
     const tx=Math.round((PW-dw)/2), ty=Math.round((PH-dh)/2);
-    const imgNum=pushStream(`${i+5} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n`,bin);
-    const content=`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n/Im${i} Do\nQ\n`;
-    const contNum=pushStream(`${i+5+arr.length} 0 obj\n<< /Length ${content.length} >>\nstream\n`,enc.encode(content));
-    const pageNum=push(`${i+5+2*arr.length} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im${i} ${imgNum} 0 R >> >> /Contents ${contNum} 0 R >>\nendobj\n`);
+
+    // 1) Imagem (XObject) - JPEG /DCTDecode
+    const imgNum = addStream(
+      `<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`,
+      imgBin
+    );
+
+    // 2) Conteúdo
+    const imgName = `/Im${i+1}`;
+    const contentStr = `q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${imgName} Do\nQ\n`;
+    const contentNum = addStream(`<< >>`, enc.encode(contentStr));
+
+    // 3) Página (aponta para /Resources com XObject)
+    const pageNum = addObj(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${imgName} ${imgNum} 0 R >> >> /Contents ${contentNum} 0 R >>`
+    );
     pageNums.push(pageNum);
   }
-  const kids=pageNums.map(n=>`${n} 0 R`).join(' ');
-  push(`2 0 obj\n<< /Type /Pages /Kids [ ${kids} ] /Count ${arr.length} >>\nendobj\n`);
-  push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
-  const start=offset(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){ xr += String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
-  xr += `trailer\n<< /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`;
+
+  // 4) Páginas e Catálogo
+  const pagesNum = addObj(`<< /Type /Pages /Kids [ ${pageNums.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pageNums.length} >>`);
+  const catalogNum = addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+
+  // xref/trailer
+  const xrefStart=getOffset();
+  let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<xref.length;i++){
+    xr += String(xref[i]).padStart(10,'0') + ' 00000 n \n';
+  }
   parts.push(enc.encode(xr));
+  parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`));
+
   return new Blob(parts,{type:'application/pdf'});
 }
+
 function dataURLtoUint8Array(dataURL){
-  const raw=atob(dataURL.split(',')[1]); const u8=new Uint8Array(raw.length);
-  for(let i=0;i<raw.length;i++) u8[i]=raw.charCodeAt(i); return u8;
+  const base64 = dataURL.split(',')[1];
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i)&0xFF;
+  return arr;
 }
 
 /* =========================
@@ -385,6 +482,7 @@ function dataURLtoUint8Array(dataURL){
   await loadCSVs();
   startCamera();
   startGPS();
+  // dica viva
   const tick=()=>{ setOv(ready()? 'Toque na imagem para capturar' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
   tick();
 })();
