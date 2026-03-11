@@ -39,7 +39,6 @@
 
   .ctrls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .ctrls > *{padding:10px}
-  .ctrls label{display:flex;align-items:center;gap:8px}
   .ctrls small{color:#9fb4fc}
 
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:12px}
@@ -60,10 +59,18 @@
       <select id="cameraSel"></select>
       <button id="btnCycle" title="Trocar Câmera">Trocar Câmera</button>
     </label>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button id="btnUltra" type="button" title="Ultra‑wide (0.5×)">0.5×</button>
+      <button id="btnWide"  type="button" title="Wide (1×)">1×</button>
+      <button id="btnTele"  type="button" title="Tele (2×+)">2×</button>
+    </div>
+
     <label id="zoomWrap" style="display:none">🔍 Zoom:
       <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
       <small id="zoomVal">1.0×</small>
     </label>
+
     <small id="persistInfo">💾 Salvamento automático: ATIVO</small>
   </div>
 
@@ -134,6 +141,14 @@ function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){
   return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'});
 }
 
+/* ===== MOTIVA BRAND (capa do PDF) ===== */
+const BRAND = {
+  anil:   '#5E22F3',   // cor principal Motiva (digital)
+  white:  '#FFFFFF',
+  black:  '#000000',
+  tagline: 'Motiva. Você nos move.'
+}; // Diretrizes conforme Guia de Marca Motiva (anil prioritário, tagline, grafismos) — ver documentação interna.
+
 /* =========================
    Estado
    ========================= */
@@ -159,6 +174,9 @@ const gal=document.getElementById('gal');
 
 const cameraSel=document.getElementById('cameraSel');
 const btnCycle=document.getElementById('btnCycle');
+const btnUltra=document.getElementById('btnUltra');
+const btnWide =document.getElementById('btnWide');
+const btnTele =document.getElementById('btnTele');
 const zoomWrap=document.getElementById('zoomWrap');
 const zoomRange=document.getElementById('zoomRange');
 const zoomVal=document.getElementById('zoomVal');
@@ -312,16 +330,24 @@ function nearestKM(lat,lon){
 }
 
 /* =========================
-   Câmera: seleção, troca, zoom
+   Câmera: seleção + zoom + lentes
    ========================= */
 let currentStream=null, currentTrack=null, currentCap=null;
 let deviceList=[], deviceIndex=0;
 
+function lensHint(label=''){
+  const s = String(label).toLowerCase();
+  if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
+  if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
+  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide';
+  return '';
+}
 function saveCamPrefs(){
-  localStorage.setItem('camDeviceId', deviceList[deviceIndex]?.deviceId || '');
-  if(currentCap?.zoom){
-    const z=Number(zoomRange.value||1);
-    localStorage.setItem('camZoom_'+deviceList[deviceIndex].deviceId, z);
+  const dev = deviceList[deviceIndex];
+  if(dev){
+    localStorage.setItem('camDeviceId', dev.deviceId);
+    const z = Number(zoomRange.value||1);
+    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId, z);
   }
 }
 function loadCamPrefsFor(id){
@@ -330,16 +356,25 @@ function loadCamPrefsFor(id){
 }
 
 async function enumerateCameras(){
+  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
   const devices=await navigator.mediaDevices.enumerateDevices();
   deviceList = devices.filter(d=>d.kind==='videoinput');
+
+  deviceList.sort((a,b)=>{
+    const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label);
+    if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label);
+  });
+
   cameraSel.innerHTML='';
   deviceList.forEach((d,i)=>{
     const o=document.createElement('option');
+    const hint = lensHint(d.label);
+    const tag = hint ? ` (${hint})` : '';
     o.value=String(i);
-    o.textContent = d.label || `Câmera ${i+1}`;
+    o.textContent = d.label ? `${d.label}${tag}` : `Câmera ${i+1}${tag}`;
     cameraSel.appendChild(o);
   });
-  // Seleciona default pelo last stored (se houver)
+
   const savedId=localStorage.getItem('camDeviceId');
   const idx = Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
   deviceIndex = idx >=0 ? idx : 0;
@@ -348,16 +383,16 @@ async function enumerateCameras(){
 
 async function startCamera(deviceIdx=deviceIndex){
   try{
-    // Para stream anterior
-    if(currentStream){
-      currentStream.getTracks().forEach(t=>t.stop());
-      currentStream=null; currentTrack=null; currentCap=null;
-    }
-    const deviceId=deviceList[deviceIdx]?.deviceId;
-    const constraints = deviceId ? {video:{deviceId:{exact:deviceId}}} : {video:{facingMode:{ideal:'environment'}}};
-    const st = await navigator.mediaDevices.getUserMedia({...constraints, audio:false});
-    currentStream = st;
-    vid.srcObject = st;
+    if(currentStream){ currentStream.getTracks().forEach(t=>t.stop()); }
+    currentStream=currentTrack=currentCap=null;
+
+    const dev = deviceList[deviceIdx];
+    const constraints = dev
+      ? { video:{ deviceId:{exact:dev.deviceId} }, audio:false }
+      : { video:{ facingMode:{ideal:'environment'} }, audio:false };
+
+    const st = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = st; vid.srcObject = st;
 
     await new Promise(res=>{
       if(vid.readyState>=1 && vid.videoWidth) return res();
@@ -368,52 +403,72 @@ async function startCamera(deviceIdx=deviceIndex){
     currentTrack = st.getVideoTracks()[0];
     currentCap   = currentTrack.getCapabilities ? currentTrack.getCapabilities() : null;
 
-    // Zoom suportado?
     if(currentCap && currentCap.zoom){
       zoomRange.min  = currentCap.zoom.min ?? 1;
       zoomRange.max  = currentCap.zoom.max ?? 1;
       zoomRange.step = currentCap.zoom.step ?? 0.1;
-      let z = loadCamPrefsFor(deviceList[deviceIdx].deviceId) ?? (currentCap.zoom.min ?? 1);
+      let z = loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
       z = Math.min(zoomRange.max, Math.max(zoomRange.min, z));
       await applyZoom(z, true);
       zoomWrap.style.display = '';
     }else{
       zoomWrap.style.display = 'none';
     }
+
     camReady = !!vid.videoWidth;
+    deviceIndex = deviceIdx;
+    cameraSel.value = String(deviceIndex);
     saveCamPrefs();
+
   }catch(e){
     console.warn('startCamera error', e);
     camReady=false;
   }
   setOv(ready() ? 'Toque na imagem para capturar' : 'Aguardando recursos…', true);
 }
-
 async function applyZoom(val, noSave=false){
   if(!(currentTrack && currentCap && currentCap.zoom)) return;
   const z = Number(val);
   try{
     await currentTrack.applyConstraints({advanced:[{zoom:z}]});
   }catch{
-    try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){ /* ignora */ }
+    try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){ /* ignore */ }
   }
   zoomRange.value = z;
   zoomVal.textContent = `${Number(z).toFixed(1)}×`;
   if(!noSave) saveCamPrefs();
 }
-
-cameraSel.addEventListener('change', async (e)=>{
+cameraSel.addEventListener('change', async ()=>{
   deviceIndex = Number(cameraSel.value||0);
   await startCamera(deviceIndex);
 });
 btnCycle.addEventListener('click', async ()=>{
   deviceIndex = (deviceIndex+1) % Math.max(1, deviceList.length);
-  cameraSel.value = String(deviceIndex);
   await startCamera(deviceIndex);
 });
+async function switchLens(target){ // 'ultra' | 'wide' | 'tele'
+  const idx = deviceList.findIndex(d => lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
+  if(idx>=0){ await startCamera(idx); return; }
+  if(currentCap?.zoom){
+    const minZ = Number(zoomRange.min||1), maxZ=Number(zoomRange.max||1);
+    if(target==='ultra')      await applyZoom(minZ);
+    else if(target==='wide')  await applyZoom(Math.min(Math.max(1, minZ), maxZ));
+    else if(target==='tele')  await applyZoom(Math.min(Math.max(2, minZ), maxZ));
+    return;
+  }
+  const rearIdxs = deviceList
+    .map((d,i)=>({d,i}))
+    .filter(x=>/back|rear|environment/i.test(x.d.label))
+    .map(x=>x.i);
+  if(rearIdxs.length>1){
+    const next = rearIdxs.find(i=>i!==deviceIndex) ?? rearIdxs[0];
+    await startCamera(next);
+  }
+}
+btnUltra.addEventListener('click', ()=>switchLens('ultra'));
+btnWide .addEventListener('click', ()=>switchLens('wide'));
+btnTele .addEventListener('click', ()=>switchLens('tele'));
 zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
-
-/* Pinch‑to‑zoom no vídeo (se suportado) */
 let pinchBase=null;
 wrap.addEventListener('touchstart', (ev)=>{
   if(ev.touches.length===2 && currentCap?.zoom){
@@ -465,7 +520,6 @@ function updateActions(){
   btnSharePhotos.disabled = !enabled;
   btnDownload.disabled = !foto.src;
 }
-
 function renderGallery(){
   gal.innerHTML='';
   photos.forEach((p,idx)=>{
@@ -479,7 +533,6 @@ function renderGallery(){
   });
   updateActions();
 }
-
 async function capture(){
   if(!ready() || !lastPos){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
 
@@ -529,18 +582,17 @@ async function capture(){
   };
 
   // Persistência automática (NÃO PERDE)
-  await dbPut({...rec, url: undefined}); // guarda blob + metadados
+  await dbPut({...rec, url: undefined}); // guarda blob + metadados; dataURL é refeito na restauração
   photos.push(rec);
   renderGallery();
 
   setOv('Foto capturada (salva no aparelho)', true);
   setTimeout(()=> setOv('Toque na imagem para capturar', true), 900);
 }
-
 wrap.addEventListener('click', ()=>{ if(ready()) capture(); });
 
 /* =========================
-   Download da última foto
+   Download / PDF / WhatsApp
    ========================= */
 btnDownload.onclick=()=>{
   if(!foto.src) return;
@@ -550,91 +602,7 @@ btnDownload.onclick=()=>{
   a.click();
 };
 
-/* =========================
-   PDF (LEVE): redimensiona cada foto para ~800px
-   ========================= */
-btnPdf.onclick=async ()=>{
-  if(!photos.length) return;
-
-  const scaled = [];
-  for(const p of photos){
-    const s = await downscaleDataURL(p.url, 800, 0.85);
-    scaled.push({url:s.dataUrl, w:s.w, h:s.h});
-  }
-
-  const blob=await makePdfFromScaledPhotos(scaled,'RELATORIO_INSPECAO_LEVE');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='RELATORIO_INSPECAO.pdf';
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
-};
-
-/* ===== Enviar RELATÓRIO (PDF) via WhatsApp (Web Share API + fallback) ===== */
-btnSharePdf.onclick=async ()=>{
-  if(!photos.length) return;
-  const scaled = [];
-  for(const p of photos){
-    const s = await downscaleDataURL(p.url, 800, 0.85);
-    scaled.push({url:s.dataUrl, w:s.w, h:s.h});
-  }
-  const pdfBlob = await makePdfFromScaledPhotos(scaled,'RELATORIO_INSPECAO_LEVE');
-  const pdfFile = new File([pdfBlob], 'RELATORIO_INSPECAO.pdf', {type:'application/pdf'});
-  const text = buildWhatsAppMessage(true);
-  try{
-    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
-      await navigator.share({ files:[pdfFile], text, title:'Relatório de Inspeção' });
-    }else{
-      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
-      window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'), '_blank');
-      alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
-    }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
-  }
-};
-
-/* ===== Enviar TODAS AS FOTOS via WhatsApp ===== */
-btnSharePhotos.onclick=async ()=>{
-  if(!photos.length) return;
-  const files = photos.map(p => dataURLtoFile(p.url, p.filename || 'INSPECAO_FOTO.jpg'));
-  const text = buildWhatsAppMessage(false);
-  const MAX_FILES_SHARE = 10;
-  if(!(navigator.canShare && navigator.canShare({files: files.slice(0, Math.min(files.length, MAX_FILES_SHARE))}))){
-    window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente. Se preferir, gere e envie o PDF.)'), '_blank');
-    alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.');
-    return;
-  }
-  try{
-    for(let i=0;i<files.length;i+=MAX_FILES_SHARE){
-      const lote = files.slice(i, i+MAX_FILES_SHARE);
-      const loteText = i===0 ? text : `Continuação (${Math.floor(i/MAX_FILES_SHARE)+1})`;
-      await navigator.share({ files: lote, text: loteText, title:'Relatório de Inspeção' });
-    }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.');
-  }
-};
-
-/* ===== Mensagem do WhatsApp: resumo + GPS por foto ===== */
-function buildWhatsAppMessage(isPdf){
-  const lines=[];
-  lines.push('*RELATÓRIO DE INSPEÇÃO – ILUMINAÇÃO*');
-  lines.push(`Total de fotos: ${photos.length}`);
-  lines.push(`Gerado em: ${new Date().toLocaleString()}`);
-  lines.push('');
-  photos.forEach((p,i)=>{
-    let L = `${i+1}) ${p.kmStr} • ${p.ts}`;
-    if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){
-       L += ` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
-    }
-    lines.push(L);
-  });
-  if(isPdf){ lines.push('Anexo: RELATORIO_INSPECAO.pdf'); }
-  return lines.join('\n');
-}
-
-/* ===== Downscale para JPEG (retorna {dataUrl,w,h}) ===== */
+/* Downscale para JPEG (retorna {dataUrl,w,h}) */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   return new Promise((resolve)=>{
     const img = new Image();
@@ -657,58 +625,221 @@ function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   });
 }
 
-/* ===== PDF builder (sequencial, com xref correto) ===== */
-async function makePdfFromScaledPhotos(arr,nameBase){
+/* CAPA no padrão Motiva (anil + onda + box + tagline) */
+function buildMotivaCoverCanvas(meta){
+  const W=1240, H=1754; // ~A4 @150dpi
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const cx=c.getContext('2d');
+
+  // Fundo ANIL (cor principal)
+  cx.fillStyle=BRAND.anil; cx.fillRect(0,0,W,H);
+
+  // Onda (grafismo proprietário) translúcida
+  cx.save();
+  cx.globalAlpha = 0.16;
+  cx.fillStyle = '#FFFFFF';
+  cx.beginPath();
+  cx.moveTo(0, H*0.18);
+  cx.bezierCurveTo(W*0.25, H*0.10, W*0.55, H*0.26, W, H*0.16);
+  cx.lineTo(W,0); cx.lineTo(0,0); cx.closePath();
+  cx.fill();
+  cx.restore();
+
+  // Box proprietário (retângulo com cantos) para o título
+  const boxX=W*0.07, boxY=H*0.26, boxW=W*0.86, boxH=H*0.18;
+  cx.fillStyle = BRAND.white;
+  const r = 40;
+  cx.beginPath();
+  cx.moveTo(boxX+r, boxY);
+  cx.lineTo(boxX+boxW-r, boxY);
+  cx.quadraticCurveTo(boxX+boxW, boxY, boxX+boxW, boxY+r);
+  cx.lineTo(boxX+boxW, boxY+boxH-r);
+  cx.quadraticCurveTo(boxX+boxW, boxY+boxH, boxX+boxW-r, boxY+boxH);
+  cx.lineTo(boxX+r, boxY+boxH);
+  cx.quadraticCurveTo(boxX, boxY+boxH, boxX, boxY+boxH-r);
+  cx.lineTo(boxX, boxY+r);
+  cx.quadraticCurveTo(boxX, boxY, boxX+r, boxY);
+  cx.closePath(); cx.fill();
+
+  // Textos
+  cx.fillStyle = BRAND.white;
+  cx.font = '700 46px system-ui';
+  cx.fillText(BRAND.tagline, W*0.07, H*0.14);
+
+  cx.fillStyle = BRAND.black;
+  cx.font = '900 64px system-ui';
+  cx.fillText('Relatório de Inspeção – Iluminação', W*0.10, boxY+boxH*0.55);
+
+  cx.fillStyle = BRAND.white;
+  cx.font = '600 32px system-ui';
+  const lines = [
+    `Gerado em: ${meta.dt}`,
+    `Total de fotos: ${meta.total}`,
+    meta.kmFirst && meta.kmLast ? `Faixa (KM): ${meta.kmFirst} → ${meta.kmLast}` : ''
+  ].filter(Boolean);
+  let by = H*0.54;
+  lines.forEach(L=>{ cx.fillText(L, W*0.07, by); by+=42; });
+
+  // Rodapé filete
+  cx.fillStyle = 'rgba(255,255,255,0.55)';
+  cx.fillRect(0, H-14, W, 14);
+
+  return c.toDataURL('image/jpeg', 0.92);
+}
+
+/* PDF com CAPA Motiva + páginas das fotos (versão leve) */
+async function makePdfFromScaledPhotosWithCover(coverDataURL, pages, nameBase){
   const PW=595, PH=842, M=36;
   const enc=new TextEncoder();
   const parts=[ enc.encode('%PDF-1.4\n') ];
   const xref=[0];
   let objNo=0;
   const getOffset=()=>parts.reduce((a,b)=>a+b.length,0);
-  function addObj(body){
+  function addObj(body){ objNo++; xref.push(getOffset()); parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo; }
+  function addStream(dict, bin){
     objNo++; xref.push(getOffset());
-    parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo;
-  }
-  function addStream(dict, binUint8){
-    objNo++; xref.push(getOffset());
-    const head = `${objNo} 0 obj\n${dict.replace('>>','')} /Length ${binUint8.length} >>\nstream\n`;
-    parts.push(enc.encode(head)); parts.push(binUint8); parts.push(enc.encode(`\nendstream\nendobj\n`));
+    const head = `${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`;
+    parts.push(enc.encode(head)); parts.push(bin); parts.push(enc.encode(`\nendstream\nendobj\n`));
     return objNo;
   }
   const pageNums=[];
-  for(let i=0;i<arr.length;i++){
-    const p=arr[i];
-    const imgBin = dataURLtoUint8Array(p.url);
+
+  // CAPA
+  if(coverDataURL){
+    const bin = dataURLtoUint8Array(coverDataURL);
+    const imgW=1240, imgH=1754;
+    const scale = Math.min((PW-2*M)/imgW, (PH-2*M)/imgH);
+    const dw=Math.round(imgW*scale), dh=Math.round(imgH*scale);
+    const tx=Math.round((PW-dw)/2), ty=Math.round((PH-dh)/2);
+    const imgNum = addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
+    const imgName = `/ImCapa`;
+    const content = `q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${imgName} Do\nQ\n`;
+    const contentNum = addStream(`<< >>`, enc.encode(content));
+    const pageNum = addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${imgName} ${imgNum} 0 R >> >> /Contents ${contentNum} 0 R >>`);
+    pageNums.push(pageNum);
+  }
+
+  // Demais páginas com fotos reduzidas
+  for(let i=0;i<pages.length;i++){
+    const p=pages[i];
+    const bin = dataURLtoUint8Array(p.url);
     const imgW=p.w||800, imgH=p.h||450;
     const maxW=PW-2*M, maxH=PH-2*M;
     let dw=maxW, dh=Math.round(imgH*(maxW/imgW));
     if(dh>maxH){ dh=maxH; dw=Math.round(imgW*(maxH/imgH)); }
     const tx=Math.round((PW-dw)/2), ty=Math.round((PH-dh)/2);
-    const imgNum = addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, imgBin);
+    const imgNum = addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
     const imgName = `/Im${i+1}`;
     const contentStr = `q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${imgName} Do\nQ\n`;
     const contentNum = addStream(`<< >>`, enc.encode(contentStr));
     const pageNum = addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${imgName} ${imgNum} 0 R >> >> /Contents ${contentNum} 0 R >>`);
     pageNums.push(pageNum);
   }
+
   const pagesNum = addObj(`<< /Type /Pages /Kids [ ${pageNums.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pageNums.length} >>`);
   const catalogNum = addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+
   const xrefStart=getOffset();
   let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
   for(let i=1;i<xref.length;i++){ xr += String(xref[i]).padStart(10,'0') + ' 00000 n \n'; }
   parts.push(enc.encode(xr));
   parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`));
+
   return new Blob(parts,{type:'application/pdf'});
 }
 
+/* Envelopa: downscale + capa + PDF pronto */
+async function makeMotivaReportFromPhotos(photosArr){
+  // downscale (leve)
+  const scaled = [];
+  for(const p of photosArr){
+    const s = await downscaleDataURL(p.url, 800, 0.85);
+    scaled.push({url:s.dataUrl, w:s.w, h:s.h});
+  }
+  // metadados capa
+  const dt = new Date().toLocaleString();
+  const kmFirst = photosArr[0]?.kmStr || '';
+  const kmLast  = photosArr[photosArr.length-1]?.kmStr || '';
+  const coverUrl = buildMotivaCoverCanvas({ total: photosArr.length, dt, kmFirst, kmLast });
+  // PDF
+  return await makePdfFromScaledPhotosWithCover(coverUrl, scaled, 'RELATORIO_INSPECAO_MOTIVA');
+}
+
+/* Salvar PDF (LEVE) + CAPA */
+btnPdf.onclick=async ()=>{
+  if(!photos.length) return;
+  const blob = await makeMotivaReportFromPhotos(photos);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='RELATORIO_INSPECAO.pdf';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
+};
+
+/* WhatsApp — Enviar PDF (com capa Motiva) */
+function buildWhatsAppMessage(isPdf){
+  const lines=[];
+  lines.push('*RELATÓRIO DE INSPEÇÃO – ILUMINAÇÃO*');
+  lines.push(`Total de fotos: ${photos.length}`);
+  lines.push(`Gerado em: ${new Date().toLocaleString()}`);
+  lines.push('');
+  photos.forEach((p,i)=>{
+    let L = `${i+1}) ${p.kmStr} • ${p.ts}`;
+    if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){
+       L += ` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+    }
+    lines.push(L);
+  });
+  if(isPdf){ lines.push('Anexo: RELATORIO_INSPECAO.pdf'); }
+  return lines.join('\n');
+}
+btnSharePdf.onclick=async ()=>{
+  if(!photos.length) return;
+  const pdfBlob = await makeMotivaReportFromPhotos(photos);
+  const pdfFile = new File([pdfBlob], 'RELATORIO_INSPECAO.pdf', {type:'application/pdf'});
+  const text = buildWhatsAppMessage(true);
+  try{
+    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
+      await navigator.share({ files:[pdfFile], text, title:'Relatório de Inspeção' });
+    }else{
+      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
+      window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'), '_blank');
+      alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
+    }
+  }catch(e){
+    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
+  }
+};
+
+/* WhatsApp — Enviar TODAS AS FOTOS */
+btnSharePhotos.onclick=async ()=>{
+  if(!photos.length) return;
+  const files = photos.map(p => dataURLtoFile(p.url, p.filename || 'INSPECAO_FOTO.jpg'));
+  const text = buildWhatsAppMessage(false);
+  const MAX_FILES_SHARE = 10;
+  if(!(navigator.canShare && navigator.canShare({files: files.slice(0, Math.min(files.length, MAX_FILES_SHARE))}))){
+    window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente. Se preferir, gere e envie o PDF.)'), '_blank');
+    alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.');
+    return;
+  }
+  try{
+    for(let i=0;i<files.length;i+=MAX_FILES_SHARE){
+      const lote = files.slice(i, i+MAX_FILES_SHARE);
+      const loteText = i===0 ? text : `Continuação (${Math.floor(i/MAX_FILES_SHARE)+1})`;
+      await navigator.share({ files: lote, text: loteText, title:'Relatório de Inspeção' });
+    }
+  }catch(e){
+    alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.');
+  }
+};
+
 /* =========================
-   Boot + restauração de fotos salvas
+   Boot + restauração de fotos persistidas
    ========================= */
 async function restoreSavedPhotos(){
   const rows = await dbGetAll();
   if(!rows.length) return;
   for(const r of rows){
-    // reconstroi dataURL a partir do blob
     const url = await new Promise(res=>{
       const fr=new FileReader();
       fr.onload=()=>res(fr.result);
@@ -735,6 +866,9 @@ btnClear.onclick=async ()=>{
   foto.src='';
   renderGallery();
 };
+
+function setOv(text, show=true){ ovMsg.textContent=text; ov.style.display= show?'flex':'none'; }
+function ready(){ return csvReady && camReady && gpsReady; }
 
 (async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
