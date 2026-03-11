@@ -115,8 +115,15 @@
     <button id="btnPdf" disabled>📄 PDF – Somente Fotos (leve)</button>
     <button id="btnSharePdf" disabled>📤 Enviar PDF (WhatsApp)</button>
     <button id="btnSharePhotos" disabled>📤 Enviar Fotos (WhatsApp)</button>
-    <button id="btnClear" disabled>🗑️ Limpar Lista</button>
+    <button id="btnClear" disabled>🧹 Limpar lista (próximo relatório)</button>
   </div>
+
+  <!-- ✅ NOVO: opção de limpeza automática após PDF -->
+  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
+    <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
+    Limpar automaticamente a lista depois de salvar/enviar o PDF
+  </label>
+
   <small style="display:block;color:#9fb4fc;margin-top:6px">
     Toque no vídeo para capturar. O PDF contém apenas as fotos (1 por página) com margens pequenas.
   </small>
@@ -165,6 +172,7 @@ const btnPdf=document.getElementById('btnPdf');
 const btnSharePdf=document.getElementById('btnSharePdf');
 const btnSharePhotos=document.getElementById('btnSharePhotos');
 const btnClear=document.getElementById('btnClear');
+const autoClear=document.getElementById('autoClear');
 const gal=document.getElementById('gal');
 
 const cameraSel=document.getElementById('cameraSel');
@@ -460,6 +468,21 @@ async function capture(){
 wrap.addEventListener('click', ()=>{ if(csvReady && camReady && gpsReady) capture(); });
 
 /* =========================
+   Limpeza de lista (próximo relatório)
+   ========================= */
+async function clearList(silent=false){
+  if(!photos.length) return;
+  if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
+
+  photos.length = 0;         // memória
+  await dbClearAll();        // IndexedDB
+  foto.src = '';             // limpa prévia
+  foto.removeAttribute('data-filename');
+  renderGallery();           // atualiza UI
+}
+btnClear.onclick = () => { clearList(false); };
+
+/* =========================
    Ações: Download / PDF / WhatsApp
    ========================= */
 btnDownload.onclick=()=>{
@@ -526,9 +549,12 @@ btnPdf.onclick=async ()=>{
   const blob=await makePdfPhotosOnly(scaled);
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='RELATORIO_INSPECAO.pdf';
   document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
+
+  // ✅ Limpar automaticamente (se marcado)
+  if (autoClear?.checked) { await clearList(true); }
 };
 
-/* WhatsApp – PDF */
+/* WhatsApp – Mensagem base */
 function buildWhatsAppMessage(isPdf){
   const lines=[];
   lines.push('*RELATÓRIO DE INSPEÇÃO*');
@@ -545,6 +571,8 @@ function buildWhatsAppMessage(isPdf){
   if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf');
   return lines.join('\n');
 }
+
+/* WhatsApp – PDF */
 btnSharePdf.onclick=async ()=>{
   if(!photos.length) return;
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
@@ -554,12 +582,18 @@ btnSharePdf.onclick=async ()=>{
   try{
     if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
       await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
+      // ✅ Limpagem automática se marcado
+      if (autoClear?.checked) { await clearList(true); }
     }else{
       const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
+      // ✅ Limpagem automática se marcado
+      if (autoClear?.checked) { await clearList(true); }
     }
-  }catch(e){ alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.'); }
+  }catch(e){
+    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
+  }
 };
 
 /* WhatsApp – FOTOS (em lotes) */
@@ -579,7 +613,9 @@ btnSharePhotos.onclick=async ()=>{
       const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`;
       await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'});
     }
-  }catch(e){ alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.'); }
+  }catch(e){
+    alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.');
+  }
 };
 
 /* =========================
