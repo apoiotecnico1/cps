@@ -8,7 +8,7 @@
   :root{
     --bg:#0b1020; --surface:#101830; --fg:#e6ebff; --muted:#a3b1d1;
     --border:#1e2647; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
-    --btn:#22c55e; --btn2:#1e40af;
+    --btn:#22c55e; --btn2:#1e40af; --btn3:#eab308; --btn4:#ef4444;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:16px}
@@ -24,11 +24,18 @@
   .chip.ok{color:#bbf7d0}.chip.ok .dot{background:var(--ok)}
   .chip.warn{color:#ffe7b0}.chip.warn .dot{background:var(--warn)}
   .chip.bad{color:#fecaca}.chip.bad .dot{background:var(--bad)}
-  button{width:100%;padding:16px;font-size:1.25rem;font-weight:900;border:0;border-radius:12px;cursor:pointer;margin-top:12px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  button{width:100%;padding:16px;font-size:1.05rem;font-weight:900;border:0;border-radius:12px;cursor:pointer;margin-top:12px;box-shadow:0 8px 18px rgba(0,0,0,.35)}
   #btnFoto{background:var(--btn);color:#08260f}
   #btnDownload{background:var(--btn2);color:#fff}
+  #btnPdf{background:var(--btn3);color:#000}
+  #btnClear{background:var(--btn4);color:#fff}
   button:disabled{opacity:.55;cursor:not-allowed}
   small.hint{display:block;color:#9fb4fc;margin-top:6px}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
+  .thumb img{width:100%;display:block}
+  .meta{padding:8px;font-size:.85rem;color:#c7d2fe}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -41,6 +48,7 @@
     <span id="chipCsv" class="chip bad"><span class="dot"></span><span>CSV: carregando…</span></span>
     <span id="chipCam" class="chip bad"><span class="dot"></span><span>Câmera: aguardando…</span></span>
     <span id="chipGps" class="chip bad"><span class="dot"></span><span>GPS: aguardando…</span></span>
+    <span id="chipList" class="chip"><span class="dot" style="background:#93c5fd"></span><span>Lista: 0</span></span>
   </div>
   <small class="hint">O botão habilita quando CSV + Câmera + GPS estiverem prontos.</small>
 </div>
@@ -61,14 +69,24 @@
 
 <!-- Ações -->
 <div class="card">
-  <button id="btnFoto" disabled>📸 Capturar Foto</button>
+  <div class="row">
+    <button id="btnFoto" disabled>📸 Capturar Foto (adiciona na lista)</button>
+    <button id="btnDownload" disabled>Baixar Última Foto</button>
+    <button id="btnPdf" disabled>📄 Salvar Relatório (PDF) – Lista</button>
+    <button id="btnClear" disabled>🗑️ Limpar Lista</button>
+  </div>
+  <small class="hint">O PDF será gerado com todas as fotos da lista, em sequência.</small>
 </div>
 
-<!-- Foto final -->
+<!-- Foto mais recente + Galeria -->
 <div class="card">
-  <h2>Foto</h2>
+  <h2>Foto mais recente</h2>
   <img id="foto" alt="Prévia da foto capturada">
-  <button id="btnDownload" disabled>Baixar Foto</button>
+</div>
+
+<div class="card">
+  <h2>Lista de fotos (sessão atual)</h2>
+  <div id="gal" class="gallery"></div>
 </div>
 
 <script>
@@ -98,16 +116,17 @@ function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 const chipCsv = document.getElementById('chipCsv');
 const chipCam = document.getElementById('chipCam');
 const chipGps = document.getElementById('chipGps');
+const chipList = document.getElementById('chipList');
 function setChip(el, state, text){
-  el.className = `chip ${state}`;
+  el.className = `chip ${state||''}`.trim();
   el.lastElementChild.textContent = text;
 }
 
 /* =========================
    Bases e estruturas
    ========================= */
-let dataset = [];    // IDs válidos
-let kmPoints = [];   // KM decimado (~5m mínimo)
+let dataset = [];     // IDs válidos
+let kmPoints = [];    // KM decimado (~5m mínimo)
 let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
 
@@ -115,9 +134,14 @@ const kmTxt=document.getElementById('kmTxt');
 const idTxt=document.getElementById('idTxt');
 const btnFoto=document.getElementById('btnFoto');
 const btnDownload=document.getElementById('btnDownload');
+const btnPdf=document.getElementById('btnPdf');
+const btnClear=document.getElementById('btnClear');
+const gal=document.getElementById('gal');
+const foto=document.getElementById('foto');
+
 function maybeEnable(){ btnFoto.disabled = !(csvReady && camReady && gpsReady); }
 
-/* ====== Grid geográfico (IDs + KM) para buscas rápidas ====== */
+/* ====== Grid geográfico (IDs + KM) ====== */
 const CELL = 0.005; // ~550 m
 const idGrid = new Map();
 const kmGrid = new Map();
@@ -160,7 +184,7 @@ async function loadIDs(){
     const lon = parsePt(c[iLon]);
     if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
     if(lat===0 && lon===0) continue;
-    if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; // limpa outliers (há linhas assim no seu CSV)
+    if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; // remove outliers
     const p = {id, lat, lon};
     dataset.push(p);
   }
@@ -170,8 +194,7 @@ async function loadIDs(){
 }
 
 function pickTrio(c){
-  // CSV de KM no formato: KM;LAT;LONG;;;;;KM;LAT;LONG (2 blocos por linha)
-  // Pegamos preferencialmente o 1º trio válido; se não, tentamos o 2º.
+  // CSV de KM no formato: KM;LAT;LONG;;;;;KM;LAT;LONG (usa 1º trio válido, senão 2º)
   const t1={km:parsePt(c[0]), lat:parsePt(c[1]), lon:parsePt(c[2])};
   if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1;
   const t2={km:parsePt(c[7]), lat:parsePt(c[8]), lon:parsePt(c[9])};
@@ -185,27 +208,20 @@ async function loadKM(){
 
   kmPoints = [];
   let lastKeep=null;
-  const MIN_STEP = 5; // metros (alvo)
+  const MIN_STEP = 5; // metros
 
   for(let i=0;i<lines.length;i++){
     const c = lines[i].split(';');
-    // pula cabeçalho e linhas sem número
-    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
+    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // pula cabeçalho
     const t = pickTrio(c);
     if(!t) continue;
     if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
 
-    // Decimação por distância: mantém ponto se não houver anterior
-    // ou se a distância ao último mantido for >= 5 m.
     if(!lastKeep){
-      kmPoints.push(t);
-      lastKeep=t;
+      kmPoints.push(t); lastKeep=t;
     }else{
       const d = hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon);
-      if(d >= MIN_STEP){
-        kmPoints.push(t);
-        lastKeep=t;
-      }
+      if(d >= MIN_STEP){ kmPoints.push(t); lastKeep=t; }
     }
   }
 
@@ -299,11 +315,32 @@ function updateDerived(){
 }
 
 /* =========================
-   5) Captura da foto + estampa
+   5) Captura da foto + lista + PDF
    ========================= */
 const can=document.getElementById('can');
 const ctx=can.getContext('2d',{alpha:false});
-const foto=document.getElementById('foto');
+
+const photos = []; // {url,w,h, ts, kmStr, idsTxt}
+
+function updateListUI(){
+  const n = photos.length;
+  setChip(chipList, '', `Lista: ${n}`);
+  btnPdf.disabled = n===0;
+  btnClear.disabled = n===0;
+
+  gal.innerHTML='';
+  photos.forEach((p,idx)=>{
+    const d=document.createElement('div');
+    d.className='thumb';
+    const im=document.createElement('img');
+    im.src=p.url;
+    const meta=document.createElement('div');
+    meta.className='meta';
+    meta.textContent = `${idx+1}. ${p.kmStr} • ${p.ts}`;
+    d.appendChild(im); d.appendChild(meta);
+    gal.appendChild(d);
+  });
+}
 
 btnFoto.onclick=()=>{
   if(!(csvReady && camReady && gpsReady && lastPos)) return;
@@ -311,32 +348,39 @@ btnFoto.onclick=()=>{
   const w=vid.videoWidth||1280, h=vid.videoHeight||720;
   can.width=w; can.height=h;
 
+  // desenha vídeo
   ctx.drawImage(vid, 0, 0, w, h);
 
-  // Faixa inferior
+  // faixa inferior
   const bandH = Math.max(160, Math.round(h*0.16));
   ctx.fillStyle='rgba(0,0,0,.62)';
   ctx.fillRect(0, h-bandH, w, bandH);
 
-  // KM + data/hora
+  // textos
   const km = nearestKM(lastPos.lat,lastPos.lon);
   const kmStr = km? fmtKm(km.km) : 'KM —';
+  const ids = nearestN(lastPos.lat,lastPos.lon,5);
+  const idsTxt = ids.map(e=>e.id).join(', ');
+  const ts = new Date().toLocaleString();
+
   ctx.fillStyle='#fff';
   ctx.textAlign='left';
   ctx.font=`900 ${Math.round(h*0.06)}px system-ui`;
   ctx.fillText(kmStr, 20, h - bandH + Math.round(bandH*0.56));
   ctx.font=`700 ${Math.round(h*0.035)}px system-ui`;
-  ctx.fillText(new Date().toLocaleString(), 20, h - Math.round(bandH*0.22));
+  ctx.fillText(ts, 20, h - Math.round(bandH*0.22));
 
-  // IDs (direita)
-  const ids = nearestN(lastPos.lat,lastPos.lon,5);
   ctx.textAlign='right';
   ctx.font=`600 ${Math.round(h*0.03)}px system-ui`;
   ids.forEach((e,i)=> ctx.fillText(e.id, w-20, h - bandH + 30 + i*28));
 
-  foto.src = can.toDataURL('image/jpeg',0.92);
+  const url = can.toDataURL('image/jpeg',0.92);
+  foto.src = url;
   btnDownload.disabled = true;
   foto.onload = ()=>{ btnDownload.disabled=false; };
+
+  photos.push({url,w,h,ts,kmStr,idsTxt});
+  updateListUI();
 };
 
 btnDownload.onclick=()=>{
@@ -347,6 +391,111 @@ btnDownload.onclick=()=>{
   a.click();
 };
 
+btnClear.onclick=()=>{
+  if(!photos.length) return;
+  if(!confirm('Limpar a lista de fotos desta sessão?')) return;
+  photos.length = 0;
+  updateListUI();
+};
+
+btnPdf.onclick=async ()=>{
+  if(!photos.length) return;
+
+  // Gera PDF simples (A4) com cada foto em 1 página
+  const blob = await makePdfFromPhotos(photos, 'RELATORIO_INSPECAO');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download = 'RELATORIO_INSPECAO.pdf';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  a.remove();
+};
+
+/* ======= PDF minimalista (cada foto por página) =======
+   - Implementação ligeira, sem libs externas.
+   - Insere JPEGs (DCTDecode) centrados em A4.
+*/
+async function makePdfFromPhotos(arr, nameBase){
+  const PW=595, PH=842, M=36; // A4 em pontos (72dpi)
+  const enc = new TextEncoder();
+  const parts=[ enc.encode('%PDF-1.3\n') ];
+  const xref=[0];
+
+  function offset(){ return parts.reduce((a,b)=>a+b.length,0); }
+  function push(txt){
+    const b=enc.encode(txt);
+    xref.push(offset());
+    parts.push(b);
+    return xref.length-1;
+  }
+  function pushStream(header, bin){
+    const hb=enc.encode(header);
+    xref.push(offset());
+    parts.push(hb);
+    parts.push(bin);
+    parts.push(enc.encode('endstream\nendobj\n'));
+    return xref.length-1;
+  }
+
+  const pageNums=[];
+  for(let i=0;i<arr.length;i++){
+    const p=arr[i];
+    const bin = dataURLtoUint8Array(p.url); // JPEG
+
+    // Tenta dimensionar para caber em A4 com margem
+    // (usa w/h capturados da câmera; se faltarem, assume 1280x720)
+    const imgW=p.w||1280, imgH=p.h||720;
+    const maxW=PW-2*M, maxH=PH-2*M;
+    let dw=maxW, dh=Math.round(imgH*(maxW/imgW));
+    if(dh>maxH){ dh=maxH; dw=Math.round(imgW*(maxH/imgH)) }
+    const tx=Math.round((PW-dw)/2), ty=Math.round((PH-dh)/2);
+
+    // Image XObject
+    const imgNum = pushStream(
+      `${i+5} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n`,
+      bin
+    );
+
+    // Conteúdo da página (pinta a imagem)
+    const content = `q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n/Im${i} Do\nQ\n`;
+    const contNum = pushStream(
+      `${i+5+arr.length} 0 obj\n<< /Length ${content.length} >>\nstream\n`,
+      enc.encode(content)
+    );
+
+    // Página
+    const pageNum = push(
+      `${i+5+2*arr.length} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im${i} ${imgNum} 0 R >> >> /Contents ${contNum} 0 R >>\nendobj\n`
+    );
+    pageNums.push(pageNum);
+  }
+
+  // Páginas / Catalog
+  const kids = pageNums.map(n=>`${n} 0 R`).join(' ');
+  push(`2 0 obj\n<< /Type /Pages /Kids [ ${kids} ] /Count ${arr.length} >>\nendobj\n`);
+  push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
+
+  // xref
+  const start = offset();
+  let xr = `xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<xref.length;i++){
+    xr += String(xref[i]).padStart(10,'0') + ' 00000 n \n';
+  }
+  xr += `trailer\n<< /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`;
+  parts.push(enc.encode(xr));
+
+  return new Blob(parts,{type:'application/pdf'});
+}
+
+function dataURLtoUint8Array(dataURL){
+  const base64 = dataURL.split(',')[1];
+  const raw = atob(base64);
+  const u8 = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) u8[i]=raw.charCodeAt(i);
+  return u8;
+}
+
 /* =========================
    6) Inicialização
    ========================= */
@@ -354,6 +503,7 @@ btnDownload.onclick=()=>{
   setChip(chipCsv,'bad','CSV: carregando…');
   setChip(chipCam,'bad','Câmera: aguardando…');
   setChip(chipGps,'bad','GPS: aguardando…');
+  setChip(chipList,'','Lista: 0');
   await loadCSVs();
   startCamera();
   startGPS();
