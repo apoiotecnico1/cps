@@ -151,6 +151,7 @@
 <!-- AÇÕES -->
 <div class="card">
   <div class="row">
+    <button id="btnAutoCapture" style="background:#ff6b35;color:#fff">🎬 Iniciar Captura Automática</button>
     <button id="btnDownload" disabled>Baixar Última Foto</button>
     <button id="btnPdf" disabled>📄 PDF – Somente Fotos (leve)</button>
     <button id="btnSharePdf" disabled>📤 Enviar PDF (WhatsApp)</button>
@@ -237,6 +238,8 @@ function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([
 let dataset=[], kmPoints=[];
 let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
+let isAutoCapturing=false;
+let autoCaptureInterval=null;
 
 const vid=document.getElementById('vid');
 const can=document.getElementById('can');
@@ -251,6 +254,7 @@ const btnPdf=document.getElementById('btnPdf');
 const btnSharePdf=document.getElementById('btnSharePdf');
 const btnSharePhotos=document.getElementById('btnSharePhotos');
 const btnClear=document.getElementById('btnClear');
+const btnAutoCapture=document.getElementById('btnAutoCapture');
 const autoClear=document.getElementById('autoClear');
 const gal=document.getElementById('gal');
 
@@ -547,6 +551,77 @@ async function capture(){
 wrap.addEventListener('click', ()=>{ if(csvReady && camReady && gpsReady) capture(); });
 
 /* =========================
+   Captura Automática (sequencial)
+   ========================= */
+function startAutoCapture(){
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+  isAutoCapturing=true;
+  btnAutoCapture.textContent='⏹️ Parar Captura';
+  btnAutoCapture.style.background='#ef4444';
+  setOv('Capturando automaticamente... toque para parar ou clique em Salvar PDF', true);
+  
+  // Captura a cada 500ms
+  autoCaptureInterval=setInterval(()=>{
+    if(csvReady && camReady && gpsReady && lastPos){
+      const w=vid.videoWidth||1280, h=vid.videoHeight||720;
+      can.width=w; can.height=h;
+      ctx.drawImage(vid,0,0,w,h);
+      const bandH=Math.max(144,Math.round(h*0.16));
+      ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
+      ctx.fillStyle='#fff'; ctx.textAlign='left';
+      ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
+      ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
+      ctx.textAlign='right'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+      ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
+
+      const url=can.toDataURL('image/jpeg',0.92);
+      const blob=dataURLtoBlob(url);
+      foto.src=url;
+
+      const safeKm=kmStr.replace('KM ','').replace('+','_');
+      const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
+
+      const rec={
+        id: Date.now()+'_'+Math.random().toString(36).slice(2),
+        url, blob, w,h, ts, kmStr,
+        idsTxt: ids.map(e=>e.id).join(', '),
+        filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
+      };
+      dbPut({...rec, url: undefined}); // guarda offline
+      photos.push(rec); renderGallery();
+    }
+  }, 500); // capt ura a cada 500ms
+}
+
+function stopAutoCapture(){
+  if(!isAutoCapturing) return;
+  isAutoCapturing=false;
+  if(autoCaptureInterval){
+    clearInterval(autoCaptureInterval);
+    autoCaptureInterval=null;
+  }
+  btnAutoCapture.textContent='🎬 Iniciar Captura Automática';
+  btnAutoCapture.style.background='#ff6b35';
+  setOv('Captura automática parada. Toque no vídeo ou clique em Captura para capturar manualmente', true);
+}
+
+btnAutoCapture.addEventListener('click', ()=>{
+  if(isAutoCapturing) stopAutoCapture();
+  else startAutoCapture();
+});
+
+// Também permite tocar no vídeo para capturar manualmente (e para a captura automática se estiver ativa)
+wrap.addEventListener('click', ()=>{ 
+  if(isAutoCapturing){
+    stopAutoCapture();
+  } else if(csvReady && camReady && gpsReady){
+    capture();
+  }
+});
+
+/* =========================
    Limpeza de lista (próximo relatório)
    ========================= */
 async function clearList(silent=false){
@@ -622,6 +697,7 @@ async function makePdfPhotosOnly(arr){
 
 btnPdf.onclick=async ()=>{
   if(!photos.length) return;
+  stopAutoCapture(); // Para a captura automática ao salvar PDF
   // downscale leve
   const scaled=[];
   for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
@@ -654,6 +730,7 @@ function buildWhatsAppMessage(isPdf){
 /* WhatsApp – PDF */
 btnSharePdf.onclick=async ()=>{
   if(!photos.length) return;
+  stopAutoCapture(); // Para a captura automática ao compartilhar
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
   const pdfBlob=await makePdfPhotosOnly(scaled);
   const pdfFile=new File([pdfBlob],'RELATORIO_INSPECAO.pdf',{type:'application/pdf'});
@@ -676,6 +753,7 @@ btnSharePdf.onclick=async ()=>{
 /* WhatsApp – FOTOS (em lotes) */
 btnSharePhotos.onclick=async ()=>{
   if(!photos.length) return;
+  stopAutoCapture(); // Para a captura automática ao compartilhar
   const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg'));
   const text=buildWhatsAppMessage(false);
   const MAX=10;
