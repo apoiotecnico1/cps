@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
 <title>Inspeção Noturna Rodovia</title>
 
@@ -10,15 +10,19 @@
 
 body{
 margin:0;
-background:#000;
-color:#fff;
+background:#111;
+display:flex;
+justify-content:center;
 font-family:system-ui;
-overflow:hidden;
 }
 
-.wrap{
-position:fixed;
-inset:0;
+.app{
+width:100%;
+max-width:420px;
+height:100vh;
+background:black;
+position:relative;
+overflow:hidden;
 }
 
 video{
@@ -37,27 +41,35 @@ pointer-events:none;
 
 .controls{
 position:absolute;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
+bottom:18px;
+width:100%;
 display:flex;
+justify-content:center;
 gap:14px;
 z-index:10;
 }
 
 button{
-width:70px;
-height:70px;
+
+width:64px;
+height:64px;
+
 border-radius:50%;
 border:none;
-font-size:28px;
+
+font-size:24px;
 color:white;
-background:rgba(0,0,0,.6);
+
+background:rgba(0,0,0,.7);
+
 backdrop-filter:blur(5px);
+
+box-shadow:0 4px 10px rgba(0,0,0,.4)
+
 }
 
-#rec{background:#e11d48}
-#stop{background:#444}
+#rec{background:#ef4444}
+#stop{background:#374151}
 #mark{background:#f97316}
 
 </style>
@@ -65,7 +77,7 @@ backdrop-filter:blur(5px);
 
 <body>
 
-<div class="wrap">
+<div class="app">
 
 <video id="video" autoplay playsinline muted></video>
 
@@ -88,17 +100,131 @@ const video=document.getElementById("video")
 const hud=document.getElementById("hud")
 const ctx=hud.getContext("2d")
 
+let gps=null
+let recording=false
 let recorder
 let chunks=[]
-let recording=false
 
-let gps=null
+let dataset=[]
+let kmPoints=[]
+
+/* util */
+
+function hav(a,b,c,d){
+
+const R=6371000
+
+const x=(c-a)*Math.PI/180
+const y=(d-b)*Math.PI/180
+
+const u=Math.sin(x/2)**2+
+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2
+
+return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
+
+}
+
+function fmtKm(v){
+
+let K=Math.floor(v)
+
+let m=Math.round((v-K)*1000)
+
+return `KM ${K}+${String(m).padStart(3,'0')}`
+
+}
+
+/* carregar CSV */
+
+async function loadCSVs(){
+
+const idCSV=await fetch("Dados_Completos_Grupo_2_all.csv").then(r=>r.text())
+
+const lines=idCSV.split("\n")
+
+for(let i=1;i<lines.length;i++){
+
+const c=lines[i].split(";")
+
+const id=c[0]
+
+const lat=parseFloat(c[1].replace(",","."))
+
+const lon=parseFloat(c[2].replace(",","."))
+
+if(id&&lat&&lon)dataset.push({id,lat,lon})
+
+}
+
+const kmCSV=await fetch("SNVBR116SPRJ.csv").then(r=>r.text())
+
+const l2=kmCSV.split("\n")
+
+for(let i=1;i<l2.length;i++){
+
+const c=l2[i].split(";")
+
+const km=parseFloat(c[0].replace(",","."))
+
+const lat=parseFloat(c[1].replace(",","."))
+
+const lon=parseFloat(c[2].replace(",","."))
+
+if(km&&lat&&lon)kmPoints.push({km,lat,lon})
+
+}
+
+}
+
+/* proximidade */
+
+function nearestIDs(lat,lon){
+
+const arr=dataset.map(p=>({
+
+id:p.id,
+
+d:hav(lat,lon,p.lat,p.lon)
+
+}))
+
+arr.sort((a,b)=>a.d-b.d)
+
+return arr.slice(0,5)
+
+}
+
+function nearestKM(lat,lon){
+
+let best=null
+let bd=Infinity
+
+for(const p of kmPoints){
+
+const d=hav(lat,lon,p.lat,p.lon)
+
+if(d<bd){
+
+bd=d
+best=p
+
+}
+
+}
+
+return best
+
+}
+
+/* gps */
 
 navigator.geolocation.watchPosition(p=>{
 
 gps=p.coords
 
 })
+
+/* camera */
 
 async function startCamera(){
 
@@ -115,57 +241,83 @@ video.srcObject=stream
 
 function resize(){
 
-hud.width=window.innerWidth*devicePixelRatio
-hud.height=window.innerHeight*devicePixelRatio
+hud.width=video.clientWidth*devicePixelRatio
+hud.height=video.clientHeight*devicePixelRatio
 
 }
 
 window.onresize=resize
-resize()
 
-function draw(){
+/* HUD */
+
+function drawHUD(){
+
+resize()
 
 const W=hud.width
 const H=hud.height
 
 ctx.clearRect(0,0,W,H)
 
-const band=H*0.15
+const band=H*0.16
 
-ctx.fillStyle="rgba(0,0,0,.6)"
+ctx.fillStyle="rgba(0,0,0,.65)"
+
 ctx.fillRect(0,H-band,W,band)
 
 ctx.fillStyle="#ff6b35"
+
 ctx.font=`900 ${H*0.05}px Arial`
-ctx.fillText("INSPEÇÃO ILUMINAÇÃO",20,H-band+50)
+
+let kmText="KM --"
+
+let ids=[]
+
+if(gps){
+
+const km=nearestKM(gps.latitude,gps.longitude)
+
+if(km)kmText=fmtKm(km.km)
+
+ids=nearestIDs(gps.latitude,gps.longitude)
+
+}
+
+ctx.fillText(kmText,20,H-band+40)
 
 ctx.fillStyle="#fff"
+
 ctx.font=`700 ${H*0.03}px Arial`
 
 ctx.fillText(new Date().toLocaleString(),20,H-20)
 
+ctx.textAlign="right"
+
+ids.forEach((e,i)=>{
+
+ctx.fillText(e.id,W-20,H-band+30+i*24)
+
+})
+
 if(recording){
 
 ctx.beginPath()
+
 ctx.arc(W-40,40,12,0,6.28)
+
 ctx.fillStyle="red"
+
 ctx.fill()
 
 }
 
-ctx.strokeStyle="rgba(255,255,255,.4)"
-ctx.beginPath()
-ctx.moveTo(W/2-20,H/2)
-ctx.lineTo(W/2+20,H/2)
-ctx.moveTo(W/2,H/2-20)
-ctx.lineTo(W/2,H/2+20)
-ctx.stroke()
-
-requestAnimationFrame(draw)
+requestAnimationFrame(drawHUD)
 
 }
 
-document.getElementById("rec").onclick=()=>{
+/* gravação */
+
+function startRecording(){
 
 if(recording)return
 
@@ -182,6 +334,7 @@ const url=URL.createObjectURL(blob)
 const a=document.createElement("a")
 
 a.href=url
+
 a.download="inspecao.webm"
 
 a.click()
@@ -194,7 +347,7 @@ recording=true
 
 }
 
-document.getElementById("stop").onclick=()=>{
+function stopRecording(){
 
 if(!recording)return
 
@@ -204,11 +357,14 @@ recording=false
 
 }
 
-document.getElementById("photo").onclick=()=>{
+/* foto */
+
+function capture(){
 
 const c=document.createElement("canvas")
 
 c.width=video.videoWidth
+
 c.height=video.videoHeight
 
 const x=c.getContext("2d")
@@ -220,21 +376,44 @@ const url=c.toDataURL("image/jpeg")
 const a=document.createElement("a")
 
 a.href=url
+
 a.download="foto_inspecao.jpg"
 
 a.click()
 
 }
 
-document.getElementById("mark").onclick=()=>{
+/* evento */
 
-alert("Falha marcada "+new Date().toLocaleTimeString())
+function mark(){
+
+navigator.vibrate?.(200)
 
 }
 
-startCamera()
+/* botões */
 
-draw()
+photo.onclick=capture
+
+rec.onclick=startRecording
+
+stop.onclick=stopRecording
+
+mark.onclick=mark
+
+/* iniciar */
+
+async function boot(){
+
+await loadCSVs()
+
+await startCamera()
+
+drawHUD()
+
+}
+
+boot()
 
 </script>
 
