@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Inspeção Iluminação Rodovia</title>
+<title>Inspeção Iluminação Rodovia IA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 
 <style>
 
@@ -44,7 +46,7 @@ bottom:18px;
 width:100%;
 display:flex;
 justify-content:center;
-gap:14px;
+gap:12px;
 z-index:10;
 }
 
@@ -56,8 +58,6 @@ border:none;
 font-size:24px;
 color:white;
 background:rgba(0,0,0,.7);
-backdrop-filter:blur(5px);
-box-shadow:0 4px 10px rgba(0,0,0,.4)
 }
 
 #rec{background:#ef4444}
@@ -72,7 +72,6 @@ box-shadow:0 4px 10px rgba(0,0,0,.4)
 <div class="app">
 
 <video id="video" autoplay playsinline muted></video>
-
 <canvas id="hud"></canvas>
 
 <div class="controls">
@@ -99,6 +98,8 @@ let chunks=[]
 
 let dataset=[]
 let kmPoints=[]
+
+let darkAlert=false
 
 /* distância */
 
@@ -129,7 +130,6 @@ return `KM ${K}+${String(m).padStart(3,'0')}`
 async function loadCSVs(){
 
 const idCSV=await fetch("Dados_Completos_Grupo_2_all.csv").then(r=>r.text())
-
 const lines=idCSV.split("\n")
 
 for(let i=1;i<lines.length;i++){
@@ -137,9 +137,7 @@ for(let i=1;i<lines.length;i++){
 const c=lines[i].split(";")
 
 const id=c[0]
-
 const lat=parseFloat(c[1].replace(",","."))
-
 const lon=parseFloat(c[2].replace(",","."))
 
 if(id&&lat&&lon)dataset.push({id,lat,lon})
@@ -147,7 +145,6 @@ if(id&&lat&&lon)dataset.push({id,lat,lon})
 }
 
 const kmCSV=await fetch("SNVBR116SPRJ.csv").then(r=>r.text())
-
 const l2=kmCSV.split("\n")
 
 for(let i=1;i<l2.length;i++){
@@ -155,9 +152,7 @@ for(let i=1;i<l2.length;i++){
 const c=l2[i].split(";")
 
 const km=parseFloat(c[0].replace(",","."))
-
 const lat=parseFloat(c[1].replace(",","."))
-
 const lon=parseFloat(c[2].replace(",","."))
 
 if(km&&lat&&lon)kmPoints.push({km,lat,lon})
@@ -171,8 +166,10 @@ if(km&&lat&&lon)kmPoints.push({km,lat,lon})
 function nearestIDs(lat,lon){
 
 const arr=dataset.map(p=>({
+
 id:p.id,
 d:hav(lat,lon,p.lat,p.lon)
+
 }))
 
 arr.sort((a,b)=>a.d-b.d)
@@ -206,10 +203,12 @@ return best
 /* GPS */
 
 navigator.geolocation.watchPosition(p=>{
+
 gps=p.coords
+
 })
 
-/* camera */
+/* câmera */
 
 async function startCamera(){
 
@@ -221,6 +220,39 @@ audio:false
 })
 
 video.srcObject=stream
+
+}
+
+/* IA DETECÇÃO */
+
+const detectCanvas=document.createElement("canvas")
+const detectCtx=detectCanvas.getContext("2d")
+
+function detectLampFailure(){
+
+detectCanvas.width=video.videoWidth
+detectCanvas.height=video.videoHeight
+
+detectCtx.drawImage(video,0,0)
+
+const img=detectCtx.getImageData(
+0,
+0,
+detectCanvas.width,
+detectCanvas.height*0.4
+)
+
+let sum=0
+
+for(let i=0;i<img.data.length;i+=4){
+
+sum+=img.data[i]
+
+}
+
+const brightness=sum/(img.data.length/4)
+
+darkAlert=brightness<35
 
 }
 
@@ -239,11 +271,9 @@ ctx.clearRect(0,0,W,H)
 const band=H*0.16
 
 ctx.fillStyle="rgba(0,0,0,.65)"
-
 ctx.fillRect(0,H-band,W,band)
 
 let kmText="KM --"
-
 let ids=[]
 
 if(gps){
@@ -257,13 +287,10 @@ ids=nearestIDs(gps.latitude,gps.longitude)
 }
 
 ctx.fillStyle="#ff6b35"
-
 ctx.font=`900 ${H*0.05}px Arial`
-
 ctx.fillText(kmText,20,H-band+40)
 
 ctx.fillStyle="#fff"
-
 ctx.font=`700 ${H*0.03}px Arial`
 
 const ts=new Date().toLocaleString()
@@ -278,23 +305,30 @@ ctx.fillText(e.id,W-20,H-band+30+i*24)
 
 })
 
-if(recording){
-
-ctx.beginPath()
-
-ctx.arc(W-40,40,12,0,6.28)
+if(darkAlert){
 
 ctx.fillStyle="red"
 
+ctx.fillText("⚠ POSSIVEL LAMPADA APAGADA",W/2,H*0.2)
+
+}
+
+if(recording){
+
+ctx.beginPath()
+ctx.arc(W-40,40,12,0,6.28)
+ctx.fillStyle="red"
 ctx.fill()
 
 }
+
+detectLampFailure()
 
 requestAnimationFrame(drawHUD)
 
 }
 
-/* foto com overlay */
+/* foto */
 
 function capture(){
 
@@ -306,7 +340,6 @@ c.height=video.videoHeight
 const x=c.getContext("2d")
 
 x.drawImage(video,0,0)
-
 x.drawImage(hud,0,0,c.width,c.height)
 
 const url=c.toDataURL("image/jpeg")
@@ -314,14 +347,13 @@ const url=c.toDataURL("image/jpeg")
 const a=document.createElement("a")
 
 a.href=url
-
 a.download="foto_inspecao.jpg"
 
 a.click()
 
 }
 
-/* gravação com HUD */
+/* gravação */
 
 function startRecording(){
 
@@ -337,7 +369,6 @@ const x=canvas.getContext("2d")
 function render(){
 
 x.drawImage(video,0,0)
-
 x.drawImage(hud,0,0,canvas.width,canvas.height)
 
 requestAnimationFrame(render)
@@ -361,7 +392,6 @@ const url=URL.createObjectURL(blob)
 const a=document.createElement("a")
 
 a.href=url
-
 a.download="inspecao_iluminacao.webm"
 
 a.click()
@@ -384,20 +414,12 @@ recording=false
 
 }
 
-/* evento */
-
-function mark(){
-
-navigator.vibrate?.(200)
-
-}
-
 /* botões */
 
 photo.onclick=capture
 rec.onclick=startRecording
 stop.onclick=stopRecording
-mark.onclick=mark
+mark.onclick=()=>navigator.vibrate?.(200)
 
 /* iniciar */
 
