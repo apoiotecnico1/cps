@@ -2,55 +2,38 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Inspeção Vídeo</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Inspeção Noturna Rodovia</title>
 
 <style>
 
 body{
 margin:0;
-background:black;
-color:white;
+background:#000;
+color:#fff;
 font-family:system-ui;
 overflow:hidden;
 }
 
-/* vídeo */
-
-.stage{
+.wrap{
 position:fixed;
 inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-}
-
-.wrap{
-position:relative;
-width:100vw;
-height:100vh;
-overflow:hidden;
 }
 
 video{
 position:absolute;
-inset:0;
-margin:auto;
 width:100%;
 height:100%;
 object-fit:contain;
 background:black;
 }
 
-canvas.hud{
+canvas{
 position:absolute;
 inset:0;
-width:100%;
-height:100%;
 pointer-events:none;
 }
-
-/* botões */
 
 .controls{
 position:absolute;
@@ -58,69 +41,42 @@ bottom:20px;
 left:50%;
 transform:translateX(-50%);
 display:flex;
-gap:18px;
-z-index:20;
+gap:14px;
+z-index:10;
 }
 
-.controls button{
-width:64px;
-height:64px;
+button{
+width:70px;
+height:70px;
 border-radius:50%;
 border:none;
 font-size:28px;
-background:rgba(0,0,0,.6);
 color:white;
-backdrop-filter:blur(6px);
-box-shadow:0 4px 12px rgba(0,0,0,.4);
-}
-
-#btnRec{background:#ef4444;}
-#btnStop{background:#444;}
-
-.ov{
-position:absolute;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-pointer-events:none;
-}
-
-.msg{
 background:rgba(0,0,0,.6);
-padding:10px 14px;
-border-radius:10px;
-font-weight:700;
+backdrop-filter:blur(5px);
 }
+
+#rec{background:#e11d48}
+#stop{background:#444}
+#mark{background:#f97316}
 
 </style>
 </head>
 
 <body>
 
-<div class="stage">
+<div class="wrap">
 
-<div class="wrap" id="wrap">
+<video id="video" autoplay playsinline muted></video>
 
-<video id="vid" autoplay playsinline muted></video>
-
-<canvas id="can" style="display:none"></canvas>
-
-<canvas id="hud" class="hud"></canvas>
-
-<div id="ov" class="ov">
-<div class="msg" id="ovMsg">Inicializando câmera...</div>
-</div>
+<canvas id="hud"></canvas>
 
 <div class="controls">
 
-<button id="btnPhoto">📷</button>
-
-<button id="btnRec">⏺</button>
-
-<button id="btnStop">⏹</button>
-
-</div>
+<button id="photo">📷</button>
+<button id="rec">⏺</button>
+<button id="stop">⏹</button>
+<button id="mark">⚠</button>
 
 </div>
 
@@ -128,31 +84,21 @@ font-weight:700;
 
 <script>
 
-/* estado */
-
-const vid=document.getElementById("vid")
+const video=document.getElementById("video")
 const hud=document.getElementById("hud")
-const hudCtx=hud.getContext("2d")
+const ctx=hud.getContext("2d")
 
-const can=document.getElementById("can")
-const ctx=can.getContext("2d")
-
-const ov=document.getElementById("ov")
-const ovMsg=document.getElementById("ovMsg")
-
-let lastPos=null
-let gpsReady=false
-let isRecording=false
-let mediaRecorder
+let recorder
 let chunks=[]
+let recording=false
 
-/* câmera */
+let gps=null
 
-let currentTrack
-let zoomMin=1
-let zoomMax=1
-let zoomStep=0.1
-let zoomCurrent=1
+navigator.geolocation.watchPosition(p=>{
+
+gps=p.coords
+
+})
 
 async function startCamera(){
 
@@ -163,142 +109,113 @@ audio:false
 
 })
 
-vid.srcObject=stream
-
-currentTrack=stream.getVideoTracks()[0]
-
-const cap=currentTrack.getCapabilities()
-
-if(cap.zoom){
-
-zoomMin=cap.zoom.min
-zoomMax=cap.zoom.max
-zoomStep=cap.zoom.step
+video.srcObject=stream
 
 }
 
-}
-
-/* gps */
-
-function startGPS(){
-
-navigator.geolocation.watchPosition(p=>{
-
-lastPos={
-
-lat:p.coords.latitude,
-lon:p.coords.longitude,
-acc:p.coords.accuracy
-
-}
-
-gpsReady=true
-
-})
-
-}
-
-/* HUD */
-
-function resizeHUD(){
+function resize(){
 
 hud.width=window.innerWidth*devicePixelRatio
 hud.height=window.innerHeight*devicePixelRatio
 
 }
 
-window.addEventListener("resize",resizeHUD)
+window.onresize=resize
+resize()
 
-function drawHUD(){
+function draw(){
 
 const W=hud.width
 const H=hud.height
 
-hudCtx.clearRect(0,0,W,H)
+ctx.clearRect(0,0,W,H)
 
-const bandH=Math.max(100*devicePixelRatio,H*0.14)
+const band=H*0.15
 
-hudCtx.fillStyle="rgba(0,0,0,.55)"
-hudCtx.fillRect(0,H-bandH,W,bandH)
+ctx.fillStyle="rgba(0,0,0,.6)"
+ctx.fillRect(0,H-band,W,band)
 
-/* KM */
+ctx.fillStyle="#ff6b35"
+ctx.font=`900 ${H*0.05}px Arial`
+ctx.fillText("INSPEÇÃO ILUMINAÇÃO",20,H-band+50)
 
-let km="KM --"
+ctx.fillStyle="#fff"
+ctx.font=`700 ${H*0.03}px Arial`
 
-if(lastPos){
+ctx.fillText(new Date().toLocaleString(),20,H-20)
 
-km="LAT "+lastPos.lat.toFixed(5)
+if(recording){
 
-}
-
-hudCtx.fillStyle="#ff6b35"
-hudCtx.font=`900 ${Math.max(22,H*0.045)}px system-ui`
-hudCtx.textAlign="left"
-hudCtx.fillText(km,20,H-bandH+40)
-
-/* timestamp */
-
-const ts=new Date().toLocaleString()
-
-hudCtx.fillStyle="#fff"
-hudCtx.font=`700 ${Math.max(16,H*0.028)}px system-ui`
-
-hudCtx.fillText(ts,20,H-20)
-
-/* gps */
-
-hudCtx.fillStyle=gpsReady?"#22c55e":"#ef4444"
-
-hudCtx.font=`600 ${Math.max(14,H*0.024)}px system-ui`
-
-hudCtx.fillText(
-
-gpsReady?"GPS OK":"GPS ...",
-20,
-40
-
-)
-
-/* rec */
-
-if(isRecording){
-
-hudCtx.beginPath()
-
-hudCtx.arc(W-40,40,12,0,Math.PI*2)
-
-hudCtx.fillStyle="red"
-
-hudCtx.fill()
+ctx.beginPath()
+ctx.arc(W-40,40,12,0,6.28)
+ctx.fillStyle="red"
+ctx.fill()
 
 }
 
+ctx.strokeStyle="rgba(255,255,255,.4)"
+ctx.beginPath()
+ctx.moveTo(W/2-20,H/2)
+ctx.lineTo(W/2+20,H/2)
+ctx.moveTo(W/2,H/2-20)
+ctx.lineTo(W/2,H/2+20)
+ctx.stroke()
+
+requestAnimationFrame(draw)
+
 }
 
-/* loop */
+document.getElementById("rec").onclick=()=>{
 
-function loop(){
+if(recording)return
 
-drawHUD()
+recorder=new MediaRecorder(video.srcObject)
 
-requestAnimationFrame(loop)
+recorder.ondataavailable=e=>chunks.push(e.data)
+
+recorder.onstop=()=>{
+
+const blob=new Blob(chunks,{type:"video/webm"})
+
+const url=URL.createObjectURL(blob)
+
+const a=document.createElement("a")
+
+a.href=url
+a.download="inspecao.webm"
+
+a.click()
 
 }
 
-/* foto */
+recorder.start()
 
-function capture(){
+recording=true
 
-const w=vid.videoWidth
-const h=vid.videoHeight
+}
 
-can.width=w
-can.height=h
+document.getElementById("stop").onclick=()=>{
 
-ctx.drawImage(vid,0,0,w,h)
+if(!recording)return
 
-const url=can.toDataURL("image/jpeg",0.92)
+recorder.stop()
+
+recording=false
+
+}
+
+document.getElementById("photo").onclick=()=>{
+
+const c=document.createElement("canvas")
+
+c.width=video.videoWidth
+c.height=video.videoHeight
+
+const x=c.getContext("2d")
+
+x.drawImage(video,0,0)
+
+const url=c.toDataURL("image/jpeg")
 
 const a=document.createElement("a")
 
@@ -309,116 +226,15 @@ a.click()
 
 }
 
-/* gravação */
+document.getElementById("mark").onclick=()=>{
 
-function startRecording(){
-
-if(isRecording)return
-
-const stream=vid.srcObject
-
-mediaRecorder=new MediaRecorder(stream)
-
-chunks=[]
-
-mediaRecorder.ondataavailable=e=>chunks.push(e.data)
-
-mediaRecorder.onstop=()=>{
-
-const blob=new Blob(chunks,{type:"video/webm"})
-
-const url=URL.createObjectURL(blob)
-
-const a=document.createElement("a")
-
-a.href=url
-a.download="video_inspecao.webm"
-
-a.click()
+alert("Falha marcada "+new Date().toLocaleTimeString())
 
 }
 
-mediaRecorder.start()
+startCamera()
 
-isRecording=true
-
-}
-
-function stopRecording(){
-
-if(!isRecording)return
-
-mediaRecorder.stop()
-
-isRecording=false
-
-}
-
-/* zoom gesto */
-
-let pinch=null
-
-wrap.addEventListener("touchstart",e=>{
-
-if(e.touches.length==2){
-
-const dx=e.touches[0].clientX-e.touches[1].clientX
-const dy=e.touches[0].clientY-e.touches[1].clientY
-
-pinch={dist:Math.hypot(dx,dy),zoom:zoomCurrent}
-
-}
-
-})
-
-wrap.addEventListener("touchmove",async e=>{
-
-if(!pinch)return
-
-const dx=e.touches[0].clientX-e.touches[1].clientX
-const dy=e.touches[0].clientY-e.touches[1].clientY
-
-const dist=Math.hypot(dx,dy)
-
-const scale=dist/pinch.dist
-
-let z=pinch.zoom*scale
-
-z=Math.min(zoomMax,Math.max(zoomMin,z))
-
-await currentTrack.applyConstraints({advanced:[{zoom:z}]})
-
-zoomCurrent=z
-
-})
-
-wrap.addEventListener("touchend",()=>pinch=null)
-
-/* botões */
-
-btnPhoto.onclick=capture
-
-btnRec.onclick=startRecording
-
-btnStop.onclick=stopRecording
-
-/* iniciar */
-
-async function boot(){
-
-resizeHUD()
-
-await startCamera()
-
-startGPS()
-
-ov.style.display="none"
-
-loop()
-
-}
-
-boot()
+draw()
 
 </script>
 
