@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Inspeção Fotográfica – Iluminação</title>
+<title>Inspeção – Vídeo e Relatórios</title>
 <style>
   :root{
     --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
     --muted:#a3b1d1; --border:#1e2647; --ok:#22c55e;
     --btn:#22c55e; --btn2:#1e40af; --btn3:#eab308; --btn4:#ef4444; --btn5:#25D366;
+    --accent:#ff6b35;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -17,7 +18,7 @@
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
     padding:12px; line-height:1.35;
   }
-  h1{margin:0 0 10px;text-align:center;font-size:1.4rem}
+  h1{margin:0 0 10px;text-align:center;font-size:1.35rem}
   .card{
     background:var(--surface);
     border:1px solid var(--border);
@@ -25,7 +26,13 @@
     padding:12px; margin:0 auto 12px;
     max-width:980px;
   }
-  /* CONTROLES recolhidos (não ocupar tela) */
+  /* TOP: KM ao vivo */
+  .kmTop{
+    text-align:center;padding:8px;background:rgba(255,107,53,.15);
+    border:1px solid var(--accent);border-radius:8px;margin-bottom:8px;
+    font-weight:900;font-size:1.05rem;color:var(--accent)
+  }
+  /* CONTROLES recolhidos */
   details.controls > summary{
     cursor:pointer; list-style:none; outline:none; user-select:none;
     font-weight:800; color:#dfe7ff;
@@ -37,6 +44,7 @@
     background:#0d1430; color:#dfe7ff; font-weight:700; padding:8px 10px;
   }
   button.small{font-size:.9rem}
+
   /* Vídeo responsivo */
   #wrap{position:relative;border-radius:12px;overflow:hidden}
   #vid{width:100%;display:block;background:#000;border-radius:12px;touch-action:none}
@@ -54,26 +62,20 @@
     flex:1 1 220px;padding:12px;font-size:1.02rem;border:0;border-radius:10px;
     cursor:pointer;background:#0d1430;color:#dfe7ff;font-weight:900
   }
-  #btnDownload{background:var(--btn2);color:#fff}
+  #btnAutoCapture{background:var(--accent);color:#fff}
+  #btnVideoRecord{background:#e74c3c;color:#fff}
   #btnPdf{background:var(--btn3);color:#000}
   #btnSharePdf,#btnSharePhotos{background:var(--btn5);color:#053d19}
-  #btnClear{background:var(--btn4);color:#fff}
+  #btnClear{background:#334155;color:#cbd5e1}
   button:disabled{opacity:.55;cursor:not-allowed}
 
-  /* Foto/Galeria */
-  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:10px;margin-top:8px}
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-  .thumb{border:1px solid #243053;border-radius:8px;overflow:hidden;background:#0a122a}
-  .thumb img{width:100%;display:block}
-  .meta{padding:6px 8px;font-size:.8rem;color:#c7d2fe}
-
-  /* Mobile ajustes */
+  /* Mobile */
   @media (max-width:420px){
     h1{font-size:1.2rem}
     button{flex:1 1 140px}
   }
 
-  /* ===== Painel de SENHA (cadeado) ===== */
+  /* ===== Cadeado ===== */
   #lock{
     position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85));
     display:flex; align-items:center; justify-content:center; z-index:9999;
@@ -116,25 +118,20 @@
   </div>
 </div>
 
-<h1>📸 Inspeção Fotográfica</h1>
+<h1>🎥 Inspeção – Vídeo e Relatórios</h1>
 
-<!-- KM ATUAL (sempre visível no topo) -->
-<div style="text-align:center;padding:8px;background:rgba(255,107,53,.15);border:1px solid #ff6b35;border-radius:8px;margin-bottom:8px;font-weight:900;font-size:1.1rem;color:#ff6b35">
-  <span id="kmTop">KM —</span>
-</div>
+<!-- KM ATUAL -->
+<div class="kmTop"><span id="kmTop">KM —</span></div>
 
-<!-- CONTROLES recolhidos (não ocupar tela) -->
+<!-- CONTROLES (compacto) -->
 <div class="card">
   <details class="controls">
-    <summary>⚙️ Controles (toque para abrir)</summary>
+    <summary>⚙️ Controles de Câmera (toque para abrir)</summary>
     <div class="ctrlGrid">
       <label>🎥 Câmera:
         <select id="cameraSel"></select>
       </label>
       <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
-      <button id="btnUltra" class="small" title="Ultra‑wide (0.5×)">0.5×</button>
-      <button id="btnWide"  class="small" title="Wide (1×)">1×</button>
-      <button id="btnTele"  class="small" title="Tele (2×+)">2×</button>
       <label id="zoomWrap" style="display:none">🔍 Zoom:
         <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
         <span id="zoomVal" style="margin-left:6px">1.0×</span>
@@ -153,18 +150,17 @@
   </div>
 </div>
 
-<!-- AÇÕES -->
+<!-- AÇÕES (Somente o essencial) -->
 <div class="card">
   <div class="row">
-    <button id="btnAutoCapture" style="background:#ff6b35;color:#fff">🎬 Iniciar Captura Automática</button>
-    <button id="btnVideoRecord" style="background:#e74c3c;color:#fff">🎥 Iniciar Gravação de Vídeo</button>
+    <button id="btnAutoCapture">🎬 Iniciar Captura Automática</button>
+    <button id="btnVideoRecord">🎥 Iniciar Gravação de Vídeo</button>
     <button id="btnPdf" disabled>📄 PDF – Somente Fotos (leve)</button>
     <button id="btnSharePdf" disabled>📤 Enviar PDF (WhatsApp)</button>
     <button id="btnSharePhotos" disabled>📤 Enviar Fotos (WhatsApp)</button>
-    <button id="btnClear" disabled>🧹 Limpar lista (próximo relatório)</button>
+    <button id="btnClear" disabled>🧹 Limpar lista</button>
   </div>
 
-  <!-- Limpeza automática após PDF -->
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
     <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
     Limpar automaticamente a lista depois de salvar/enviar o PDF
@@ -173,17 +169,6 @@
   <small style="display:block;color:#9fb4fc;margin-top:6px">
     Toque no vídeo para capturar. O PDF contém apenas as fotos (1 por página) com margens pequenas.
   </small>
-</div>
-
-<!-- Foto mais recente + Galeria -->
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Foto mais recente</h2>
-  <img id="foto" alt="Prévia da foto capturada">
-</div>
-
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:1rem">Lista de fotos (sessão atual)</h2>
-  <div id="gal" class="gallery"></div>
 </div>
 
 <script>
@@ -201,29 +186,21 @@ const LOCK = {
 function showError(msg){ LOCK.err.textContent = msg || ''; }
 function tryUnlock(){
   const v = (LOCK.input.value||'').trim();
-  if(v === 'nox'){ // senha simples (requisito do usuário)
-    if(LOCK.remember.checked){
-      sessionStorage.setItem(LOCK.key,'1');
-    }
+  if(v === 'nox'){
+    if(LOCK.remember.checked){ sessionStorage.setItem(LOCK.key,'1'); }
     LOCK.panel.style.display='none';
     showError('');
-    boot(); // inicia o app só após desbloquear
+    boot();
   }else{
     showError('Senha incorreta.');
-    LOCK.input.focus();
-    LOCK.input.select();
+    LOCK.input.focus(); LOCK.input.select();
   }
 }
 LOCK.btn.addEventListener('click', tryUnlock);
 LOCK.input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
 (function gate(){
-  if(sessionStorage.getItem(LOCK.key)==='1'){
-    LOCK.panel.style.display='none';
-    boot(); // já desbloqueado nesta sessão
-  }else{
-    // foca o campo e aguarda senha
-    LOCK.input.focus();
-  }
+  if(sessionStorage.getItem(LOCK.key)==='1'){ LOCK.panel.style.display='none'; boot(); }
+  else{ LOCK.input.focus(); }
 })();
 
 /* =========================
@@ -253,7 +230,6 @@ let kmUpdateInterval=null;
 const vid=document.getElementById('vid');
 const can=document.getElementById('can');
 const ctx=can.getContext('2d',{alpha:false});
-const foto=document.getElementById('foto');
 const wrap=document.getElementById('wrap');
 const ov=document.getElementById('ov');
 const ovMsg=document.getElementById('ovMsg');
@@ -262,13 +238,9 @@ const btnAutoCapture=document.getElementById('btnAutoCapture');
 const btnVideoRecord=document.getElementById('btnVideoRecord');
 const autoClear=document.getElementById('autoClear');
 const kmTop=document.getElementById('kmTop');
-const gal=document.getElementById('gal');
 
 const cameraSel=document.getElementById('cameraSel');
 const btnCycle=document.getElementById('btnCycle');
-const btnUltra=document.getElementById('btnUltra');
-const btnWide =document.getElementById('btnWide');
-const btnTele =document.getElementById('btnTele');
 const zoomWrap=document.getElementById('zoomWrap');
 const zoomRange=document.getElementById('zoomRange');
 const zoomVal=document.getElementById('zoomVal');
@@ -292,7 +264,7 @@ async function dbGetAll(){ if(!db) db=await openDB(); return new Promise((res,re
 async function dbClearAll(){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
 
 /* =========================
-   CSVs (IDs + KM) — leve
+   CSVs (IDs + KM)
    ========================= */
 const CELL=0.005; // ~550m
 const idGrid=new Map(), kmGrid=new Map();
@@ -343,7 +315,7 @@ async function loadKM(){
   kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
   for(let i=0;i<lines.length;i++){
     const c=lines[i].split(';');
-    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; // cabeçalho
+    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
     const t=pickTrio(c); if(!t) continue;
     if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
     if(!lastKeep){ kmPoints.push(t); lastKeep=t; }
@@ -377,17 +349,10 @@ function nearestKM(lat,lon){
 }
 
 /* =========================
-   Câmera: seleção + zoom (controles recolhidos)
+   Câmera
    ========================= */
 let currentStream=null, currentTrack=null, currentCap=null;
 let deviceList=[], deviceIndex=0;
-function lensHint(label=''){
-  const s=String(label).toLowerCase();
-  if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
-  if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
-  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide';
-  return '';
-}
 function saveCamPrefs(){
   const dev=deviceList[deviceIndex];
   if(dev){
@@ -408,8 +373,8 @@ async function enumerateCameras(){
   cameraSel.innerHTML='';
   deviceList.forEach((d,i)=>{
     const o=document.createElement('option');
-    const tag=lensHint(d.label); o.value=String(i);
-    o.textContent=d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`;
+    o.value=String(i);
+    o.textContent=d.label? d.label : `Câmera ${i+1}`;
     cameraSel.appendChild(o);
   });
   const savedId=localStorage.getItem('camDeviceId');
@@ -448,22 +413,6 @@ async function applyZoom(val, noSave=false){
 }
 cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); });
 btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
-async function switchLens(target){
-  const idx=deviceList.findIndex(d=>lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
-  if(idx>=0){ await startCamera(idx); return; }
-  if(currentCap?.zoom){
-    const mn=Number(zoomRange.min||1), mx=Number(zoomRange.max||1);
-    if(target==='ultra') await applyZoom(mn);
-    else if(target==='wide') await applyZoom(Math.min(Math.max(1,mn),mx));
-    else await applyZoom(Math.min(Math.max(2,mn),mx));
-    return;
-  }
-  const rearIdxs=deviceList.map((d,i)=>({d,i})).filter(x=>/back|rear|environment/i.test(x.d.label)).map(x=>x.i);
-  if(rearIdxs.length>1){ const next=rearIdxs.find(i=>i!==deviceIndex) ?? rearIdxs[0]; await startCamera(next); }
-}
-btnUltra.addEventListener('click', ()=>switchLens('ultra'));
-btnWide .addEventListener('click', ()=>switchLens('wide'));
-btnTele .addEventListener('click', ()=>switchLens('tele'));
 zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
 
 /* Pinch‑to‑zoom */
@@ -488,7 +437,7 @@ wrap.addEventListener('touchmove', (ev)=>{
 wrap.addEventListener('touchend', ()=>{ pinchBase=null; });
 
 /* =========================
-   GPS
+   GPS + KM
    ========================= */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); return; }
@@ -500,30 +449,29 @@ function startGPS(){
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
   }, ()=>{ gpsReady=false; setOv('Permita o GPS para usar', true); }, {enableHighAccuracy:true, timeout:12000});
 }
+function updateKmDisplay(){
+  if(!lastPos) return;
+  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+  kmTop.textContent=kmStr;
+}
+function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(updateKmDisplay, 300); }
+function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
 /* =========================
-   Captura (toque no vídeo)
+   Captura de fotos
    ========================= */
 function updateActions(){
   const n=photos.length, enabled=n>0;
   btnPdf.disabled=!enabled; btnClear.disabled=!enabled;
   btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled;
 }
-function renderGallery(){
-  gal.innerHTML='';
-  photos.forEach((p,idx)=>{
-    const d=document.createElement('div'); d.className='thumb';
-    const im=document.createElement('img'); im.src=p.url;
-    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`;
-    d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
-  });
-  updateActions();
-}
 async function capture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
   const w=vid.videoWidth||1280, h=vid.videoHeight||720;
   can.width=w; can.height=h;
   ctx.drawImage(vid,0,0,w,h);
+
   const bandH=Math.max(144,Math.round(h*0.16));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
   const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
@@ -536,10 +484,9 @@ async function capture(){
 
   const url=can.toDataURL('image/jpeg',0.92);
   const blob=dataURLtoBlob(url);
-  foto.src=url;
 
   const safeKm=kmStr.replace('KM ','').replace('+','_');
-  const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
+  const fname=`KM_${safeKm}.jpg`;
 
   const rec={
     id: Date.now()+'_'+Math.random().toString(36).slice(2),
@@ -547,29 +494,25 @@ async function capture(){
     idsTxt: ids.map(e=>e.id).join(', '),
     filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
   };
-  await dbPut({...rec, url: undefined}); // guarda blob + metadados
-  photos.push(rec); renderGallery();
-
+  await dbPut({...rec, url: undefined});
+  photos.push(rec);
+  updateActions();
   setOv('Foto capturada (salva no aparelho)', true);
   setTimeout(()=> setOv('Toque no vídeo para capturar', true), 800);
 }
 
-/* =========================
-   Captura Automática (sequencial)
-   ========================= */
+/* Captura Automática (sequencial) */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   isAutoCapturing=true;
   btnAutoCapture.textContent='⏹️ Parar Captura';
   btnAutoCapture.style.background='#ef4444';
-  setOv('Capturando automaticamente... toque para parar ou clique em Salvar PDF', true);
-  
-  // Captura a cada 500ms
+  setOv('Capturando automaticamente... toque para parar', true);
+
   autoCaptureInterval=setInterval(()=>{
     if(csvReady && camReady && gpsReady && lastPos){
       const w=vid.videoWidth||1280, h=vid.videoHeight||720;
-      can.width=w; can.height=h;
-      ctx.drawImage(vid,0,0,w,h);
+      can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
       const bandH=Math.max(144,Math.round(h*0.16));
       ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
       const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
@@ -582,60 +525,42 @@ function startAutoCapture(){
 
       const url=can.toDataURL('image/jpeg',0.92);
       const blob=dataURLtoBlob(url);
-      foto.src=url;
-
       const safeKm=kmStr.replace('KM ','').replace('+','_');
-      const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
-
+      const fname=`KM_${safeKm}.jpg`;
       const rec={
         id: Date.now()+'_'+Math.random().toString(36).slice(2),
-        url, blob, w,h, ts, kmStr,
+        url, blob, w:h? w:800, h:h? h:450, ts, kmStr,
         idsTxt: ids.map(e=>e.id).join(', '),
         filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
       };
-      dbPut({...rec, url: undefined}); // guarda offline
-      photos.push(rec); renderGallery();
+      dbPut({...rec, url: undefined});
+      photos.push(rec); updateActions();
     }
-  }, 500); // capt ura a cada 500ms
+  }, 500);
 }
-
 function stopAutoCapture(){
   if(!isAutoCapturing) return;
   isAutoCapturing=false;
-  if(autoCaptureInterval){
-    clearInterval(autoCaptureInterval);
-    autoCaptureInterval=null;
-  }
+  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
   btnAutoCapture.textContent='🎬 Iniciar Captura Automática';
-  btnAutoCapture.style.background='#ff6b35';
-  setOv('Captura automática parada. Toque no vídeo ou clique em Captura para capturar manualmente', true);
+  btnAutoCapture.style.background='var(--accent)';
+  setOv('Captura automática parada', true);
 }
+btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 
-btnAutoCapture.addEventListener('click', ()=>{
-  if(isAutoCapturing) stopAutoCapture();
-  else startAutoCapture();
-});
-
-/* =========================
-   Limpeza de lista (próximo relatório)
-   ========================= */
+/* Limpar lista */
 async function clearList(silent=false){
   if(!photos.length) return;
   if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
-
-  photos.length = 0;         // memória
-  await dbClearAll();        // IndexedDB
-  foto.src = '';             // limpa prévia
-  foto.removeAttribute('data-filename');
-  renderGallery();           // atualiza UI
+  photos.length = 0;
+  await dbClearAll();
+  updateActions();
 }
 btnClear.onclick = () => { clearList(false); };
 
 /* =========================
-   Ações: Download / PDF / WhatsApp
+   PDF / Compartilhar
    ========================= */
-
-/* Downscale p/ PDF (leve) */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   return new Promise((resolve)=>{
     const img=new Image();
@@ -650,10 +575,8 @@ function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
     img.src=srcUrl;
   });
 }
-
-/* PDF (Opção B): SOMENTE FOTOS – 1 por página, com pequena margem branca */
 async function makePdfPhotosOnly(arr){
-  const PW=595, PH=842, M=24; // A4, margem pequena
+  const PW=595, PH=842, M=24; // A4
   const enc=new TextEncoder();
   const parts=[ enc.encode('%PDF-1.4\n') ];
   const xref=[0]; let objNo=0;
@@ -685,203 +608,6 @@ async function makePdfPhotosOnly(arr){
   parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
   return new Blob(parts,{type:'application/pdf'});
 }
-
-btnPdf.onclick=async ()=>{
-  if(!photos.length) return;
-  stopAutoCapture(); // Para a captura automática ao salvar PDF
-  // downscale leve
-  const scaled=[];
-  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const blob=await makePdfPhotosOnly(scaled);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='RELATORIO_INSPECAO.pdf';
-  document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
-
-  // Limpar automaticamente (se marcado)
-  if (autoClear?.checked) { await clearList(true); }
-};
-
-/* =========================
-   Gravação de Vídeo Contínuo + KM em Tempo Real
-   ========================= */
-function updateKmDisplay(){
-  if(!lastPos) return;
-  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-  kmTop.textContent=kmStr;
-}
-
-function startKmUpdate(){
-  updateKmDisplay();
-  kmUpdateInterval=setInterval(updateKmDisplay, 300); // atualiza a cada 300ms
-}
-
-function stopKmUpdate(){
-  if(kmUpdateInterval){
-    clearInterval(kmUpdateInterval);
-    kmUpdateInterval=null;
-  }
-}
-
-async function startVideoRecording(){
-  if(!(csvReady && camReady && gpsReady && lastPos)){
-    alert('Aguarde CSV/Câmera/GPS');
-    return;
-  }
-  
-  try{
-    // Obter o stream do vídeo
-    const videoStream=vid.srcObject;
-    if(!videoStream){
-      alert('Câmera não disponível');
-      return;
-    }
-    
-    // Criar canvas stream para adicionar overlay
-    const overlayCanvas=document.createElement('canvas');
-    overlayCanvas.width=vid.videoWidth||1280;
-    overlayCanvas.height=vid.videoHeight||720;
-    const overlayCtx=overlayCanvas.getContext('2d');
-    
-    // Criar stream do canvas
-    const canvasStream=overlayCanvas.captureStream(30); // 30 fps
-    
-    // Copiar áudio do vídeo se disponível
-    const audioTracks=videoStream.getAudioTracks();
-    if(audioTracks.length>0){
-      canvasStream.addTrack(audioTracks[0]);
-    }
-    
-    // Iniciar MediaRecorder
-    const options={
-      mimeType: 'video/webm;codecs=vp8,opus',
-      videoBitsPerSecond: 2500000 // 2.5 Mbps
-    };
-    
-    if(!MediaRecorder.isTypeSupported(options.mimeType)){
-      options.mimeType='video/webm';
-    }
-    
-    mediaRecorder=new MediaRecorder(canvasStream, options);
-    recordedChunks=[];
-    
-    mediaRecorder.ondataavailable=(e)=>{
-      if(e.data.size>0) recordedChunks.push(e.data);
-    };
-    
-    mediaRecorder.onstop=()=>{
-      isRecordingVideo=false;
-      btnVideoRecord.textContent='🎥 Iniciar Gravação de Vídeo';
-      btnVideoRecord.style.background='#e74c3c';
-    };
-    
-    // Iniciar gravação
-    mediaRecorder.start();
-    isRecordingVideo=true;
-    btnVideoRecord.textContent='⏹️ Parar Gravação';
-    btnVideoRecord.style.background='#e74c3c';
-    setOv('Gravando vídeo... Clique para parar ou use o botão', true);
-    
-    // Atualizar overlay com KM + frame do vídeo
-    const drawLoop=()=>{
-      if(!isRecordingVideo) return;
-      
-      // Desenhar o vídeo no canvas
-      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-      
-      // Desenhar barra com informações
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      
-      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
-      overlayCtx.fillStyle='rgba(0,0,0,.62)';
-      overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
-      
-      // KM em laranja
-      overlayCtx.fillStyle='#ff6b35';
-      overlayCtx.textAlign='left';
-      overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
-      overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
-      
-      // Timestamp
-      const ts=new Date().toLocaleString();
-      overlayCtx.fillStyle='#fff';
-      overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
-      overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
-      
-      requestAnimationFrame(drawLoop);
-    };
-    
-    // Iniciar o loop de desenho
-    drawLoop();
-    startKmUpdate();
-    
-  }catch(e){
-    console.error('Erro ao iniciar gravação:', e);
-    alert('Erro ao iniciar gravação: '+e.message);
-    isRecordingVideo=false;
-  }
-}
-
-function stopVideoRecording(){
-  if(!isRecordingVideo || !mediaRecorder) return;
-  
-  isRecordingVideo=false;
-  mediaRecorder.stop();
-  stopKmUpdate();
-  
-  // Esperar o mediaRecorder terminar de processar
-  setTimeout(()=>{
-    if(recordedChunks.length===0){
-      alert('Erro: Nenhum dado foi gravado. Tente novamente.');
-      return;
-    }
-    
-    const blob=new Blob(recordedChunks, {type: 'video/webm'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    const now=new Date();
-    const dateStr=now.toISOString().slice(0,10);
-    const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-');
-    a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{
-      URL.revokeObjectURL(url);
-      a.remove();
-    }, 2000);
-    
-    setOv('Vídeo salvo com sucesso!', true);
-    setTimeout(()=>setOv('Toque no vídeo para capturar', true), 2000);
-  }, 500);
-}
-
-btnVideoRecord.addEventListener('click', async ()=>{
-  if(isRecordingVideo){
-    btnVideoRecord.disabled=true;
-    stopVideoRecording();
-    setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000);
-  } else {
-    btnVideoRecord.disabled=true;
-    try{
-      await startVideoRecording();
-    }catch(e){
-      console.error('Erro na gravação:', e);
-    }
-    btnVideoRecord.disabled=false;
-  }
-});
-
-// Também permite tocar no vídeo para parar gravação
-wrap.addEventListener('click', ()=>{ 
-  if(isRecordingVideo){
-    stopVideoRecording();
-  } else if(isAutoCapturing){
-    stopAutoCapture();
-  } else if(csvReady && camReady && gpsReady){
-    capture();
-  }
-});
 function buildWhatsAppMessage(isPdf){
   const lines=[];
   lines.push('*RELATÓRIO DE INSPEÇÃO*');
@@ -899,10 +625,20 @@ function buildWhatsAppMessage(isPdf){
   return lines.join('\n');
 }
 
-/* WhatsApp – PDF */
+btnPdf.onclick=async ()=>{
+  if(!photos.length) return;
+  stopAutoCapture();
+  const scaled=[];
+  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
+  const blob=await makePdfPhotosOnly(scaled);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='RELATORIO_INSPECAO.pdf';
+  document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
+  if (autoClear?.checked) { await clearList(true); }
+};
+
 btnSharePdf.onclick=async ()=>{
   if(!photos.length) return;
-  stopAutoCapture(); // Para a captura automática ao compartilhar
+  stopAutoCapture();
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
   const pdfBlob=await makePdfPhotosOnly(scaled);
   const pdfFile=new File([pdfBlob],'RELATORIO_INSPECAO.pdf',{type:'application/pdf'});
@@ -910,22 +646,21 @@ btnSharePdf.onclick=async ()=>{
   try{
     if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
       await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
-      if (autoClear?.checked) { await clearList(true); } // limpa após envio
+      if (autoClear?.checked) { await clearList(true); }
     }else{
       const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
-      if (autoClear?.checked) { await clearList(true); } // limpa após fallback
+      if (autoClear?.checked) { await clearList(true); }
     }
   }catch(e){
     alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
   }
 };
 
-/* WhatsApp – FOTOS (em lotes) */
 btnSharePhotos.onclick=async ()=>{
   if(!photos.length) return;
-  stopAutoCapture(); // Para a captura automática ao compartilhar
+  stopAutoCapture();
   const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg'));
   const text=buildWhatsAppMessage(false);
   const MAX=10;
@@ -946,7 +681,113 @@ btnSharePhotos.onclick=async ()=>{
 };
 
 /* =========================
-   Boot + restauração (chamado após senha)
+   Gravação de Vídeo com overlay (KM + timestamp)
+   ========================= */
+async function startVideoRecording(){
+  if(!(csvReady && camReady && gpsReady && lastPos)){
+    alert('Aguarde CSV/Câmera/GPS'); return;
+  }
+  try{
+    const videoStream=vid.srcObject;
+    if(!videoStream){ alert('Câmera não disponível'); return; }
+
+    const overlayCanvas=document.createElement('canvas');
+    overlayCanvas.width=vid.videoWidth||1280;
+    overlayCanvas.height=vid.videoHeight||720;
+    const overlayCtx=overlayCanvas.getContext('2d');
+
+    const canvasStream=overlayCanvas.captureStream(30);
+    const audioTracks=videoStream.getAudioTracks();
+    if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+    if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
+
+    mediaRecorder=new MediaRecorder(canvasStream, options);
+    recordedChunks=[];
+
+    mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop=()=>{
+      isRecordingVideo=false;
+      btnVideoRecord.textContent='🎥 Iniciar Gravação de Vídeo';
+      btnVideoRecord.style.background='#e74c3c';
+    };
+
+    mediaRecorder.start();
+    isRecordingVideo=true;
+    btnVideoRecord.textContent='⏹️ Parar Gravação';
+    btnVideoRecord.style.background='#e74c3c';
+    setOv('Gravando vídeo... Clique para parar', true);
+
+    const drawLoop=()=>{
+      if(!isRecordingVideo) return;
+      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
+      overlayCtx.fillStyle='rgba(0,0,0,.62)';
+      overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
+      overlayCtx.fillStyle='#ff6b35';
+      overlayCtx.textAlign='left';
+      overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
+      overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
+      const ts=new Date().toLocaleString();
+      overlayCtx.fillStyle='#fff';
+      overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
+      overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+      requestAnimationFrame(drawLoop);
+    };
+    drawLoop();
+    startKmUpdate();
+  }catch(e){
+    console.error('Erro ao iniciar gravação:', e);
+    alert('Erro ao iniciar gravação: '+e.message);
+    isRecordingVideo=false;
+  }
+}
+function stopVideoRecording(){
+  if(!isRecordingVideo || !mediaRecorder) return;
+  isRecordingVideo=false;
+  mediaRecorder.stop();
+  stopKmUpdate();
+  setTimeout(()=>{
+    if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
+    const blob=new Blob(recordedChunks, {type: 'video/webm'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    const now=new Date();
+    const dateStr=now.toISOString().slice(0,10);
+    const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-');
+    a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+    setOv('Vídeo salvo com sucesso!', true);
+    setTimeout(()=>setOv('Toque no vídeo para capturar', true), 2000);
+  }, 500);
+}
+btnVideoRecord.addEventListener('click', async ()=>{
+  if(isRecordingVideo){
+    btnVideoRecord.disabled=true;
+    stopVideoRecording();
+    setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000);
+  } else {
+    btnVideoRecord.disabled=true;
+    try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); }
+    btnVideoRecord.disabled=false;
+  }
+});
+
+/* Clique na área do vídeo (tocar/capturar/parar) */
+wrap.addEventListener('click', ()=>{
+  if(isRecordingVideo){ stopVideoRecording(); }
+  else if(isAutoCapturing){ stopAutoCapture(); }
+  else if(csvReady && camReady && gpsReady){ capture(); }
+});
+
+/* =========================
+   Boot
    ========================= */
 async function restoreSavedPhotos(){
   const rows=await dbGetAll(); if(!rows.length) return;
@@ -954,20 +795,19 @@ async function restoreSavedPhotos(){
     const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(r.blob); });
     photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc });
   }
-  if(photos.length){ foto.src=photos[photos.length-1].url; foto.dataset.filename=photos[photos.length-1].filename; }
-  renderGallery();
+  updateActions();
 }
 function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
 function ready(){ return csvReady && camReady && gpsReady; }
 
 async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
-  await loadCSVs();                      // CSVs
-  await enumerateCameras();              // lista câmeras
-  await startCamera(deviceIndex);        // abre câmera
-  startGPS();                            // GPS
+  await loadCSVs();
+  await enumerateCameras();
+  await startCamera(deviceIndex);
+  startGPS();
   db=await openDB(); await restoreSavedPhotos();
-  startKmUpdate();                       // inicia atualização do KM
+  startKmUpdate();
   const tick=()=>{ setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
   tick();
 }
