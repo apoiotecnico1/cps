@@ -729,12 +729,6 @@ async function startVideoRecording(){
   }
   
   try{
-    // Criar um canvas para desenhar KM + vídeo
-    const tempCanvas=document.createElement('canvas');
-    tempCanvas.width=720;
-    tempCanvas.height=720;
-    const tempCtx=tempCanvas.getContext('2d');
-    
     // Obter o stream do vídeo
     const videoStream=vid.srcObject;
     if(!videoStream){
@@ -774,69 +768,82 @@ async function startVideoRecording(){
       if(e.data.size>0) recordedChunks.push(e.data);
     };
     
-    mediaRecorder.onstart=()=>{
-      isRecordingVideo=true;
-      btnVideoRecord.textContent='⏹️ Parar Gravação';
-      btnVideoRecord.style.background='#e74c3c';
-      setOv('Gravando vídeo... Clique para parar ou use o botão', true);
-    };
-    
     mediaRecorder.onstop=()=>{
       isRecordingVideo=false;
       btnVideoRecord.textContent='🎥 Iniciar Gravação de Vídeo';
       btnVideoRecord.style.background='#e74c3c';
     };
     
+    // Iniciar gravação
     mediaRecorder.start();
+    isRecordingVideo=true;
+    btnVideoRecord.textContent='⏹️ Parar Gravação';
+    btnVideoRecord.style.background='#e74c3c';
+    setOv('Gravando vídeo... Clique para parar ou use o botão', true);
     
     // Atualizar overlay com KM + frame do vídeo
     const drawLoop=()=>{
-      if(isRecordingVideo){
-        overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-        
-        // Desenhar KM no canto superior
-        const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-        const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-        
-        const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
-        overlayCtx.fillStyle='rgba(0,0,0,.62)';
-        overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
-        
-        overlayCtx.fillStyle='#ff6b35';
-        overlayCtx.textAlign='left';
-        overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
-        overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
-        
-        const ts=new Date().toLocaleString();
-        overlayCtx.fillStyle='#fff';
-        overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
-        overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
-        
-        requestAnimationFrame(drawLoop);
-      }
+      if(!isRecordingVideo) return;
+      
+      // Desenhar o vídeo no canvas
+      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      
+      // Desenhar barra com informações
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      
+      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
+      overlayCtx.fillStyle='rgba(0,0,0,.62)';
+      overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
+      
+      // KM em laranja
+      overlayCtx.fillStyle='#ff6b35';
+      overlayCtx.textAlign='left';
+      overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
+      overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
+      
+      // Timestamp
+      const ts=new Date().toLocaleString();
+      overlayCtx.fillStyle='#fff';
+      overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
+      overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+      
+      requestAnimationFrame(drawLoop);
     };
     
+    // Iniciar o loop de desenho
     drawLoop();
     startKmUpdate();
     
   }catch(e){
     console.error('Erro ao iniciar gravação:', e);
     alert('Erro ao iniciar gravação: '+e.message);
+    isRecordingVideo=false;
   }
 }
 
 function stopVideoRecording(){
   if(!isRecordingVideo || !mediaRecorder) return;
   
+  isRecordingVideo=false;
   mediaRecorder.stop();
   stopKmUpdate();
   
-  mediaRecorder.onstop=()=>{
+  // Esperar o mediaRecorder terminar de processar
+  setTimeout(()=>{
+    if(recordedChunks.length===0){
+      alert('Erro: Nenhum dado foi gravado. Tente novamente.');
+      return;
+    }
+    
     const blob=new Blob(recordedChunks, {type: 'video/webm'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
-    a.download=`VIDEO_INSPECAO_${new Date().toISOString().slice(0,10)}_${new Date().toTimeString().slice(0,8).replace(/:/g,'-')}.webm`;
+    const now=new Date();
+    const dateStr=now.toISOString().slice(0,10);
+    const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-');
+    a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
     document.body.appendChild(a);
     a.click();
     setTimeout(()=>{
@@ -846,14 +853,22 @@ function stopVideoRecording(){
     
     setOv('Vídeo salvo com sucesso!', true);
     setTimeout(()=>setOv('Toque no vídeo para capturar', true), 2000);
-  };
+  }, 500);
 }
 
-btnVideoRecord.addEventListener('click', ()=>{
+btnVideoRecord.addEventListener('click', async ()=>{
   if(isRecordingVideo){
+    btnVideoRecord.disabled=true;
     stopVideoRecording();
+    setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000);
   } else {
-    startVideoRecording();
+    btnVideoRecord.disabled=true;
+    try{
+      await startVideoRecording();
+    }catch(e){
+      console.error('Erro na gravação:', e);
+    }
+    btnVideoRecord.disabled=false;
   }
 });
 
