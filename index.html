@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Inspeção Iluminação Rodovia IA</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<title>Inspeção Iluminação Rodovia</title>
 
 <style>
 
@@ -38,11 +38,12 @@ background:black;
 canvas{
 position:absolute;
 inset:0;
+pointer-events:none;
 }
 
 .controls{
 position:absolute;
-bottom:18px;
+bottom:16px;
 width:100%;
 display:flex;
 justify-content:center;
@@ -51,13 +52,20 @@ z-index:10;
 }
 
 button{
+
 width:64px;
 height:64px;
+
 border-radius:50%;
 border:none;
+
 font-size:24px;
 color:white;
+
 background:rgba(0,0,0,.7);
+
+box-shadow:0 4px 10px rgba(0,0,0,.4)
+
 }
 
 #rec{background:#ef4444}
@@ -65,6 +73,7 @@ background:rgba(0,0,0,.7);
 #mark{background:#f97316}
 
 </style>
+
 </head>
 
 <body>
@@ -72,6 +81,7 @@ background:rgba(0,0,0,.7);
 <div class="app">
 
 <video id="video" autoplay playsinline muted></video>
+
 <canvas id="hud"></canvas>
 
 <div class="controls">
@@ -106,6 +116,7 @@ let darkAlert=false
 function hav(a,b,c,d){
 
 const R=6371000
+
 const x=(c-a)*Math.PI/180
 const y=(d-b)*Math.PI/180
 
@@ -116,6 +127,8 @@ return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
 
 }
 
+/* km */
+
 function fmtKm(v){
 
 let K=Math.floor(v)
@@ -125,37 +138,47 @@ return `KM ${K}+${String(m).padStart(3,'0')}`
 
 }
 
-/* CSV */
+/* carregar CSV */
 
 async function loadCSVs(){
 
 const idCSV=await fetch("Dados_Completos_Grupo_2_all.csv").then(r=>r.text())
-const lines=idCSV.split("\n")
+
+const lines=idCSV.split(/\r?\n/)
 
 for(let i=1;i<lines.length;i++){
 
 const c=lines[i].split(";")
 
+if(c.length<3)continue
+
 const id=c[0]
+
 const lat=parseFloat(c[1].replace(",","."))
+
 const lon=parseFloat(c[2].replace(",","."))
 
-if(id&&lat&&lon)dataset.push({id,lat,lon})
+if(!isNaN(lat)&&!isNaN(lon))dataset.push({id,lat,lon})
 
 }
 
 const kmCSV=await fetch("SNVBR116SPRJ.csv").then(r=>r.text())
-const l2=kmCSV.split("\n")
+
+const l2=kmCSV.split(/\r?\n/)
 
 for(let i=1;i<l2.length;i++){
 
 const c=l2[i].split(";")
 
+if(c.length<3)continue
+
 const km=parseFloat(c[0].replace(",","."))
+
 const lat=parseFloat(c[1].replace(",","."))
+
 const lon=parseFloat(c[2].replace(",","."))
 
-if(km&&lat&&lon)kmPoints.push({km,lat,lon})
+if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))kmPoints.push({km,lat,lon})
 
 }
 
@@ -200,7 +223,7 @@ return best
 
 }
 
-/* GPS */
+/* gps */
 
 navigator.geolocation.watchPosition(p=>{
 
@@ -223,24 +246,19 @@ video.srcObject=stream
 
 }
 
-/* IA DETECÇÃO */
+/* IA simples */
 
 const detectCanvas=document.createElement("canvas")
 const detectCtx=detectCanvas.getContext("2d")
 
-function detectLampFailure(){
+function detectDark(){
 
 detectCanvas.width=video.videoWidth
 detectCanvas.height=video.videoHeight
 
 detectCtx.drawImage(video,0,0)
 
-const img=detectCtx.getImageData(
-0,
-0,
-detectCanvas.width,
-detectCanvas.height*0.4
-)
+const img=detectCtx.getImageData(0,0,detectCanvas.width,detectCanvas.height*0.4)
 
 let sum=0
 
@@ -271,6 +289,7 @@ ctx.clearRect(0,0,W,H)
 const band=H*0.16
 
 ctx.fillStyle="rgba(0,0,0,.65)"
+
 ctx.fillRect(0,H-band,W,band)
 
 let kmText="KM --"
@@ -287,15 +306,16 @@ ids=nearestIDs(gps.latitude,gps.longitude)
 }
 
 ctx.fillStyle="#ff6b35"
+
 ctx.font=`900 ${H*0.05}px Arial`
+
 ctx.fillText(kmText,20,H-band+40)
 
 ctx.fillStyle="#fff"
+
 ctx.font=`700 ${H*0.03}px Arial`
 
-const ts=new Date().toLocaleString()
-
-ctx.fillText(ts,20,H-20)
+ctx.fillText(new Date().toLocaleString(),20,H-20)
 
 ctx.textAlign="right"
 
@@ -308,8 +328,7 @@ ctx.fillText(e.id,W-20,H-band+30+i*24)
 if(darkAlert){
 
 ctx.fillStyle="red"
-
-ctx.fillText("⚠ POSSIVEL LAMPADA APAGADA",W/2,H*0.2)
+ctx.fillText("⚠ TRECHO ESCURO",W/2,H*0.2)
 
 }
 
@@ -322,7 +341,7 @@ ctx.fill()
 
 }
 
-detectLampFailure()
+detectDark()
 
 requestAnimationFrame(drawHUD)
 
@@ -340,6 +359,7 @@ c.height=video.videoHeight
 const x=c.getContext("2d")
 
 x.drawImage(video,0,0)
+
 x.drawImage(hud,0,0,c.width,c.height)
 
 const url=c.toDataURL("image/jpeg")
@@ -347,6 +367,7 @@ const url=c.toDataURL("image/jpeg")
 const a=document.createElement("a")
 
 a.href=url
+
 a.download="foto_inspecao.jpg"
 
 a.click()
@@ -358,6 +379,8 @@ a.click()
 function startRecording(){
 
 if(recording)return
+
+chunks=[]
 
 const canvas=document.createElement("canvas")
 
@@ -381,7 +404,11 @@ const stream=canvas.captureStream(30)
 
 recorder=new MediaRecorder(stream)
 
-recorder.ondataavailable=e=>chunks.push(e.data)
+recorder.ondataavailable=e=>{
+
+if(e.data.size>0)chunks.push(e.data)
+
+}
 
 recorder.onstop=()=>{
 
@@ -392,6 +419,7 @@ const url=URL.createObjectURL(blob)
 const a=document.createElement("a")
 
 a.href=url
+
 a.download="inspecao_iluminacao.webm"
 
 a.click()
