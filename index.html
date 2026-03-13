@@ -118,6 +118,11 @@
 
 <h1>📸 Inspeção Fotográfica</h1>
 
+<!-- KM ATUAL (sempre visível no topo) -->
+<div style="text-align:center;padding:8px;background:rgba(255,107,53,.15);border:1px solid #ff6b35;border-radius:8px;margin-bottom:8px;font-weight:900;font-size:1.1rem;color:#ff6b35">
+  <span id="kmTop">KM —</span>
+</div>
+
 <!-- CONTROLES recolhidos (não ocupar tela) -->
 <div class="card">
   <details class="controls">
@@ -152,7 +157,7 @@
 <div class="card">
   <div class="row">
     <button id="btnAutoCapture" style="background:#ff6b35;color:#fff">🎬 Iniciar Captura Automática</button>
-    <button id="btnDownload" disabled>Baixar Última Foto</button>
+    <button id="btnVideoRecord" style="background:#e74c3c;color:#fff">🎥 Iniciar Gravação de Vídeo</button>
     <button id="btnPdf" disabled>📄 PDF – Somente Fotos (leve)</button>
     <button id="btnSharePdf" disabled>📤 Enviar PDF (WhatsApp)</button>
     <button id="btnSharePhotos" disabled>📤 Enviar Fotos (WhatsApp)</button>
@@ -240,6 +245,10 @@ let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
 let isAutoCapturing=false;
 let autoCaptureInterval=null;
+let isRecordingVideo=false;
+let mediaRecorder=null;
+let recordedChunks=[];
+let kmUpdateInterval=null;
 
 const vid=document.getElementById('vid');
 const can=document.getElementById('can');
@@ -249,13 +258,10 @@ const wrap=document.getElementById('wrap');
 const ov=document.getElementById('ov');
 const ovMsg=document.getElementById('ovMsg');
 
-const btnDownload=document.getElementById('btnDownload');
-const btnPdf=document.getElementById('btnPdf');
-const btnSharePdf=document.getElementById('btnSharePdf');
-const btnSharePhotos=document.getElementById('btnSharePhotos');
-const btnClear=document.getElementById('btnClear');
 const btnAutoCapture=document.getElementById('btnAutoCapture');
+const btnVideoRecord=document.getElementById('btnVideoRecord');
 const autoClear=document.getElementById('autoClear');
+const kmTop=document.getElementById('kmTop');
 const gal=document.getElementById('gal');
 
 const cameraSel=document.getElementById('cameraSel');
@@ -502,7 +508,6 @@ function updateActions(){
   const n=photos.length, enabled=n>0;
   btnPdf.disabled=!enabled; btnClear.disabled=!enabled;
   btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled;
-  btnDownload.disabled=!foto.src;
 }
 function renderGallery(){
   gal.innerHTML='';
@@ -548,7 +553,6 @@ async function capture(){
   setOv('Foto capturada (salva no aparelho)', true);
   setTimeout(()=> setOv('Toque no vídeo para capturar', true), 800);
 }
-wrap.addEventListener('click', ()=>{ if(csvReady && camReady && gpsReady) capture(); });
 
 /* =========================
    Captura Automática (sequencial)
@@ -612,15 +616,6 @@ btnAutoCapture.addEventListener('click', ()=>{
   else startAutoCapture();
 });
 
-// Também permite tocar no vídeo para capturar manualmente (e para a captura automática se estiver ativa)
-wrap.addEventListener('click', ()=>{ 
-  if(isAutoCapturing){
-    stopAutoCapture();
-  } else if(csvReady && camReady && gpsReady){
-    capture();
-  }
-});
-
 /* =========================
    Limpeza de lista (próximo relatório)
    ========================= */
@@ -639,10 +634,6 @@ btnClear.onclick = () => { clearList(false); };
 /* =========================
    Ações: Download / PDF / WhatsApp
    ========================= */
-btnDownload.onclick=()=>{
-  if(!foto.src) return;
-  const a=document.createElement('a'); a.href=foto.src; a.download=foto.dataset.filename||'INSPECAO_FOTO.jpg'; a.click();
-};
 
 /* Downscale p/ PDF (leve) */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
@@ -709,7 +700,173 @@ btnPdf.onclick=async ()=>{
   if (autoClear?.checked) { await clearList(true); }
 };
 
-/* WhatsApp – Mensagem base */
+/* =========================
+   Gravação de Vídeo Contínuo + KM em Tempo Real
+   ========================= */
+function updateKmDisplay(){
+  if(!lastPos) return;
+  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+  kmTop.textContent=kmStr;
+}
+
+function startKmUpdate(){
+  updateKmDisplay();
+  kmUpdateInterval=setInterval(updateKmDisplay, 300); // atualiza a cada 300ms
+}
+
+function stopKmUpdate(){
+  if(kmUpdateInterval){
+    clearInterval(kmUpdateInterval);
+    kmUpdateInterval=null;
+  }
+}
+
+async function startVideoRecording(){
+  if(!(csvReady && camReady && gpsReady && lastPos)){
+    alert('Aguarde CSV/Câmera/GPS');
+    return;
+  }
+  
+  try{
+    // Criar um canvas para desenhar KM + vídeo
+    const tempCanvas=document.createElement('canvas');
+    tempCanvas.width=720;
+    tempCanvas.height=720;
+    const tempCtx=tempCanvas.getContext('2d');
+    
+    // Obter o stream do vídeo
+    const videoStream=vid.srcObject;
+    if(!videoStream){
+      alert('Câmera não disponível');
+      return;
+    }
+    
+    // Criar canvas stream para adicionar overlay
+    const overlayCanvas=document.createElement('canvas');
+    overlayCanvas.width=vid.videoWidth||1280;
+    overlayCanvas.height=vid.videoHeight||720;
+    const overlayCtx=overlayCanvas.getContext('2d');
+    
+    // Criar stream do canvas
+    const canvasStream=overlayCanvas.captureStream(30); // 30 fps
+    
+    // Copiar áudio do vídeo se disponível
+    const audioTracks=videoStream.getAudioTracks();
+    if(audioTracks.length>0){
+      canvasStream.addTrack(audioTracks[0]);
+    }
+    
+    // Iniciar MediaRecorder
+    const options={
+      mimeType: 'video/webm;codecs=vp8,opus',
+      videoBitsPerSecond: 2500000 // 2.5 Mbps
+    };
+    
+    if(!MediaRecorder.isTypeSupported(options.mimeType)){
+      options.mimeType='video/webm';
+    }
+    
+    mediaRecorder=new MediaRecorder(canvasStream, options);
+    recordedChunks=[];
+    
+    mediaRecorder.ondataavailable=(e)=>{
+      if(e.data.size>0) recordedChunks.push(e.data);
+    };
+    
+    mediaRecorder.onstart=()=>{
+      isRecordingVideo=true;
+      btnVideoRecord.textContent='⏹️ Parar Gravação';
+      btnVideoRecord.style.background='#e74c3c';
+      setOv('Gravando vídeo... Clique para parar ou use o botão', true);
+    };
+    
+    mediaRecorder.onstop=()=>{
+      isRecordingVideo=false;
+      btnVideoRecord.textContent='🎥 Iniciar Gravação de Vídeo';
+      btnVideoRecord.style.background='#e74c3c';
+    };
+    
+    mediaRecorder.start();
+    
+    // Atualizar overlay com KM + frame do vídeo
+    const drawLoop=()=>{
+      if(isRecordingVideo){
+        overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
+        
+        // Desenhar KM no canto superior
+        const kmObj=nearestKM(lastPos.lat,lastPos.lon);
+        const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+        
+        const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
+        overlayCtx.fillStyle='rgba(0,0,0,.62)';
+        overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
+        
+        overlayCtx.fillStyle='#ff6b35';
+        overlayCtx.textAlign='left';
+        overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
+        overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
+        
+        const ts=new Date().toLocaleString();
+        overlayCtx.fillStyle='#fff';
+        overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
+        overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+        
+        requestAnimationFrame(drawLoop);
+      }
+    };
+    
+    drawLoop();
+    startKmUpdate();
+    
+  }catch(e){
+    console.error('Erro ao iniciar gravação:', e);
+    alert('Erro ao iniciar gravação: '+e.message);
+  }
+}
+
+function stopVideoRecording(){
+  if(!isRecordingVideo || !mediaRecorder) return;
+  
+  mediaRecorder.stop();
+  stopKmUpdate();
+  
+  mediaRecorder.onstop=()=>{
+    const blob=new Blob(recordedChunks, {type: 'video/webm'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`VIDEO_INSPECAO_${new Date().toISOString().slice(0,10)}_${new Date().toTimeString().slice(0,8).replace(/:/g,'-')}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 2000);
+    
+    setOv('Vídeo salvo com sucesso!', true);
+    setTimeout(()=>setOv('Toque no vídeo para capturar', true), 2000);
+  };
+}
+
+btnVideoRecord.addEventListener('click', ()=>{
+  if(isRecordingVideo){
+    stopVideoRecording();
+  } else {
+    startVideoRecording();
+  }
+});
+
+// Também permite tocar no vídeo para parar gravação
+wrap.addEventListener('click', ()=>{ 
+  if(isRecordingVideo){
+    stopVideoRecording();
+  } else if(isAutoCapturing){
+    stopAutoCapture();
+  } else if(csvReady && camReady && gpsReady){
+    capture();
+  }
+});
 function buildWhatsAppMessage(isPdf){
   const lines=[];
   lines.push('*RELATÓRIO DE INSPEÇÃO*');
@@ -795,6 +952,7 @@ async function boot(){
   await startCamera(deviceIndex);        // abre câmera
   startGPS();                            // GPS
   db=await openDB(); await restoreSavedPhotos();
+  startKmUpdate();                       // inicia atualização do KM
   const tick=()=>{ setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
   tick();
 }
