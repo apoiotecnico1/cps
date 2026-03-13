@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Inspeção Noturna Rodovia</title>
+<title>Inspeção Iluminação Rodovia</title>
 
 <style>
 
@@ -36,7 +36,6 @@ background:black;
 canvas{
 position:absolute;
 inset:0;
-pointer-events:none;
 }
 
 .controls{
@@ -50,22 +49,15 @@ z-index:10;
 }
 
 button{
-
 width:64px;
 height:64px;
-
 border-radius:50%;
 border:none;
-
 font-size:24px;
 color:white;
-
 background:rgba(0,0,0,.7);
-
 backdrop-filter:blur(5px);
-
 box-shadow:0 4px 10px rgba(0,0,0,.4)
-
 }
 
 #rec{background:#ef4444}
@@ -108,12 +100,11 @@ let chunks=[]
 let dataset=[]
 let kmPoints=[]
 
-/* util */
+/* distância */
 
 function hav(a,b,c,d){
 
 const R=6371000
-
 const x=(c-a)*Math.PI/180
 const y=(d-b)*Math.PI/180
 
@@ -127,14 +118,13 @@ return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
 function fmtKm(v){
 
 let K=Math.floor(v)
-
 let m=Math.round((v-K)*1000)
 
 return `KM ${K}+${String(m).padStart(3,'0')}`
 
 }
 
-/* carregar CSV */
+/* CSV */
 
 async function loadCSVs(){
 
@@ -181,11 +171,8 @@ if(km&&lat&&lon)kmPoints.push({km,lat,lon})
 function nearestIDs(lat,lon){
 
 const arr=dataset.map(p=>({
-
 id:p.id,
-
 d:hav(lat,lon,p.lat,p.lon)
-
 }))
 
 arr.sort((a,b)=>a.d-b.d)
@@ -216,12 +203,10 @@ return best
 
 }
 
-/* gps */
+/* GPS */
 
 navigator.geolocation.watchPosition(p=>{
-
 gps=p.coords
-
 })
 
 /* camera */
@@ -239,20 +224,12 @@ video.srcObject=stream
 
 }
 
-function resize(){
-
-hud.width=video.clientWidth*devicePixelRatio
-hud.height=video.clientHeight*devicePixelRatio
-
-}
-
-window.onresize=resize
-
 /* HUD */
 
 function drawHUD(){
 
-resize()
+hud.width=video.clientWidth*devicePixelRatio
+hud.height=video.clientHeight*devicePixelRatio
 
 const W=hud.width
 const H=hud.height
@@ -264,10 +241,6 @@ const band=H*0.16
 ctx.fillStyle="rgba(0,0,0,.65)"
 
 ctx.fillRect(0,H-band,W,band)
-
-ctx.fillStyle="#ff6b35"
-
-ctx.font=`900 ${H*0.05}px Arial`
 
 let kmText="KM --"
 
@@ -283,13 +256,19 @@ ids=nearestIDs(gps.latitude,gps.longitude)
 
 }
 
+ctx.fillStyle="#ff6b35"
+
+ctx.font=`900 ${H*0.05}px Arial`
+
 ctx.fillText(kmText,20,H-band+40)
 
 ctx.fillStyle="#fff"
 
 ctx.font=`700 ${H*0.03}px Arial`
 
-ctx.fillText(new Date().toLocaleString(),20,H-20)
+const ts=new Date().toLocaleString()
+
+ctx.fillText(ts,20,H-20)
 
 ctx.textAlign="right"
 
@@ -315,13 +294,61 @@ requestAnimationFrame(drawHUD)
 
 }
 
-/* gravação */
+/* foto com overlay */
+
+function capture(){
+
+const c=document.createElement("canvas")
+
+c.width=video.videoWidth
+c.height=video.videoHeight
+
+const x=c.getContext("2d")
+
+x.drawImage(video,0,0)
+
+x.drawImage(hud,0,0,c.width,c.height)
+
+const url=c.toDataURL("image/jpeg")
+
+const a=document.createElement("a")
+
+a.href=url
+
+a.download="foto_inspecao.jpg"
+
+a.click()
+
+}
+
+/* gravação com HUD */
 
 function startRecording(){
 
 if(recording)return
 
-recorder=new MediaRecorder(video.srcObject)
+const canvas=document.createElement("canvas")
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+const x=canvas.getContext("2d")
+
+function render(){
+
+x.drawImage(video,0,0)
+
+x.drawImage(hud,0,0,canvas.width,canvas.height)
+
+requestAnimationFrame(render)
+
+}
+
+render()
+
+const stream=canvas.captureStream(30)
+
+recorder=new MediaRecorder(stream)
 
 recorder.ondataavailable=e=>chunks.push(e.data)
 
@@ -335,7 +362,7 @@ const a=document.createElement("a")
 
 a.href=url
 
-a.download="inspecao.webm"
+a.download="inspecao_iluminacao.webm"
 
 a.click()
 
@@ -357,32 +384,6 @@ recording=false
 
 }
 
-/* foto */
-
-function capture(){
-
-const c=document.createElement("canvas")
-
-c.width=video.videoWidth
-
-c.height=video.videoHeight
-
-const x=c.getContext("2d")
-
-x.drawImage(video,0,0)
-
-const url=c.toDataURL("image/jpeg")
-
-const a=document.createElement("a")
-
-a.href=url
-
-a.download="foto_inspecao.jpg"
-
-a.click()
-
-}
-
 /* evento */
 
 function mark(){
@@ -394,11 +395,8 @@ navigator.vibrate?.(200)
 /* botões */
 
 photo.onclick=capture
-
 rec.onclick=startRecording
-
 stop.onclick=stopRecording
-
 mark.onclick=mark
 
 /* iniciar */
