@@ -3,78 +3,43 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Inspeção – Vídeo e Relatórios</title>
+<title>Inspeção – Só Vídeo (HUD em tempo real)</title>
 <style>
   :root{
     --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
-    --muted:#a3b1d1; --border:#1e2647; --ok:#22c55e;
-    --btn:#22c55e; --btn2:#1e40af; --btn3:#eab308; --btn4:#ef4444; --btn5:#25D366;
-    --accent:#ff6b35;
+    --border:#1e2647; --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0;background:var(--bg);color:var(--fg);
+    margin:0;background:#000;color:var(--fg);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
-    padding:12px; line-height:1.35;
+    line-height:1.35;
   }
-  h1{margin:0 0 10px;text-align:center;font-size:1.35rem}
-  .card{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:12px; margin:0 auto 12px;
-    max-width:980px;
+  /* Container full-bleed */
+  .stage{
+    position:fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center;
   }
-  /* TOP: KM ao vivo */
-  .kmTop{
-    text-align:center;padding:8px;background:rgba(255,107,53,.15);
-    border:1px solid var(--accent);border-radius:8px;margin-bottom:8px;
-    font-weight:900;font-size:1.05rem;color:var(--accent)
+  .wrap{
+    position:relative; width:100vw; height:100vh; overflow:hidden; background:#000;
+    touch-action:none;
   }
-  /* CONTROLES recolhidos */
-  details.controls > summary{
-    cursor:pointer; list-style:none; outline:none; user-select:none;
-    font-weight:800; color:#dfe7ff;
+  /* Vídeo deve preencher sem deformar; letterbox */
+  video{
+    position:absolute; inset:0; margin:auto; min-width:100%; min-height:100%;
+    width:auto; height:auto; object-fit:cover; background:#000;
   }
-  details.controls > summary::-webkit-details-marker{display:none}
-  .ctrlGrid{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:8px}
-  select, input[type=range], button.small{
-    border-radius:10px; border:1px solid var(--border);
-    background:#0d1430; color:#dfe7ff; font-weight:700; padding:8px 10px;
+  /* Canvas HUD por cima do vídeo */
+  canvas.hud{
+    position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
   }
-  button.small{font-size:.9rem}
-
-  /* Vídeo responsivo */
-  #wrap{position:relative;border-radius:12px;overflow:hidden}
-  #vid{width:100%;display:block;background:#000;border-radius:12px;touch-action:none}
-  #can{display:none}
+  /* Overlay de status (carregando / mensagens) */
   .ov{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.35));
-    font-weight:900;letter-spacing:.02em;text-align:center;pointer-events:none;
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.35));
+    font-weight:900; text-align:center; pointer-events:none;
   }
-  .ov .msg{background:rgba(0,0,0,.55);padding:8px 10px;border-radius:10px;font-size:.95rem}
-
-  /* Ações */
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{
-    flex:1 1 220px;padding:12px;font-size:1.02rem;border:0;border-radius:10px;
-    cursor:pointer;background:#0d1430;color:#dfe7ff;font-weight:900
-  }
-  #btnAutoCapture{background:var(--accent);color:#fff}
-  #btnVideoRecord{background:#e74c3c;color:#fff}
-  #btnPdf{background:var(--btn3);color:#000}
-  #btnSharePdf,#btnSharePhotos{background:var(--btn5);color:#053d19}
-  #btnClear{background:#334155;color:#cbd5e1}
-  button:disabled{opacity:.55;cursor:not-allowed}
-
-  /* Mobile */
-  @media (max-width:420px){
-    h1{font-size:1.2rem}
-    button{flex:1 1 140px}
-  }
-
+  .ov .msg{background:rgba(0,0,0,.6); padding:10px 14px; border-radius:10px; font-size:1rem}
   /* ===== Cadeado ===== */
   #lock{
     position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85));
@@ -101,7 +66,7 @@
 </head>
 <body>
 
-<!-- ===== CAD EADO (SENHA) ===== -->
+<!-- ===== Cadeado ===== -->
 <div id="lock">
   <div class="lock-card">
     <h2>🔒 Acesso restrito</h2>
@@ -118,57 +83,17 @@
   </div>
 </div>
 
-<h1>🎥 Inspeção – Vídeo e Relatórios</h1>
-
-<!-- KM ATUAL -->
-<div class="kmTop"><span id="kmTop">KM —</span></div>
-
-<!-- CONTROLES (compacto) -->
-<div class="card">
-  <details class="controls">
-    <summary>⚙️ Controles de Câmera (toque para abrir)</summary>
-    <div class="ctrlGrid">
-      <label>🎥 Câmera:
-        <select id="cameraSel"></select>
-      </label>
-      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
-      <label id="zoomWrap" style="display:none">🔍 Zoom:
-        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
-        <span id="zoomVal" style="margin-left:6px">1.0×</span>
-      </label>
-      <span style="color:#9fb4fc;font-size:.85rem">💾 Salvamento automático (anti‑perda): ATIVO</span>
-    </div>
-  </details>
-</div>
-
-<!-- VÍDEO (toque para capturar) -->
-<div class="card">
-  <div id="wrap">
+<!-- ===== Cena de vídeo (full) ===== -->
+<div class="stage">
+  <div class="wrap" id="wrap">
     <video id="vid" autoplay playsinline muted></video>
-    <canvas id="can" width="1280" height="720"></canvas>
+    <!-- canvas de captura (off) -->
+    <canvas id="can" width="1280" height="720" style="display:none"></canvas>
+    <!-- canvas HUD em tempo real -->
+    <canvas id="hud" class="hud"></canvas>
+    <!-- overlay de status -->
     <div id="ov" class="ov"><div class="msg" id="ovMsg">Carregando CSV, câmera e GPS…</div></div>
   </div>
-</div>
-
-<!-- AÇÕES (Somente o essencial) -->
-<div class="card">
-  <div class="row">
-    <button id="btnAutoCapture">🎬 Iniciar Captura Automática</button>
-    <button id="btnVideoRecord">🎥 Iniciar Gravação de Vídeo</button>
-    <button id="btnPdf" disabled>📄 PDF – Somente Fotos (leve)</button>
-    <button id="btnSharePdf" disabled>📤 Enviar PDF (WhatsApp)</button>
-    <button id="btnSharePhotos" disabled>📤 Enviar Fotos (WhatsApp)</button>
-    <button id="btnClear" disabled>🧹 Limpar lista</button>
-  </div>
-
-  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
-    <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
-    Limpar automaticamente a lista depois de salvar/enviar o PDF
-  </label>
-
-  <small style="display:block;color:#9fb4fc;margin-top:6px">
-    Toque no vídeo para capturar. O PDF contém apenas as fotos (1 por página) com margens pequenas.
-  </small>
 </div>
 
 <script>
@@ -212,7 +137,6 @@ function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-
 function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function dataURLtoUint8Array(dataURL){ const base64=dataURL.split(',')[1]; const raw=atob(base64); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i)&0xFF; return arr; }
 function dataURLtoBlob(dataURL){ const mime=(dataURL.split(';')[0].split(':')[1])||'image/jpeg'; return new Blob([dataURLtoUint8Array(dataURL)],{type:mime}); }
-function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'}); }
 
 /* =========================
    Estado
@@ -220,30 +144,20 @@ function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([
 let dataset=[], kmPoints=[];
 let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null;
-let isAutoCapturing=false;
-let autoCaptureInterval=null;
-let isRecordingVideo=false;
+
+let isRecording=false;
 let mediaRecorder=null;
 let recordedChunks=[];
 let kmUpdateInterval=null;
 
+const wrap=document.getElementById('wrap');
 const vid=document.getElementById('vid');
 const can=document.getElementById('can');
 const ctx=can.getContext('2d',{alpha:false});
-const wrap=document.getElementById('wrap');
+const hud=document.getElementById('hud');
+const hudCtx=hud.getContext('2d');
 const ov=document.getElementById('ov');
 const ovMsg=document.getElementById('ovMsg');
-
-const btnAutoCapture=document.getElementById('btnAutoCapture');
-const btnVideoRecord=document.getElementById('btnVideoRecord');
-const autoClear=document.getElementById('autoClear');
-const kmTop=document.getElementById('kmTop');
-
-const cameraSel=document.getElementById('cameraSel');
-const btnCycle=document.getElementById('btnCycle');
-const zoomWrap=document.getElementById('zoomWrap');
-const zoomRange=document.getElementById('zoomRange');
-const zoomVal=document.getElementById('zoomVal');
 
 const photos=[]; // {id,url,blob,w,h,ts,kmStr,idsTxt,filename,lat,lon,acc}
 
@@ -261,7 +175,6 @@ function openDB(){
 }
 async function dbPut(rec){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(rec); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
 async function dbGetAll(){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).index('ts').getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
-async function dbClearAll(){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
 
 /* =========================
    CSVs (IDs + KM)
@@ -330,7 +243,7 @@ async function loadCSVs(){
 }
 
 /* =========================
-   Busca de vizinhos
+   Vizinhança
    ========================= */
 function nearestN(lat,lon,n=5){
   if(!dataset.length) return [];
@@ -349,79 +262,155 @@ function nearestKM(lat,lon){
 }
 
 /* =========================
-   Câmera
+   Câmera (auto seleção traseira)
    ========================= */
-let currentStream=null, currentTrack=null, currentCap=null;
-let deviceList=[], deviceIndex=0;
-function saveCamPrefs(){
-  const dev=deviceList[deviceIndex];
-  if(dev){
-    localStorage.setItem('camDeviceId',dev.deviceId);
-    const z=Number(zoomRange.value||1);
-    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId,z);
-  }
+let deviceList=[], deviceIndex=0, currentStream=null, currentTrack=null, currentCap=null;
+function pickRearIndex(list){
+  let rearIdx=list.findIndex(d=>/back|rear|environment/i.test(d.label));
+  if(rearIdx<0) rearIdx=0;
+  return rearIdx;
 }
-function loadCamPrefsFor(id){ const z=localStorage.getItem('camZoom_'+id); return z?Number(z):null; }
 async function enumerateCameras(){
   try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
   const devices=await navigator.mediaDevices.enumerateDevices();
   deviceList=devices.filter(d=>d.kind==='videoinput');
-  deviceList.sort((a,b)=>{
-    const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label);
-    if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label);
-  });
-  cameraSel.innerHTML='';
-  deviceList.forEach((d,i)=>{
-    const o=document.createElement('option');
-    o.value=String(i);
-    o.textContent=d.label? d.label : `Câmera ${i+1}`;
-    cameraSel.appendChild(o);
-  });
-  const savedId=localStorage.getItem('camDeviceId');
-  const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
-  deviceIndex=idx>=0?idx:0;
-  cameraSel.value=String(deviceIndex);
+  deviceIndex=pickRearIndex(deviceList);
 }
-async function startCamera(deviceIdx=deviceIndex){
+async function startCamera(idx=deviceIndex){
   try{
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
     currentStream=currentTrack=currentCap=null;
-    const dev=deviceList[deviceIdx];
+    const dev=deviceList[idx];
     const constraints=dev? {video:{deviceId:{exact:dev.deviceId}},audio:false} : {video:{facingMode:{ideal:'environment'}},audio:false};
     const st=await navigator.mediaDevices.getUserMedia(constraints);
     currentStream=st; vid.srcObject=st;
     await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
     currentTrack=st.getVideoTracks()[0];
     currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
-    if(currentCap && currentCap.zoom){
-      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
-      let z=loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
-      z=Math.min(zoomRange.max, Math.max(zoomRange.min, z)); await applyZoom(z,true);
-      zoomWrap.style.display='';
-    }else{ zoomWrap.style.display='none'; }
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex); saveCamPrefs();
+    camReady=!!vid.videoWidth;
   }catch(e){ camReady=false; }
-  setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando recursos…', true);
+  setOv(ready()? 'Toque p/ foto · Toque duplo p/ gravar · Pinça p/ zoom · Toque longo p/ trocar câmera' : 'Aguardando recursos…', true);
 }
-async function applyZoom(val, noSave=false){
-  if(!(currentTrack && currentCap && currentCap.zoom)) return;
-  const z=Number(val);
-  try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }
-  catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-  zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`;
-  if(!noSave) saveCamPrefs();
+async function switchCamera(){
+  if(!deviceList.length) return;
+  deviceIndex=(deviceIndex+1)%deviceList.length;
+  await startCamera(deviceIndex);
 }
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); });
-btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
-zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
 
-/* Pinch‑to‑zoom */
+/* =========================
+   GPS + KM ao vivo
+   ========================= */
+function startGPS(){
+  if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); return; }
+  navigator.geolocation.getCurrentPosition(p=>{
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    gpsReady=true;
+    navigator.geolocation.watchPosition(pos=>{
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+    }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
+  }, ()=>{ gpsReady=false; setOv('Permita o GPS para usar', true); }, {enableHighAccuracy:true, timeout:12000});
+}
+
+/* =========================
+   HUD (tempo real)
+   ========================= */
+let hudNeedsSize=true;
+let showZoomHintTs=0;
+function resizeHud(){
+  const r=wrap.getBoundingClientRect();
+  hud.width=r.width*devicePixelRatio;
+  hud.height=r.height*devicePixelRatio;
+  hud.style.width=`${r.width}px`;
+  hud.style.height=`${r.height}px`;
+  hudNeedsSize=false;
+}
+window.addEventListener('resize', ()=>{ hudNeedsSize=true; });
+
+function drawHUD(){
+  if(hudNeedsSize) resizeHud();
+  const W=hud.width, H=hud.height;
+  hudCtx.clearRect(0,0,W,H);
+
+  // Safe paddings
+  const pad=24*devicePixelRatio;
+
+  // Dimensões de banda inferior (igual ao vídeo gravado)
+  const bandH=Math.max(144*devicePixelRatio,Math.round(H*0.16));
+  // Barra inferior translúcida
+  hudCtx.fillStyle='rgba(0,0,0,.58)';
+  hudCtx.fillRect(0,H-bandH,W,bandH);
+
+  // Conteúdo (KM + timestamp)
+  const kmStr = (lastPos && csvReady) ? (nearestKM(lastPos.lat,lastPos.lon)?.km ?? null) : null;
+  const KM = kmStr!=null ? fmtKm(kmStr) : 'KM —';
+
+  // KM (laranja) alinhado à esquerda
+  hudCtx.fillStyle='#ff6b35';
+  hudCtx.textAlign='left';
+  hudCtx.font=`900 ${Math.round(H*0.055)}px system-ui`;
+  hudCtx.fillText(KM, pad, H-bandH+Math.round(bandH*0.52));
+
+  // Timestamp abaixo
+  hudCtx.fillStyle='#ffffff';
+  hudCtx.font=`700 ${Math.round(H*0.032)}px system-ui`;
+  const ts=new Date().toLocaleString();
+  hudCtx.fillText(ts, pad, H-Math.round(bandH*0.22));
+
+  // IDs à direita (top 5)
+  const ids = (lastPos && csvReady) ? nearestN(lastPos.lat,lastPos.lon,5) : [];
+  hudCtx.textAlign='right';
+  hudCtx.fillStyle='#e6ebff';
+  hudCtx.font=`600 ${Math.round(H*0.028)}px system-ui`;
+  const startY = H-bandH + Math.round(28*devicePixelRatio);
+  const lineH  = Math.round(26*devicePixelRatio);
+  ids.forEach((e,i)=>{ hudCtx.fillText(e.id, W-pad, startY + i*lineH); });
+
+  // GPS status (canto sup.esq.)
+  hudCtx.textAlign='left';
+  hudCtx.font=`600 ${Math.round(H*0.024)}px system-ui`;
+  const gpsTxt = gpsReady && lastPos ? `GPS ✓  acc: ~${Math.round(lastPos.acc||0)} m` : 'GPS —';
+  hudCtx.fillStyle = gpsReady ? '#a7f3d0' : '#ffd1d1';
+  hudCtx.fillText(gpsTxt, pad, pad + Math.round(22*devicePixelRatio));
+
+  // Zoom hint (mostra por 1,2s após mudar)
+  if(performance.now() - showZoomHintTs < 1200 && currentCap?.zoom){
+    hudCtx.textAlign='center';
+    hudCtx.fillStyle='rgba(0,0,0,.45)';
+    const bxW=Math.round(W*0.22), bxH=Math.round(H*0.06);
+    hudCtx.fillRect((W-bxW)/2, pad, bxW, bxH);
+    hudCtx.fillStyle='#ffffff';
+    hudCtx.font=`700 ${Math.round(H*0.03)}px system-ui`;
+    const z = currentZoomShown.toFixed(1)+'×';
+    hudCtx.fillText('Zoom '+z, W/2, pad + Math.round(bxH*0.65));
+  }
+
+  // Indicador de gravação (canto sup.dir.)
+  if(isRecording){
+    const r=10*devicePixelRatio;
+    const cx=W-pad-r, cy=pad+r;
+    hudCtx.beginPath();
+    hudCtx.arc(cx,cy,r,0,Math.PI*2);
+    hudCtx.fillStyle='#ef4444';
+    hudCtx.fill();
+    hudCtx.fillStyle='#ffffff';
+    hudCtx.font=`700 ${Math.round(H*0.024)}px system-ui`;
+    hudCtx.textAlign='right';
+    hudCtx.fillText('REC', cx-14*devicePixelRatio, cy+6*devicePixelRatio);
+  }
+}
+
+/* =========================
+   Gestos: tap / double-tap / long-press / pinch-zoom
+   ========================= */
 let pinchBase=null;
+let zoomMin=1, zoomMax=1, zoomStep=0.1;
+let currentZoomShown=1;
+
 wrap.addEventListener('touchstart', (ev)=>{
   if(ev.touches.length===2 && currentCap?.zoom){
     const dx=ev.touches[0].clientX-ev.touches[1].clientX;
     const dy=ev.touches[0].clientY-ev.touches[1].clientY;
-    pinchBase={dist:Math.hypot(dx,dy), zoom:Number(zoomRange.value)};
+    pinchBase={dist:Math.hypot(dx,dy), zoom:currentZoomShown};
   }
 },{passive:true});
 wrap.addEventListener('touchmove', (ev)=>{
@@ -430,329 +419,188 @@ wrap.addEventListener('touchmove', (ev)=>{
     const dy=ev.touches[0].clientY-ev.touches[1].clientY;
     const dist=Math.hypot(dx,dy);
     const scale=dist/pinchBase.dist;
-    const target=Math.min(zoomRange.max, Math.max(zoomRange.min, pinchBase.zoom*scale));
+    const target=Math.min(zoomMax, Math.max(zoomMin, pinchBase.zoom*scale));
     applyZoom(target);
   }
 },{passive:true});
 wrap.addEventListener('touchend', ()=>{ pinchBase=null; });
 
-/* =========================
-   GPS + KM
-   ========================= */
-function startGPS(){
-  if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); return; }
-  navigator.geolocation.getCurrentPosition(p=>{
-    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true; setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando recursos…', true);
-    navigator.geolocation.watchPosition(pos=>{
-      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
-    }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-  }, ()=>{ gpsReady=false; setOv('Permita o GPS para usar', true); }, {enableHighAccuracy:true, timeout:12000});
-}
-function updateKmDisplay(){
-  if(!lastPos) return;
-  const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-  const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-  kmTop.textContent=kmStr;
-}
-function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(updateKmDisplay, 300); }
-function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
+let lastTap=0, longPressTimer=null;
+wrap.addEventListener('pointerdown', ()=>{
+  longPressTimer=setTimeout(()=>{ switchCamera(); }, 1200);
+});
+wrap.addEventListener('pointerup', (e)=>{
+  if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer=null; }
+  const now=Date.now();
+  if(now-lastTap<300){
+    // double tap -> toggle recording
+    toggleRecording();
+  }else{
+    // single tap -> capture photo
+    capture();
+  }
+  lastTap=now;
+});
+wrap.addEventListener('dblclick', (e)=>{ e.preventDefault(); }); // evitar zoom do navegador
+
+/* Mouse wheel para zoom (desktop) */
+wrap.addEventListener('wheel', (e)=>{
+  if(!(currentCap?.zoom)) return;
+  e.preventDefault();
+  const delta = e.deltaY>0 ? -zoomStep : zoomStep;
+  applyZoom(Math.min(zoomMax, Math.max(zoomMin, currentZoomShown+delta)));
+},{passive:false});
 
 /* =========================
-   Captura de fotos
+   Zoom (track constraints)
    ========================= */
-function updateActions(){
-  const n=photos.length, enabled=n>0;
-  btnPdf.disabled=!enabled; btnClear.disabled=!enabled;
-  btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled;
+async function fetchZoomCaps(){
+  if(!(currentTrack && currentTrack.getCapabilities)) return;
+  const cap=currentTrack.getCapabilities();
+  if(cap && cap.zoom){
+    zoomMin=cap.zoom.min??1; zoomMax=cap.zoom.max??1; zoomStep=cap.zoom.step??0.1;
+    const s=currentTrack.getSettings();
+    currentZoomShown = Number(s.zoom || 1);
+  }else{
+    zoomMin=zoomMax=1; zoomStep=0.1; currentZoomShown=1;
+  }
 }
+async function applyZoom(z){
+  if(!(currentTrack && currentCap && currentCap.zoom)) return;
+  const val = Math.min(zoomMax, Math.max(zoomMin, Number(z)));
+  try{ await currentTrack.applyConstraints({advanced:[{zoom:val}]}); }
+  catch{ try{ await currentTrack.applyConstraints({zoom:val}); }catch(e){} }
+  currentZoomShown=val;
+  showZoomHintTs = performance.now();
+}
+
+/* =========================
+   Foto (tap) com overlay
+   ========================= */
+function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
+function ready(){ return csvReady && camReady && gpsReady; }
+
 async function capture(){
-  if(!(csvReady && camReady && gpsReady && lastPos)){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
+  if(!(ready() && lastPos)) { setOv('Aguardando CSV/Câmera/GPS…', true); return; }
   const w=vid.videoWidth||1280, h=vid.videoHeight||720;
   can.width=w; can.height=h;
-  ctx.drawImage(vid,0,0,w,h);
+  const cctx=can.getContext('2d',{alpha:false});
+  cctx.drawImage(vid,0,0,w,h);
 
+  // Desenhar o mesmo HUD da parte inferior
   const bandH=Math.max(144,Math.round(h*0.16));
-  ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+  cctx.fillStyle='rgba(0,0,0,.62)'; cctx.fillRect(0,h-bandH,w,bandH);
   const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
   const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
-  ctx.fillStyle='#fff'; ctx.textAlign='left';
-  ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
-  ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
-  ctx.textAlign='right'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-  ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
+  cctx.fillStyle='#ff6b35'; cctx.textAlign='left';
+  cctx.font=`900 ${Math.round(h*0.055)}px system-ui`; cctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
+  cctx.fillStyle='#fff';
+  cctx.font=`700 ${Math.round(h*0.032)}px system-ui`; cctx.fillText(ts,20,h-Math.round(bandH*0.22));
+  cctx.textAlign='right'; cctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
+  ids.forEach((e,i)=>cctx.fillText(e.id,w-20,h-bandH+28+i*26));
 
   const url=can.toDataURL('image/jpeg',0.92);
   const blob=dataURLtoBlob(url);
-
-  const safeKm=kmStr.replace('KM ','').replace('+','_');
-  const fname=`KM_${safeKm}.jpg`;
-
+  const safeKm=(kmStr||'KM__').replace('KM ','').replace('+','_');
   const rec={
     id: Date.now()+'_'+Math.random().toString(36).slice(2),
-    url, blob, w,h, ts, kmStr,
-    idsTxt: ids.map(e=>e.id).join(', '),
-    filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
+    url, blob, w, h,
+    ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '),
+    filename: `KM_${safeKm}.jpg`,
+    lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
   };
   await dbPut({...rec, url: undefined});
   photos.push(rec);
-  updateActions();
   setOv('Foto capturada (salva no aparelho)', true);
-  setTimeout(()=> setOv('Toque no vídeo para capturar', true), 800);
+  setTimeout(()=>setOv('Toque p/ foto · Duplo toque p/ gravar · Pinça p/ zoom · Long press p/ câmera', true), 900);
 }
-
-/* Captura Automática (sequencial) */
-function startAutoCapture(){
-  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  isAutoCapturing=true;
-  btnAutoCapture.textContent='⏹️ Parar Captura';
-  btnAutoCapture.style.background='#ef4444';
-  setOv('Capturando automaticamente... toque para parar', true);
-
-  autoCaptureInterval=setInterval(()=>{
-    if(csvReady && camReady && gpsReady && lastPos){
-      const w=vid.videoWidth||1280, h=vid.videoHeight||720;
-      can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
-      const bandH=Math.max(144,Math.round(h*0.16));
-      ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
-      ctx.fillStyle='#fff'; ctx.textAlign='left';
-      ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
-      ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
-      ctx.textAlign='right'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-      ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
-
-      const url=can.toDataURL('image/jpeg',0.92);
-      const blob=dataURLtoBlob(url);
-      const safeKm=kmStr.replace('KM ','').replace('+','_');
-      const fname=`KM_${safeKm}.jpg`;
-      const rec={
-        id: Date.now()+'_'+Math.random().toString(36).slice(2),
-        url, blob, w:h? w:800, h:h? h:450, ts, kmStr,
-        idsTxt: ids.map(e=>e.id).join(', '),
-        filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc
-      };
-      dbPut({...rec, url: undefined});
-      photos.push(rec); updateActions();
-    }
-  }, 500);
-}
-function stopAutoCapture(){
-  if(!isAutoCapturing) return;
-  isAutoCapturing=false;
-  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
-  btnAutoCapture.textContent='🎬 Iniciar Captura Automática';
-  btnAutoCapture.style.background='var(--accent)';
-  setOv('Captura automática parada', true);
-}
-btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
-
-/* Limpar lista */
-async function clearList(silent=false){
-  if(!photos.length) return;
-  if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
-  photos.length = 0;
-  await dbClearAll();
-  updateActions();
-}
-btnClear.onclick = () => { clearList(false); };
 
 /* =========================
-   PDF / Compartilhar
+   Gravação de vídeo com HUD
    ========================= */
-function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
-  return new Promise((resolve)=>{
-    const img=new Image();
-    img.onload=()=>{
-      const W=img.width,H=img.height; let w=W,h=H;
-      if(Math.max(W,H)>maxDim){ if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); } else { h=maxDim; w=Math.round(W*(maxDim/H)); } }
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve({dataUrl:c.toDataURL('image/jpeg',quality), w,h});
-    };
-    img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0});
-    img.src=srcUrl;
-  });
+let canvasStream=null, overlayCanvas=null, overlayCtx=null;
+function makeOverlayCanvas(){
+  overlayCanvas=document.createElement('canvas');
+  overlayCanvas.width=vid.videoWidth||1280;
+  overlayCanvas.height=vid.videoHeight||720;
+  overlayCtx=overlayCanvas.getContext('2d');
+  return overlayCanvas.captureStream(30);
 }
-async function makePdfPhotosOnly(arr){
-  const PW=595, PH=842, M=24; // A4
-  const enc=new TextEncoder();
-  const parts=[ enc.encode('%PDF-1.4\n') ];
-  const xref=[0]; let objNo=0;
-  const off=()=>parts.reduce((a,b)=>a+b.length,0);
-  const addObj=(body)=>{ objNo++; xref.push(off()); parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo; };
-  const addStream=(dict,bin)=>{ objNo++; xref.push(off()); const head=`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`; parts.push(enc.encode(head)); parts.push(bin); parts.push(enc.encode(`\nendstream\nendobj\n`)); return objNo; };
+function drawRecordLoop(){
+  if(!isRecording) return;
+  // Frame base
+  overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
 
-  const pages=[];
-  for(let i=0;i<arr.length;i++){
-    const p=arr[i]; const bin=dataURLtoUint8Array(p.url);
-    const imgW=p.w||800, imgH=p.h||450;
-    const maxW=PW-2*M, maxH=PH-2*M;
-    let dw=maxW, dh=Math.round(imgH*(maxW/imgW));
-    if(dh>maxH){ dh=maxH; dw=Math.round(imgW*(maxH/imgH)); }
-    const tx=Math.round((PW-dw)/2), ty=Math.round((PH-dh)/2);
-    const imgNum=addStream(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>`, bin);
-    const name=`/Im${i+1}`;
-    const content=`q\n${dw} 0 0 ${dh} ${tx} ${ty} cm\n${name} Do\nQ\n`;
-    const contNum=addStream(`<< >>`, enc.encode(content));
-    const pageNum=addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${name} ${imgNum} 0 R >> >> /Contents ${contNum} 0 R >>`);
-    pages.push(pageNum);
-  }
-  const pagesNum=addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
-  const catalogNum=addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+  // Banda com o mesmo conteúdo do HUD
+  const H=overlayCanvas.height, W=overlayCanvas.width;
+  const bandH=Math.max(144,Math.round(H*0.16));
+  overlayCtx.fillStyle='rgba(0,0,0,.62)';
+  overlayCtx.fillRect(0, H-bandH, W, bandH);
 
-  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
-  parts.push(enc.encode(xr));
-  parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
-  return new Blob(parts,{type:'application/pdf'});
-}
-function buildWhatsAppMessage(isPdf){
-  const lines=[];
-  lines.push('*RELATÓRIO DE INSPEÇÃO*');
-  lines.push(`Total de fotos: ${photos.length}`);
-  lines.push(`Gerado em: ${new Date().toLocaleString()}`);
-  lines.push('');
-  photos.forEach((p,i)=>{
-    let L=`${i+1}) ${p.kmStr} • ${p.ts}`;
-    if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){
-      L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
-    }
-    lines.push(L);
-  });
-  if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf');
-  return lines.join('\n');
+  const kmObj= lastPos ? nearestKM(lastPos.lat,lastPos.lon) : null;
+  const kmStr= kmObj? fmtKm(kmObj.km): 'KM —';
+  overlayCtx.fillStyle='#ff6b35';
+  overlayCtx.textAlign='left';
+  overlayCtx.font=`900 ${Math.round(H*0.055)}px system-ui`;
+  overlayCtx.fillText(kmStr, 20, H-bandH+Math.round(bandH*0.52));
+
+  const ts=new Date().toLocaleString();
+  overlayCtx.fillStyle='#fff';
+  overlayCtx.font=`700 ${Math.round(H*0.032)}px system-ui`;
+  overlayCtx.fillText(ts, 20, H-Math.round(bandH*0.22));
+
+  // Indicador REC
+  overlayCtx.beginPath();
+  overlayCtx.arc(W-30, 30, 10, 0, Math.PI*2);
+  overlayCtx.fillStyle='#ef4444';
+  overlayCtx.fill();
+
+  requestAnimationFrame(drawRecordLoop);
 }
 
-btnPdf.onclick=async ()=>{
-  if(!photos.length) return;
-  stopAutoCapture();
-  const scaled=[];
-  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const blob=await makePdfPhotosOnly(scaled);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='RELATORIO_INSPECAO.pdf';
-  document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
-  if (autoClear?.checked) { await clearList(true); }
-};
+async function startRecording(){
+  if(isRecording) return;
+  if(!(ready() && lastPos)){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
 
-btnSharePdf.onclick=async ()=>{
-  if(!photos.length) return;
-  stopAutoCapture();
-  const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const pdfBlob=await makePdfPhotosOnly(scaled);
-  const pdfFile=new File([pdfBlob],'RELATORIO_INSPECAO.pdf',{type:'application/pdf'});
-  const text=buildWhatsAppMessage(true);
-  try{
-    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
-      await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
-      if (autoClear?.checked) { await clearList(true); }
-    }else{
-      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download='RELATORIO_INSPECAO.pdf'; a.click();
-      window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
-      alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
-      if (autoClear?.checked) { await clearList(true); }
-    }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
-  }
-};
-
-btnSharePhotos.onclick=async ()=>{
-  if(!photos.length) return;
-  stopAutoCapture();
-  const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg'));
-  const text=buildWhatsAppMessage(false);
-  const MAX=10;
-  if(!(navigator.canShare && navigator.canShare({files:files.slice(0,Math.min(files.length,MAX))}))){
-    window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente. Se preferir, gere e envie o PDF.)'),'_blank');
-    alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.');
-    return;
-  }
-  try{
-    for(let i=0;i<files.length;i+=MAX){
-      const lote=files.slice(i,i+MAX);
-      const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`;
-      await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'});
-    }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.');
-  }
-};
-
-/* =========================
-   Gravação de Vídeo com overlay (KM + timestamp)
-   ========================= */
-async function startVideoRecording(){
-  if(!(csvReady && camReady && gpsReady && lastPos)){
-    alert('Aguarde CSV/Câmera/GPS'); return;
-  }
   try{
     const videoStream=vid.srcObject;
-    if(!videoStream){ alert('Câmera não disponível'); return; }
+    if(!videoStream){ setOv('Câmera não disponível', true); return; }
 
-    const overlayCanvas=document.createElement('canvas');
-    overlayCanvas.width=vid.videoWidth||1280;
-    overlayCanvas.height=vid.videoHeight||720;
-    const overlayCtx=overlayCanvas.getContext('2d');
+    // Canvas stream com HUD
+    canvasStream=makeOverlayCanvas();
 
-    const canvasStream=overlayCanvas.captureStream(30);
+    // Áudio (se existir)
     const audioTracks=videoStream.getAudioTracks();
     if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
 
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
-    if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
-
-    mediaRecorder=new MediaRecorder(canvasStream, options);
+    // MediaRecorder
+    const opts={ mimeType:'video/webm;codecs=vp8,opus', videoBitsPerSecond:2500000 };
+    if(!MediaRecorder.isTypeSupported(opts.mimeType)){ opts.mimeType='video/webm'; }
+    mediaRecorder=new MediaRecorder(canvasStream, opts);
     recordedChunks=[];
-
     mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
     mediaRecorder.onstop=()=>{
-      isRecordingVideo=false;
-      btnVideoRecord.textContent='🎥 Iniciar Gravação de Vídeo';
-      btnVideoRecord.style.background='#e74c3c';
+      isRecording=false;
+      setOv('Gravação finalizada', true);
+      setTimeout(()=>setOv('Toque p/ foto · Duplo toque p/ gravar · Pinça p/ zoom · Long press p/ câmera', true), 1200);
     };
-
     mediaRecorder.start();
-    isRecordingVideo=true;
-    btnVideoRecord.textContent='⏹️ Parar Gravação';
-    btnVideoRecord.style.background='#e74c3c';
-    setOv('Gravando vídeo... Clique para parar', true);
-
-    const drawLoop=()=>{
-      if(!isRecordingVideo) return;
-      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
-      overlayCtx.fillStyle='rgba(0,0,0,.62)';
-      overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
-      overlayCtx.fillStyle='#ff6b35';
-      overlayCtx.textAlign='left';
-      overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
-      overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
-      const ts=new Date().toLocaleString();
-      overlayCtx.fillStyle='#fff';
-      overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
-      overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
-      requestAnimationFrame(drawLoop);
-    };
-    drawLoop();
-    startKmUpdate();
+    isRecording=true;
+    setOv('Gravando… duplo toque para parar', true);
+    drawRecordLoop();
   }catch(e){
-    console.error('Erro ao iniciar gravação:', e);
-    alert('Erro ao iniciar gravação: '+e.message);
-    isRecordingVideo=false;
+    console.error(e);
+    isRecording=false;
+    setOv('Erro ao iniciar gravação: '+e.message, true);
   }
 }
-function stopVideoRecording(){
-  if(!isRecordingVideo || !mediaRecorder) return;
-  isRecordingVideo=false;
+function stopRecording(){
+  if(!isRecording || !mediaRecorder) return;
+  isRecording=false;
   mediaRecorder.stop();
-  stopKmUpdate();
   setTimeout(()=>{
-    if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
-    const blob=new Blob(recordedChunks, {type: 'video/webm'});
+    if(recordedChunks.length===0){ setOv('Nenhum dado gravado.', true); return; }
+    const blob=new Blob(recordedChunks, {type:'video/webm'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
@@ -760,58 +608,43 @@ function stopVideoRecording(){
     const dateStr=now.toISOString().slice(0,10);
     const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-');
     a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
-    document.body.appendChild(a);
-    a.click();
+    document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
-    setOv('Vídeo salvo com sucesso!', true);
-    setTimeout(()=>setOv('Toque no vídeo para capturar', true), 2000);
-  }, 500);
+  }, 400);
 }
-btnVideoRecord.addEventListener('click', async ()=>{
-  if(isRecordingVideo){
-    btnVideoRecord.disabled=true;
-    stopVideoRecording();
-    setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000);
-  } else {
-    btnVideoRecord.disabled=true;
-    try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); }
-    btnVideoRecord.disabled=false;
-  }
-});
+function toggleRecording(){
+  if(isRecording) stopRecording(); else startRecording();
+}
 
-/* Clique na área do vídeo (tocar/capturar/parar) */
-wrap.addEventListener('click', ()=>{
-  if(isRecordingVideo){ stopVideoRecording(); }
-  else if(isAutoCapturing){ stopAutoCapture(); }
-  else if(csvReady && camReady && gpsReady){ capture(); }
-});
+/* =========================
+   Loop do HUD em tempo real
+   ========================= */
+function loop(){
+  drawHUD();
+  requestAnimationFrame(loop);
+}
 
 /* =========================
    Boot
    ========================= */
-async function restoreSavedPhotos(){
-  const rows=await dbGetAll(); if(!rows.length) return;
-  for(const r of rows){
-    const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(r.blob); });
-    photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc });
-  }
-  updateActions();
-}
-function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
-function ready(){ return csvReady && camReady && gpsReady; }
-
 async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
   await loadCSVs();
   await enumerateCameras();
   await startCamera(deviceIndex);
+  await fetchZoomCaps();
   startGPS();
-  db=await openDB(); await restoreSavedPhotos();
-  startKmUpdate();
-  const tick=()=>{ setOv(ready()? 'Toque no vídeo para capturar' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
+
+  db=await openDB(); // restauração não exibe galeria (somos "só vídeo"), mas mantém anti-perda
+
+  resizeHud();
+  setOv('Toque p/ foto · Duplo toque p/ gravar · Pinça p/ zoom · Long press p/ câmera', true);
+  loop();
+
+  // Atualiza mensagem conforme pronto
+  const tick=()=>{ setOv(ready()? 'Toque p/ foto · Duplo toque p/ gravar · Pinça p/ zoom · Long press p/ câmera' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); };
   tick();
 }
 </script>
-
 </body>
 </html>
