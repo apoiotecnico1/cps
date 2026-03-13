@@ -5,26 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Inspeção – Só Vídeo (Tela Inteira)</title>
 
-<!-- Fonte para KM bonito (com fallback local) -->
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+<!-- Fonte para KM (mais legível) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet" />
 
 <style>
   :root{ --fg:#e6ebff; --accent:#ff6b35; }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:#000;color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial}
-  /* Área de cena em tela cheia */
+
+  /* Cena em tela cheia */
   .stage{position:fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center}
   .wrap{position:relative; width:100vw; height:100vh; overflow:hidden; background:#000; touch-action:none}
-  /* O vídeo preenche a tela */
   video{position:absolute; inset:0; margin:auto; min-width:100%; min-height:100%; width:auto; height:auto; object-fit:cover; background:#000}
-  /* HUD em cima do vídeo */
+
+  /* HUD sobre o vídeo */
   canvas.hud{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
-  /* Mensagens */
   .ov{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.35)); font-weight:900; text-align:center; pointer-events:none}
   .ov .msg{background:rgba(0,0,0,.6); padding:10px 14px; border-radius:10px; font-size:1rem}
+
+  /* ===== Controles de gravação na tela ===== */
+  .recControls{
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    display:flex; gap:10px; z-index:10; pointer-events:auto;
+  }
+  .recBtn{
+    display:flex; align-items:center; justify-content:center;
+    min-width:120px; height:46px; padding:0 16px;
+    border-radius:999px; border:1px solid rgba(255,255,255,.25);
+    background:rgba(0,0,0,.45); color:#fff; font-weight:900; font-size:0.98rem;
+    backdrop-filter: blur(6px); cursor:pointer; user-select:none;
+  }
+  .recBtn.start{ border-color:#22c55e }
+  .recBtn.stop { border-color:#ef4444 }
+  .recBtn:active{ transform:scale(.98) }
+
+  /* Badge discreto do ID mais próximo */
+  .idBadge{
+    position:absolute; right:12px; bottom:12px; z-index:9;
+    background:rgba(0,0,0,.35); color:#cbd5e1;
+    border:1px solid rgba(255,255,255,.15);
+    padding:4px 8px; border-radius:8px; font-size:.72rem; font-weight:700;
+    opacity:.75; pointer-events:none;
+  }
 
   /* Cadeado */
   #lock{position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85)); display:flex; align-items:center; justify-content:center; z-index:9999}
@@ -61,12 +86,18 @@
 <div class="stage">
   <div class="wrap" id="wrap">
     <video id="vid" autoplay playsinline muted></video>
-    <!-- Canvas para capturas -->
     <canvas id="can" width="1280" height="720" style="display:none"></canvas>
-    <!-- HUD em tempo real -->
     <canvas id="hud" class="hud"></canvas>
-    <!-- Mensagens -->
     <div id="ov" class="ov"><div class="msg" id="ovMsg">Carregando CSV, câmera e GPS…</div></div>
+
+    <!-- Controles visíveis de gravação -->
+    <div class="recControls" id="recControls">
+      <button class="recBtn start" id="btnStartRec">⏺️ Iniciar</button>
+      <button class="recBtn stop"  id="btnStopRec" disabled>⏹️ Parar</button>
+    </div>
+
+    <!-- Badge discreto com ID mais próximo -->
+    <div class="idBadge" id="idBadge">ID —</div>
   </div>
 </div>
 
@@ -123,8 +154,11 @@ let pinchBase=null, showZoomHintTs=0;
 const wrap=$('#wrap'), vid=$('#vid'), can=$('#can'), ctx=can.getContext('2d',{alpha:false});
 const hud=$('#hud'), hudCtx=hud.getContext('2d');
 const ov=$('#ov'), ovMsg=$('#ovMsg');
+const idBadge=$('#idBadge');
 
-const photos=[];
+const btnStartRec=$('#btnStartRec');
+const btnStopRec =$('<btnStopRec>'); // placeholder selector safeguard (we'll assign below via getElementById)
+document.getElementById('btnStopRec'); // ensure element exists
 
 /* ======= IndexedDB anti-perda (fotos) ======= */
 const DB_NAME='inspecaoDB', DB_VER=1, STORE='photos';
@@ -228,7 +262,6 @@ async function startCamera(idx=deviceIndex){
     currentTrack=st.getVideoTracks()[0];
     currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
     camReady=!!vid.videoWidth;
-    // Zoom caps
     if(currentCap?.zoom){
       zoomMin=currentCap.zoom.min??1; zoomMax=currentCap.zoom.max??1; zoomStep=currentCap.zoom.step??0.1;
       currentZoomShown = Number(currentTrack.getSettings().zoom||1);
@@ -291,7 +324,7 @@ function drawHUD(){
   hudCtx.textAlign='left';
   hudCtx.fillText(ts, pad, H-Math.round(bandH*0.22));
 
-  // IDs à direita
+  // IDs à direita (coluna)
   const ids = (lastPos && csvReady) ? nearestN(lastPos.lat,lastPos.lon,5) : [];
   hudCtx.textAlign='right';
   hudCtx.fillStyle='#e6ebff';
@@ -299,6 +332,10 @@ function drawHUD(){
   const startY = H-bandH + Math.round(28*devicePixelRatio);
   const lineH  = Math.round(26*devicePixelRatio);
   ids.forEach((e,i)=>{ hudCtx.fillText(e.id, W-pad, startY + i*lineH); });
+
+  // Atualiza badge do ID mais próximo (bem discreto)
+  const nearest = ids.length ? ids[0].id : '—';
+  idBadge.textContent = `ID ${nearest}`;
 
   // GPS status canto sup.esq
   hudCtx.textAlign='left';
@@ -420,7 +457,6 @@ function drawRecordLoop(){
   overlayCtx.font=`700 ${Math.round(H*0.032)}px ${fontReady?'"Poppins"':'system-ui'}`;
   overlayCtx.fillText(ts, 20, H-Math.round(bandH*0.22));
 
-  // IDs à direita
   const ids = (lastPos && csvReady) ? nearestN(lastPos.lat,lastPos.lon,5) : [];
   overlayCtx.textAlign='right'; overlayCtx.fillStyle='#e6ebff';
   overlayCtx.font=`600 ${Math.round(H*0.028)}px ${fontReady?'"Poppins"':'system-ui'}`;
@@ -444,34 +480,52 @@ async function startRecording(){
     mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
     mediaRecorder.onstop=()=>{
       isRecording=false;
+      setRecButtons(false);
       setOv('Gravação finalizada', true);
       setTimeout(()=>setOv('Toque=Foto · Duplo toque=Gravar · Pinça=Zoom · Long press=Trocar câmera', true), 1000);
+      // download
+      if(recordedChunks.length){
+        const blob=new Blob(recordedChunks, {type:'video/webm'});
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        const now=new Date();
+        const name=`VIDEO_${now.toISOString().slice(0,10)}_${now.toTimeString().slice(0,8).replace(/:/g,'-')}.webm`;
+        a.download=name; document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+      }
     };
-    mediaRecorder.start(); isRecording=true; setOv('Gravando… duplo toque para parar', true);
+    mediaRecorder.start(); isRecording=true; setRecButtons(true);
+    setOv('Gravando… duplo toque ou botão Parar para encerrar', true);
     drawRecordLoop();
-  }catch(e){ console.error(e); isRecording=false; setOv('Erro ao iniciar gravação: '+e.message, true); }
+  }catch(e){ console.error(e); isRecording=false; setRecButtons(false); setOv('Erro ao iniciar gravação: '+e.message, true); }
 }
 function stopRecording(){
   if(!isRecording || !mediaRecorder) return;
-  isRecording=false; mediaRecorder.stop();
-  setTimeout(()=>{
-    if(recordedChunks.length===0){ setOv('Nenhum dado gravado.', true); return; }
-    const blob=new Blob(recordedChunks, {type:'video/webm'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    const now=new Date();
-    const name=`VIDEO_${now.toISOString().slice(0,10)}_${now.toTimeString().slice(0,8).replace(/:/g,'-')}.webm`;
-    a.download=name;
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-  }, 400);
+  isRecording=false;
+  mediaRecorder.stop();
 }
 function toggleRecording(){ if(isRecording) stopRecording(); else startRecording(); }
+
+function setRecButtons(recording){
+  const startBtn=document.getElementById('btnStartRec');
+  const stopBtn =document.getElementById('btnStopRec');
+  if(recording){
+    startBtn.disabled=true;
+    stopBtn.disabled=false;
+  }else{
+    startBtn.disabled=false;
+    stopBtn.disabled=true;
+  }
+}
 
 /* ======= Loop ======= */
 function ready(){ return csvReady && camReady && gpsReady; }
 function hudTick(){ setOv(ready()? 'Toque=Foto · Duplo toque=Gravar · Pinça=Zoom · Long press=Trocar câmera' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(hudTick); }
 function loopHUD(){ drawHUD(); requestAnimationFrame(loopHUD); }
+
+/* ======= Eventos dos botões na tela ======= */
+document.getElementById('btnStartRec').addEventListener('click', e=>{ e.stopPropagation(); startRecording(); });
+document.getElementById('btnStopRec').addEventListener('click',  e=>{ e.stopPropagation(); stopRecording(); });
 
 /* ======= Boot ======= */
 async function boot(){
