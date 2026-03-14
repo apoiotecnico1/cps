@@ -72,9 +72,22 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
+/* Funções do 1º exemplo para KM e ID */
+function calcularKM(lat,lon){
+  // Simulação do cálculo real do km
+  return `KM ${Math.floor(lat*10)}+${Math.floor(lon*10)}`;
+}
+function calcularID(lat,lon){
+  // Simulação de ID baseado em GPS
+  return `ID_${Math.floor(lat*1000+lon*1000)}`;
+}
+
 function updateHUDInfo(){
-  const km="KM 12+345"; // Simulação, integrar cálculo real
-  const id="ID_001";    // Simulação, pegar do dataset real
+  let km="KM —", id="ID —";
+  if(gpsReady){
+    km = calcularKM(lastPos.latitude,lastPos.longitude);
+    id = calcularID(lastPos.latitude,lastPos.longitude);
+  }
   const ts=new Date().toLocaleString();
   kmidEl.textContent=`${km} | ${id}`;
   tsEl.textContent=ts;
