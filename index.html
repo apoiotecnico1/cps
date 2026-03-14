@@ -3,26 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Visualização Rodovia</title>
+<title>Inspeção Noturna Inteligente</title>
 <style>
 :root{
   --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
   --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
-  --btn-bg:#ffd700; --btn-color:#000;
 }
 body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
 .app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
 canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
-button{
-  flex:1 1 60px;height:60px;border-radius:8px;border:none;font-size:20px;font-weight:700;color:var(--btn-color);
-  background:var(--btn-bg);box-shadow:0 4px 6px rgba(0,0,0,.4);text-align:center;
-}
-#rec{background:#ef4444;color:#fff;} 
-#stop{background:#374151;color:#fff;} 
-#photo{background:#22c55e;color:#fff;} 
-#pdfSend{background:#2563eb;color:#fff;}
+button{flex:1 1 60px;height:60px;border-radius:12px;border:none;font-size:22px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
+#rec{background:#ef4444;} 
+#stop{background:#374151;} 
+#photo{background:#22c55e;} 
+#pdfSend{background:#2563eb;}
 #hudInfo{
   position:absolute;top:16px;left:16px;color:var(--accent);font-size:16px;font-weight:900;text-shadow:0 0 4px #000;
   background:rgba(0,0,0,0.5);padding:8px;border-radius:12px;
@@ -68,8 +64,6 @@ let camReady=false;
 let isRecording=false;
 let mediaRecorder=null;
 let recordedChunks=[];
-let overlayCanvas, overlayCtx;
-let photoCollection=[];
 
 /* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; updateHUDInfo(); },()=>{}, {enableHighAccuracy:true});
@@ -126,27 +120,13 @@ function capture(){
   const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height);
   x.fillStyle="#ff6b35"; x.font="48px system-ui"; x.fillText(kmidEl.textContent,20,60);
   x.fillStyle="#fff"; x.font="32px system-ui"; x.fillText(tsEl.textContent,20,110);
-  photoCollection.push(c.toDataURL('image/jpeg'));
-  alert("Foto capturada! Total: "+photoCollection.length);
+  alert("Foto capturada!");
 }
 
 /* ================= Gravação ================= */
 function startRecording(){
   if(isRecording) return;
-  overlayCanvas=document.createElement('canvas');
-  overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
-  overlayCtx=overlayCanvas.getContext('2d');
-  const drawLoop=()=>{
-    if(!isRecording) return;
-    overlayCtx.drawImage(vid,0,0,overlayCanvas.width,overlayCanvas.height);
-    overlayCtx.fillStyle="#ff6b35"; overlayCtx.font="48px system-ui";
-    overlayCtx.fillText(kmidEl.textContent,20,60);
-    overlayCtx.fillStyle="#fff"; overlayCtx.font="32px system-ui";
-    overlayCtx.fillText(tsEl.textContent,20,110);
-    requestAnimationFrame(drawLoop);
-  };
-  drawLoop();
-  const stream=overlayCanvas.captureStream(24);
+  const stream=vid.captureStream(24);
   mediaRecorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
   recordedChunks=[];
   mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
@@ -165,40 +145,23 @@ function downloadVideo(){
   if(recordedChunks.length===0) return alert("Nenhum vídeo gravado!");
   const blob=new Blob(recordedChunks,{type:'video/webm'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='video_rodovia.webm'; a.click();
+  const a=document.createElement('a'); a.href=url; a.download='video_inspecao.webm'; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
 /* ================= PDF Relatório ================= */
 async function generatePDF(){
-  if(photoCollection.length===0) return alert("Nenhuma foto capturada!");
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("Relatório Rodovia", 14, 20);
-  let y = 30;
-  for(let i=0;i<photoCollection.length;i++){
-    const img = new Image();
-    img.src = photoCollection[i];
-    await new Promise(r=>{img.onload=r;});
-    const imgWidth = 180;
-    const ratio = img.width / img.height;
-    const imgHeight = imgWidth / ratio;
-    if(y + imgHeight > 280){ doc.addPage(); y=20; }
-    doc.setFontSize(12); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,14,y-2);
-    doc.addImage(img, 'JPEG', 14, y, imgWidth, imgHeight);
-    y += imgHeight + 10;
-  }
+  doc.setFontSize(16); doc.text("Relatório de Inspeção Noturna", 14, 20);
   return doc;
 }
 
 async function sendPDFWhatsApp(){
   const doc = await generatePDF();
-  if(!doc) return;
   const pdfBlob = doc.output('blob');
   const pdfURL = URL.createObjectURL(pdfBlob);
-  const a=document.createElement('a'); a.href=pdfURL; a.download='relatorio_rodovia.pdf'; a.click();
-  photoCollection=[];
-  alert("Relatório gerado e fotos limpas!");
+  const a=document.createElement('a'); a.href=pdfURL; a.download='relatorio_inspecao.pdf'; a.click();
 }
 
 /* ================= Eventos ================= */
