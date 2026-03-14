@@ -3,418 +3,183 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
-<title>Inspeção Iluminação Rodovia IA</title>
-
+<title>Inspeção Noturna Rodovia - HUD IA</title>
 <style>
-
-body{
-margin:0;
-background:#111;
-display:flex;
-justify-content:center;
-font-family:system-ui;
-}
-
-.app{
-width:100%;
-max-width:420px;
-height:100vh;
-background:black;
-position:relative;
-overflow:hidden;
-}
-
-video{
-position:absolute;
-width:100%;
-height:100%;
-object-fit:contain;
-background:black;
-}
-
-canvas{
-position:absolute;
-inset:0;
-pointer-events:none;
-}
-
-.controls{
-position:absolute;
-bottom:16px;
-width:100%;
-display:flex;
-justify-content:center;
-gap:12px;
-z-index:10;
-}
-
-button{
-width:64px;
-height:64px;
-border-radius:50%;
-border:none;
-font-size:24px;
-color:white;
-background:rgba(0,0,0,.7);
-box-shadow:0 4px 10px rgba(0,0,0,.4)
-}
-
-#rec{background:#ef4444}
-#stop{background:#374151}
-#mark{background:#f97316}
-
+  :root{
+    --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
+    --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
+  }
+  body, html{margin:0;padding:0;height:100%;background:#000;font-family:system-ui;-webkit-tap-highlight-color:transparent;}
+  .app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
+  canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .controls{position:absolute;bottom:16px;width:100%;display:flex;justify-content:center;gap:12px;z-index:10;}
+  button{width:64px;height:64px;border-radius:50%;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
+  #rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #mark{background:#f97316;}
 </style>
 </head>
-
 <body>
-
 <div class="app">
-
-<video id="video" autoplay playsinline muted></video>
-<canvas id="hud"></canvas>
-
-<div class="controls">
-
-<button id="photo">📷</button>
-<button id="rec">⏺</button>
-<button id="stop">⏹</button>
-<button id="mark">⚠</button>
-
-</div>
-
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="hud" class="hud"></canvas>
+  <div class="controls">
+    <button id="photo">📷</button>
+    <button id="rec">⏺</button>
+    <button id="stop">⏹</button>
+    <button id="mark">⚠</button>
+  </div>
 </div>
 
 <script>
+const vid=document.getElementById("vid");
+const hud=document.getElementById("hud");
+const ctx=hud.getContext("2d");
 
-const video=document.getElementById("video")
-const hud=document.getElementById("hud")
-const ctx=hud.getContext("2d")
+const photoBtn=document.getElementById("photo");
+const recBtn=document.getElementById("rec");
+const stopBtn=document.getElementById("stop");
+const markBtn=document.getElementById("mark");
 
-let gps=null
-let recording=false
-let recorder
-let chunks=[]
+let dataset=[], kmPoints=[];
+let lastPos=null;
+let gpsReady=false;
+let camReady=false;
+let csvReady=false;
+let isRecording=false;
+let mediaRecorder=null;
+let recordedChunks=[];
+let currentStream=null;
+let currentTrack=null;
+let currentCap=null;
+let currentZoom=1;
+let pinchBase=null;
 
-let dataset=[]
-let kmPoints=[]
+const CELL=0.005;
 
-let darkAlert=false
+function parsePt(v){ return v==null?NaN:Number(String(v).trim().replace(/\./g,'').replace(',','.')); }
+function hav(a,b,c,d){const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
+function fmtKm(v){ let K=Math.floor(v),m=Math.round((v-K)*1000); return `KM ${K}+${String(m).padStart(3,'0')}`; }
+function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 
-/* distancia */
-
-function hav(a,b,c,d){
-
-const R=6371000
-const x=(c-a)*Math.PI/180
-const y=(d-b)*Math.PI/180
-
-const u=Math.sin(x/2)**2+
-Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2
-
-return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
-
+/* ================= CSVs ================= */
+async function loadIDs(){
+  const txt=await fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text());
+  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  const head=lines[0].split(';').map(h=>h.toLowerCase());
+  const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('lon'));
+  const iLat=head.findIndex(h=>h.includes('lat'));
+  const iLon=head.findIndex(h=>h.includes('lon'));
+  dataset=[];
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(';');
+    const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
+    if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    dataset.push({id,lat,lon});
+  }
 }
-
-function fmtKm(v){
-
-let K=Math.floor(v)
-let m=Math.round((v-K)*1000)
-
-return `KM ${K}+${String(m).padStart(3,'0')}`
-
+async function loadKM(){
+  const txt=await fetch('./SNVBR116SPRJ.csv').then(r=>r.text());
+  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
+  function pickTrio(c){
+    const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+    return Number.isFinite(t1.km)?t1:null;
+  }
+  for(let i=0;i<lines.length;i++){
+    const c=lines[i].split(';');
+    const t=pickTrio(c); if(!t) continue;
+    if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else{ const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon); if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; } }
+  }
 }
+async function loadCSVs(){ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }
 
-/* carregar CSV */
-
-async function loadCSVs(){
-
-const idCSV=await fetch("Dados_Completos_Grupo_2_all.csv").then(r=>r.text())
-const lines=idCSV.split(/\r?\n/)
-
-for(let i=1;i<lines.length;i++){
-
-const c=lines[i].split(";")
-
-if(c.length<3)continue
-
-const id=c[0]
-const lat=parseFloat(c[1].replace(",","."))
-const lon=parseFloat(c[2].replace(",","."))
-
-if(!isNaN(lat)&&!isNaN(lon))dataset.push({id,lat,lon})
-
+/* ================= Vizinhança ================= */
+function nearestN(lat,lon,n=5){
+  const arr=dataset.map(p=>({id:p.id,d:hav(lat,lon,p.lat,p.lon)})).sort((a,b)=>a.d-b.d);
+  return arr.slice(0,n);
 }
-
-const kmCSV=await fetch("SNVBR116SPRJ.csv").then(r=>r.text())
-const l2=kmCSV.split(/\r?\n/)
-
-for(let i=1;i<l2.length;i++){
-
-const c=l2[i].split(";")
-
-if(c.length<3)continue
-
-const km=parseFloat(c[0].replace(",","."))
-const lat=parseFloat(c[1].replace(",","."))
-const lon=parseFloat(c[2].replace(",","."))
-
-if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))kmPoints.push({km,lat,lon})
-
-}
-
-}
-
-/* proximidade */
-
-function nearestIDs(lat,lon){
-
-const arr=dataset.map(p=>({
-id:p.id,
-d:hav(lat,lon,p.lat,p.lon)
-}))
-
-arr.sort((a,b)=>a.d-b.d)
-
-return arr.slice(0,5)
-
-}
-
 function nearestKM(lat,lon){
-
-let best=null
-let bd=Infinity
-
-for(const p of kmPoints){
-
-const d=hav(lat,lon,p.lat,p.lon)
-
-if(d<bd){
-bd=d
-best=p
+  if(!kmPoints.length) return null;
+  let best=null,bd=Infinity;
+  for(const p of kmPoints){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;bd=d;} }
+  return best;
 }
 
-}
+/* ================= GPS ================= */
+navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; });
 
-return best
-
-}
-
-/* GPS */
-
-navigator.geolocation.watchPosition(p=>{
-gps=p.coords
-})
-
-/* camera */
-
+/* ================= Câmera ================= */
 async function startCamera(){
-
-const stream=await navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"},
-audio:false
-})
-
-video.srcObject=stream
-
+  try{
+    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    currentStream=st; vid.srcObject=st; await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
+    currentTrack=st.getVideoTracks()[0]; currentCap=currentTrack.getCapabilities?.();
+    camReady=true;
+  }catch(e){ camReady=false; console.error(e); }
 }
 
-/* IA simples */
-
-const detectCanvas=document.createElement("canvas")
-const detectCtx=detectCanvas.getContext("2d")
-
-function detectDark(){
-
-detectCanvas.width=video.videoWidth
-detectCanvas.height=video.videoHeight
-
-detectCtx.drawImage(video,0,0)
-
-const img=detectCtx.getImageData(0,0,detectCanvas.width,detectCanvas.height*0.4)
-
-let sum=0
-
-for(let i=0;i<img.data.length;i+=4){
-sum+=img.data[i]
-}
-
-const brightness=sum/(img.data.length/4)
-
-darkAlert=brightness<35
-
-}
-
-/* HUD */
-
+/* ================= HUD ================= */
 function drawHUD(){
+  hud.width=hud.clientWidth*devicePixelRatio;
+  hud.height=hud.clientHeight*devicePixelRatio;
+  const W=hud.width,H=hud.height;
+  ctx.clearRect(0,0,W,H);
 
-hud.width=video.clientWidth*devicePixelRatio
-hud.height=video.clientHeight*devicePixelRatio
+  // banda inferior
+  const band=Math.max(144*devicePixelRatio,H*0.16);
+  ctx.fillStyle='rgba(0,0,0,.58)'; ctx.fillRect(0,H-band,W,band);
 
-const W=hud.width
-const H=hud.height
+  // KM
+  let kmStr='KM —'; if(lastPos && csvReady){ const k=nearestKM(lastPos.latitude,lastPos.longitude); kmStr=k?fmtKm(k.km):kmStr; }
+  ctx.fillStyle='#ff6b35'; ctx.font=`900 ${H*0.055}px Arial`; ctx.textAlign='left';
+  ctx.fillText(kmStr,24*devicePixelRatio,H-band+Math.round(band*0.52));
 
-ctx.clearRect(0,0,W,H)
+  // IDs
+  let ids=[]; if(lastPos && csvReady) ids=nearestN(lastPos.latitude,lastPos.longitude,5);
+  ctx.fillStyle='#e6ebff'; ctx.font=`600 ${H*0.028}px Arial`; ctx.textAlign='right';
+  ids.forEach((e,i)=>ctx.fillText(e.id,W-24*devicePixelRatio,H-band+28*devicePixelRatio+i*26*devicePixelRatio));
 
-const band=H*0.16
+  // timestamp
+  ctx.fillStyle='#fff'; ctx.font=`700 ${H*0.032}px Arial`; ctx.textAlign='left';
+  ctx.fillText(new Date().toLocaleString(),24*devicePixelRatio,H-Math.round(band*0.22));
 
-ctx.fillStyle="rgba(0,0,0,.65)"
-ctx.fillRect(0,H-band,W,band)
+  // gravação
+  if(isRecording){ const r=10*devicePixelRatio; ctx.beginPath(); ctx.arc(W-24*devicePixelRatio-r,24*devicePixelRatio+r,r,0,Math.PI*2); ctx.fillStyle='#ef4444'; ctx.fill(); ctx.font=`700 ${H*0.024}px Arial`; ctx.fillText('REC', W-44*devicePixelRatio,H*0.05*H); }
 
-let kmText="KM --"
-let ids=[]
-
-if(gps){
-
-const km=nearestKM(gps.latitude,gps.longitude)
-
-if(km)kmText=fmtKm(km.km)
-
-ids=nearestIDs(gps.latitude,gps.longitude)
-
+  requestAnimationFrame(drawHUD);
 }
 
-ctx.fillStyle="#ff6b35"
-ctx.font=`900 ${H*0.05}px Arial`
-ctx.fillText(kmText,20,H-band+40)
-
-ctx.fillStyle="#fff"
-ctx.font=`700 ${H*0.03}px Arial`
-ctx.fillText(new Date().toLocaleString(),20,H-20)
-
-ctx.textAlign="right"
-
-ids.forEach((e,i)=>{
-ctx.fillText(e.id,W-20,H-band+30+i*24)
-})
-
-if(darkAlert){
-
-ctx.fillStyle="red"
-ctx.fillText("⚠ TRECHO ESCURO",W/2,H*0.2)
-
-}
-
-if(recording){
-
-ctx.beginPath()
-ctx.arc(W-40,40,12,0,6.28)
-ctx.fillStyle="red"
-ctx.fill()
-
-}
-
-detectDark()
-
-requestAnimationFrame(drawHUD)
-
-}
-
-/* foto */
-
+/* ================= Fotos ================= */
 function capture(){
-
-const c=document.createElement("canvas")
-
-c.width=video.videoWidth
-c.height=video.videoHeight
-
-const x=c.getContext("2d")
-
-x.drawImage(video,0,0)
-x.drawImage(hud,0,0,c.width,c.height)
-
-const url=c.toDataURL("image/jpeg")
-
-const a=document.createElement("a")
-a.href=url
-a.download="foto_inspecao.jpg"
-a.click()
-
+  if(!vid.videoWidth || !vid.videoHeight) return;
+  const c=document.createElement('canvas'); c.width=vid.videoWidth; c.height=vid.videoHeight;
+  const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height); x.drawImage(hud,0,0,c.width,c.height);
+  const url=c.toDataURL('image/jpeg');
+  const a=document.createElement('a'); a.href=url; a.download='foto_inspecao.jpg'; a.click();
 }
 
-/* gravação */
-
+/* ================= Gravação ================= */
+let overlayCanvas, overlayCtx;
 function startRecording(){
-
-if(recording)return
-
-chunks=[]
-
-const canvas=document.createElement("canvas")
-
-canvas.width=video.videoWidth
-canvas.height=video.videoHeight
-
-const x=canvas.getContext("2d")
-
-function render(){
-
-x.drawImage(video,0,0)
-x.drawImage(hud,0,0,canvas.width,canvas.height)
-
-requestAnimationFrame(render)
-
+  if(isRecording) return;
+  overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
+  overlayCtx=overlayCanvas.getContext('2d');
+  const drawLoop=()=>{ if(!isRecording) return; overlayCtx.drawImage(vid,0,0,overlayCanvas.width,overlayCanvas.height); overlayCtx.drawImage(hud,0,0,overlayCanvas.width,overlayCanvas.height); requestAnimationFrame(drawLoop); }; drawLoop();
+  const stream=overlayCanvas.captureStream(30); mediaRecorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
+  recordedChunks=[]; mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop=()=>{ const blob=new Blob(recordedChunks,{type:'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='video_inspecao.webm'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),2000); };
+  mediaRecorder.start(); isRecording=true;
 }
+function stopRecording(){ if(!isRecording) return; mediaRecorder.stop(); isRecording=false; }
 
-render()
+/* ================= Eventos ================= */
+photoBtn.onclick=capture; recBtn.onclick=startRecording; stopBtn.onclick=stopRecording; markBtn.onclick=()=>navigator.vibrate?.(200);
 
-const stream=canvas.captureStream(30)
-
-recorder=new MediaRecorder(stream)
-
-recorder.ondataavailable=e=>{
-if(e.data.size>0)chunks.push(e.data)
-}
-
-recorder.onstop=()=>{
-
-const blob=new Blob(chunks,{type:"video/webm"})
-
-const url=URL.createObjectURL(blob)
-
-const a=document.createElement("a")
-a.href=url
-a.download="inspecao_iluminacao.webm"
-a.click()
-
-}
-
-recorder.start()
-
-recording=true
-
-}
-
-function stopRecording(){
-
-if(!recording)return
-recorder.stop()
-recording=false
-
-}
-
-/* botões */
-
-photo.onclick=capture
-rec.onclick=startRecording
-stop.onclick=stopRecording
-mark.onclick=()=>navigator.vibrate?.(200)
-
-/* iniciar */
-
-async function boot(){
-
-await loadCSVs()
-await startCamera()
-drawHUD()
-
-}
-
-boot()
+/* ================= Inicialização ================= */
+async function boot(){ await loadCSVs(); await startCamera(); drawHUD(); }
+boot();
 
 </script>
-
 </body>
 </html>
