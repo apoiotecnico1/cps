@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Inspeção Noturna Inteligente</title>
+<title>Vídeo Auditoria Rodovia</title>
 <style>
 :root{
   --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
   --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
 }
 body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
-.app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.app{position:relative;width:100%;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
 canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .controls{position:absolute;bottom:16px;width:95%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
@@ -26,7 +26,7 @@ button{flex:1 1 70px;height:60px;border-radius:12px;border:none;font-size:24px;c
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="hud" class="hud"></canvas>
   <div id="hudInfo">
-    <div id="kmid">KM —</div>
+    <div id="kmid">KM — | ID —</div>
     <div id="closestIDs">IDs próximos: —</div>
     <div id="timestamp">Data/Hora</div>
   </div>
@@ -40,173 +40,171 @@ button{flex:1 1 70px;height:60px;border-radius:12px;border:none;font-size:24px;c
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-const vid=document.getElementById("vid");
-const hud=document.getElementById("hud");
-const ctx=hud.getContext("2d");
-const photoBtn=document.getElementById("photo");
-const recBtn=document.getElementById("rec");
-const stopBtn=document.getElementById("stop");
-const pdfBtn=document.getElementById("pdfSend");
-const kmidEl=document.getElementById("kmid");
-const closestEl=document.getElementById("closestIDs");
-const tsEl=document.getElementById("timestamp");
+const vid = document.getElementById("vid");
+const hud = document.getElementById("hud");
+const ctx = hud.getContext("2d");
+const photoBtn = document.getElementById("photo");
+const recBtn = document.getElementById("rec");
+const stopBtn = document.getElementById("stop");
+const pdfBtn = document.getElementById("pdfSend");
+const kmidEl = document.getElementById("kmid");
+const closestEl = document.getElementById("closestIDs");
+const tsEl = document.getElementById("timestamp");
 
-let lastPos={lat:0,lon:0};
-let gpsReady=false;
-let camReady=false;
-let isRecording=false;
-let mediaRecorder=null;
-let recordedChunks=[];
+let lastPos = {lat:0,lon:0};
+let gpsReady = false;
+let camReady = false;
+let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
 let overlayCanvas, overlayCtx;
-let photoCollection=[];
-let csvData=[];
+let photoCollection = [];
+let csvData = [];
 
-/* ================= Carregar CSV ================= */
+/* ==================== Carregar CSV de pontos ==================== */
 async function loadCSV(url){
   const res = await fetch(url);
   const text = await res.text();
   csvData = text.trim().split('\n').map(line=>{
     const [km,id,lat,lon] = line.split(',');
-    return {km:id, id:id, lat:parseFloat(lat), lon:parseFloat(lon)};
+    return {km: km, id: id, lat: parseFloat(lat), lon: parseFloat(lon)};
   });
 }
 
-/* ================= Funções de KM/ID com base no CSV ================= */
-function calcularKMID(lat,lon){
+/* ==================== Funções de KM e ID ==================== */
+function getClosestPoint(lat, lon){
   if(csvData.length===0) return {km:"KM —", id:"ID —"};
-  // achar ponto mais próximo
-  let minDist=Infinity, closest={km:"KM —",id:"ID —"};
+  let minDist = Infinity;
+  let closest = {km:"KM —", id:"ID —"};
   csvData.forEach(p=>{
     const d = Math.hypot(lat-p.lat, lon-p.lon);
-    if(d<minDist){ minDist=d; closest={km:p.km,id:p.id}; }
+    if(d < minDist){
+      minDist = d;
+      closest = {km:p.km, id:p.id};
+    }
   });
   return closest;
 }
 
-/* IDs próximos (5) */
-function gerarIDsProximos(lat, lon){
+function getNearestIDs(lat, lon){
   if(csvData.length===0) return "—";
-  const sorted = csvData.map(p=>({id:p.id,d:Math.hypot(lat-p.lat,lon-p.lon)}))
-                         .sort((a,b)=>a.d-b.d);
-  const top5 = sorted.slice(1,6).map(p=>p.id);
-  return top5.join(', ');
+  const sorted = csvData.map(p=>({id:p.id, d:Math.hypot(lat-p.lat, lon-p.lon)}))
+                        .sort((a,b)=>a.d-b.d);
+  return sorted.slice(1,6).map(p=>p.id).join(', ');
 }
 
-/* ================= GPS ================= */
+/* ==================== GPS ==================== */
 navigator.geolocation.watchPosition(p=>{
-  lastPos=p.coords; gpsReady=true;
-  updateHUDInfo();
-},()=>{}, {enableHighAccuracy:true});
+  lastPos=p.coords; gpsReady=true; updateHUDInfo();
+}, ()=>{}, {enableHighAccuracy:true});
 
-/* ================= Câmera ================= */
+/* ==================== Câmera ==================== */
 async function startCamera(){
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
-    vid.srcObject=stream;
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    vid.srcObject = stream;
     await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
-    camReady=true;
-  }catch(e){ camReady=false; console.error(e); }
+    camReady = true;
+  }catch(e){ console.error(e); camReady=false; }
 }
 
-/* ================= HUD ================= */
+/* ==================== HUD ==================== */
 function updateHUDInfo(){
   let km="KM —", id="ID —", closest="—";
   if(gpsReady){
-    const c = calcularKMID(lastPos.latitude,lastPos.longitude);
-    km = c.km;
-    id = c.id;
-    closest = gerarIDsProximos(lastPos.latitude,lastPos.longitude);
+    const c = getClosestPoint(lastPos.latitude,lastPos.longitude);
+    km = c.km; id = c.id;
+    closest = getNearestIDs(lastPos.latitude,lastPos.longitude);
   }
-  kmidEl.textContent=km+" | "+id;
-  closestEl.textContent="IDs próximos: "+closest;
-  tsEl.textContent=new Date().toLocaleString();
+  kmidEl.textContent = km + " | " + id;
+  closestEl.textContent = "IDs próximos: " + closest;
+  tsEl.textContent = new Date().toLocaleString();
 }
 
 function drawHUD(){
-  hud.width=hud.clientWidth*devicePixelRatio;
-  hud.height=hud.clientHeight*devicePixelRatio;
-  const W=hud.width,H=hud.height;
+  hud.width = hud.clientWidth*devicePixelRatio;
+  hud.height = hud.clientHeight*devicePixelRatio;
+  const W = hud.width, H = hud.height;
   ctx.clearRect(0,0,W,H);
-
   if(isRecording){
     ctx.beginPath();
     ctx.arc(W-40,H-40,16,0,Math.PI*2);
-    ctx.fillStyle='#ef4444';
-    ctx.fill();
-    ctx.font=`16px system-ui`;
-    ctx.fillStyle='#fff';
+    ctx.fillStyle='#ef4444'; ctx.fill();
+    ctx.font='16px system-ui'; ctx.fillStyle='#fff';
     ctx.fillText('REC', W-60,H-35);
   }
   requestAnimationFrame(drawHUD);
 }
 
-/* ================= Fotos ================= */
-function capture(){
+/* ==================== Fotos ==================== */
+function capturePhoto(){
   if(!vid.videoWidth || !vid.videoHeight) return;
-  const c=document.createElement('canvas'); c.width=vid.videoWidth; c.height=vid.videoHeight;
-  const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height);
+  const c = document.createElement('canvas');
+  c.width = vid.videoWidth; c.height = vid.videoHeight;
+  const x = c.getContext('2d');
+  x.drawImage(vid,0,0,c.width,c.height);
   x.fillStyle="#ff6b35"; x.font="48px system-ui"; x.fillText(kmidEl.textContent,20,60);
   x.fillStyle="#fff"; x.font="32px system-ui"; x.fillText(tsEl.textContent,20,110);
   photoCollection.push(c.toDataURL('image/jpeg'));
-  alert("Foto capturada! Total: "+photoCollection.length);
+  alert("Foto capturada! Total: " + photoCollection.length);
 }
 
-/* ================= Gravação ================= */
+/* ==================== Gravação ==================== */
 function startRecording(){
   if(isRecording) return;
-  overlayCanvas=document.createElement('canvas');
-  overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
-  overlayCtx=overlayCanvas.getContext('2d');
-  const drawLoop=()=>{
+  overlayCanvas = document.createElement('canvas');
+  overlayCanvas.width = vid.videoWidth; overlayCanvas.height = vid.videoHeight;
+  overlayCtx = overlayCanvas.getContext('2d');
+  
+  function drawLoop(){
     if(!isRecording) return;
-    overlayCtx.drawImage(vid,0,0,overlayCanvas.width,overlayCanvas.height);
+    overlayCtx.drawImage(vid,0,0,overlayCanvas.width, overlayCanvas.height);
     overlayCtx.fillStyle="#ff6b35"; overlayCtx.font="48px system-ui";
     overlayCtx.fillText(kmidEl.textContent,20,60);
     overlayCtx.fillStyle="#fff"; overlayCtx.font="32px system-ui";
     overlayCtx.fillText(tsEl.textContent,20,110);
     requestAnimationFrame(drawLoop);
-  };
+  }
   drawLoop();
-  const stream=overlayCanvas.captureStream(24);
-  mediaRecorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
-  recordedChunks=[];
-  mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+  
+  const stream = overlayCanvas.captureStream(24);
+  mediaRecorder = new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
+  recordedChunks = [];
+  mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recordedChunks.push(e.data); };
   mediaRecorder.start(10000);
   isRecording=true;
 }
 
 function stopRecording(){
   if(!isRecording) return;
-  mediaRecorder.stop();
-  isRecording=false;
+  mediaRecorder.stop(); isRecording=false;
   setTimeout(downloadVideo,500);
 }
 
 function downloadVideo(){
   if(recordedChunks.length===0) return alert("Nenhum vídeo gravado!");
-  const blob=new Blob(recordedChunks,{type:'video/webm'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='video_inspecao.webm'; a.click();
+  const blob = new Blob(recordedChunks,{type:'video/webm'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='video_auditoria.webm'; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
-/* ================= PDF Relatório ================= */
+/* ==================== PDF Relatório ==================== */
 async function generatePDF(){
   if(photoCollection.length===0) return alert("Nenhuma foto capturada!");
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("Relatório de Inspeção Noturna", 14, 20);
+  doc.setFontSize(16); doc.text("Relatório de Vídeo Auditoria", 14, 20);
   let y = 30;
   for(let i=0;i<photoCollection.length;i++){
-    const img = new Image();
-    img.src = photoCollection[i];
+    const img = new Image(); img.src = photoCollection[i];
     await new Promise(r=>{img.onload=r;});
     const imgWidth = 180;
     const ratio = img.width / img.height;
     const imgHeight = imgWidth / ratio;
     if(y + imgHeight > 280){ doc.addPage(); y=20; }
     doc.setFontSize(12); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,14,y-2);
-    doc.addImage(img, 'JPEG', 14, y, imgWidth, imgHeight);
+    doc.addImage(img,'JPEG',14,y,imgWidth,imgHeight);
     y += imgHeight + 10;
   }
   return doc;
@@ -217,23 +215,22 @@ async function sendPDFWhatsApp(){
   if(!doc) return;
   const pdfBlob = doc.output('blob');
   const pdfURL = URL.createObjectURL(pdfBlob);
-  const a=document.createElement('a'); a.href=pdfURL; a.download='relatorio_inspecao.pdf'; a.click();
-  photoCollection=[];
-  alert("Relatório gerado e fotos limpas!");
+  const a = document.createElement('a'); a.href=pdfURL; a.download='relatorio_auditoria.pdf'; a.click();
+  photoCollection=[]; alert("Relatório gerado e fotos limpas!");
 }
 
-/* ================= Eventos ================= */
-photoBtn.onclick=capture;
-recBtn.onclick=startRecording;
-stopBtn.onclick=stopRecording;
-pdfBtn.onclick=sendPDFWhatsApp;
+/* ==================== Eventos ==================== */
+photoBtn.onclick = capturePhoto;
+recBtn.onclick = startRecording;
+stopBtn.onclick = stopRecording;
+pdfBtn.onclick = sendPDFWhatsApp;
 
-/* ================= Inicialização ================= */
+/* ==================== Inicialização ==================== */
 async function boot(){
-  await loadCSV('pontos.csv'); // <-- seu CSV com km,id,lat,lon
-  await startCamera(); 
-  drawHUD(); 
-  updateHUDInfo(); 
+  await loadCSV('pontos.csv'); // <-- CSV com km,id,lat,lon
+  await startCamera();
+  drawHUD();
+  updateHUDInfo();
   setInterval(updateHUDInfo,1000);
 }
 boot();
