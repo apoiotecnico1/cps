@@ -41,6 +41,14 @@ button#photo { background:#ffd700;color:#000; }
 button#pdfSend { background:#1e90ff;color:#fff; }
 button#zoomIn, button#zoomOut, button#focus { background:#eee;color:#000; }
 
+#helpBtn{
+  position:fixed;top:8px;right:8px;z-index:20;width:36px;height:36px;border-radius:50%;
+  background:#1e90ff;color:#fff;font-weight:bold;font-size:18px;border:none;cursor:pointer;
+}
+#helpBanner{
+  position:fixed;top:50px;right:20px;width:300px;background:rgba(255,255,255,0.95);color:#000;
+  border:2px solid #000;padding:12px;border-radius:12px;z-index:21;display:none;max-height:400px;overflow-y:auto;font-size:14px;
+}
 .photoGallery{
   margin-top:100vh;
   display:flex;
@@ -80,6 +88,17 @@ button#zoomIn, button#zoomOut, button#focus { background:#eee;color:#000; }
   </div>
 
   <div class="photoGallery" id="photoGallery"></div>
+
+  <button id="helpBtn">?</button>
+  <div id="helpBanner">
+    <h3>Como usar o sistema</h3>
+    <p>1. A câmera captura imagens da rodovia automaticamente, mesmo se você rolar a tela.</p>
+    <p>2. Use os botões de zoom e foco para ajustar manualmente a visualização.</p>
+    <p>3. Clique em 📷 Foto para salvar manualmente uma imagem no relatório.</p>
+    <p>4. Clique em ⏺ Gravar para iniciar vídeo com sobreposição de KM e hora, e ⏹ Parar para finalizar.</p>
+    <p>5. Clique em 📄 PDF/WhatsApp para gerar um relatório rápido com todas as fotos.</p>
+    <p>6. As fotos aparecem abaixo e você pode rolar a tela para visualizá-las.</p>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -95,6 +114,8 @@ const kmidEl=document.getElementById("kmid");
 const closestEl=document.getElementById("closestIDs");
 const tsEl=document.getElementById("timestamp");
 const photoGallery=document.getElementById("photoGallery");
+const helpBtn=document.getElementById("helpBtn");
+const helpBanner=document.getElementById("helpBanner");
 
 let lastPos={lat:0,lon:0};
 let gpsReady=false;
@@ -116,6 +137,7 @@ async function startCamera(){
     vid.srcObject=stream;
     await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
     camReady=true;
+    startAutoCapture();
   }catch(e){ camReady=false; console.error(e); }
 }
 
@@ -167,12 +189,17 @@ function capture(){
   x.fillStyle="#000"; 
   x.font="32px system-ui"; 
   x.fillText(tsEl.textContent,20,110);
-  const dataUrl = c.toDataURL('image/jpeg');
+  const dataUrl = c.toDataURL('image/jpeg',0.5); // qualidade menor para PDF rápido
   photoCollection.push(dataUrl);
 
   const imgEl = document.createElement('img'); 
   imgEl.src = dataUrl;
   photoGallery.appendChild(imgEl);
+}
+
+/* ================= Captura automática ================= */
+function startAutoCapture(){
+  setInterval(capture,5000); // captura a cada 5s
 }
 
 /* ================= Gravação ================= */
@@ -219,20 +246,20 @@ function downloadVideo(){
 async function generatePDF(){
   if(photoCollection.length===0) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("Relatório de Rodovia", 14, 20);
-  let y = 30;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a5'}); // PDF menor
+  doc.setFontSize(14); doc.text("Relatório de Rodovia", 10, 10);
+  let y = 20;
   for(let i=0;i<photoCollection.length;i++){
     const img = new Image();
     img.src = photoCollection[i];
     await new Promise(r=>{img.onload=r;});
-    const imgWidth = 180;
+    const imgWidth = 120;
     const ratio = img.width / img.height;
     const imgHeight = imgWidth / ratio;
-    if(y + imgHeight > 280){ doc.addPage(); y=20; }
-    doc.setFontSize(12); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,14,y-2);
-    doc.addImage(img, 'JPEG', 14, y, imgWidth, imgHeight);
-    y += imgHeight + 10;
+    if(y + imgHeight > 180){ doc.addPage(); y=10; }
+    doc.setFontSize(10); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,10,y-2);
+    doc.addImage(img, 'JPEG', 10, y, imgWidth, imgHeight);
+    y += imgHeight + 5;
   }
   return doc;
 }
@@ -260,7 +287,10 @@ document.getElementById('focus').onclick = ()=>{
   alert("Foco manual ativado! (simulação)");
 };
 
-/* ================= Eventos ================= */
+/* ================= Help Banner ================= */
+helpBtn.onclick = ()=>{ helpBanner.style.display = helpBanner.style.display==='none'?'block':'none'; };
+
+/* ================= Eventos principais ================= */
 photoBtn.onclick=capture;
 recBtn.onclick=startRecording;
 stopBtn.onclick=stopRecording;
