@@ -59,6 +59,38 @@ let mediaRecorder=null;
 let recordedChunks=[];
 let overlayCanvas, overlayCtx;
 let photoCollection=[];
+let csvData=[];
+
+/* ================= Carregar CSV ================= */
+async function loadCSV(url){
+  const res = await fetch(url);
+  const text = await res.text();
+  csvData = text.trim().split('\n').map(line=>{
+    const [km,id,lat,lon] = line.split(',');
+    return {km:id, id:id, lat:parseFloat(lat), lon:parseFloat(lon)};
+  });
+}
+
+/* ================= Funções de KM/ID com base no CSV ================= */
+function calcularKMID(lat,lon){
+  if(csvData.length===0) return {km:"KM —", id:"ID —"};
+  // achar ponto mais próximo
+  let minDist=Infinity, closest={km:"KM —",id:"ID —"};
+  csvData.forEach(p=>{
+    const d = Math.hypot(lat-p.lat, lon-p.lon);
+    if(d<minDist){ minDist=d; closest={km:p.km,id:p.id}; }
+  });
+  return closest;
+}
+
+/* IDs próximos (5) */
+function gerarIDsProximos(lat, lon){
+  if(csvData.length===0) return "—";
+  const sorted = csvData.map(p=>({id:p.id,d:Math.hypot(lat-p.lat,lon-p.lon)}))
+                         .sort((a,b)=>a.d-b.d);
+  const top5 = sorted.slice(1,6).map(p=>p.id);
+  return top5.join(', ');
+}
 
 /* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{
@@ -77,36 +109,15 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
-/* Funções originais para KM e ID */
-function calcularKM(lat, lon){
-  let kmBase = 100;
-  return `KM ${kmBase + Math.floor((lat+lon)*10)}`;
-}
-
-function calcularID(lat, lon){
-  return `ID_${Math.floor(lat*1000 + lon*1000)}`;
-}
-
-/* IDs próximos simulados (5 próximos) */
-function gerarIDsProximos(lat, lon){
-  let ids=[];
-  for(let i=-2;i<=2;i++){
-    if(i===0) continue;
-    const dLat = lat + i*0.0001;
-    const dLon = lon + i*0.0001;
-    ids.push(calcularID(dLat,dLon));
-  }
-  return ids.join(', ');
-}
-
 function updateHUDInfo(){
   let km="KM —", id="ID —", closest="—";
   if(gpsReady){
-    km = calcularKM(lastPos.latitude,lastPos.longitude);
-    id = calcularID(lastPos.latitude,lastPos.longitude);
+    const c = calcularKMID(lastPos.latitude,lastPos.longitude);
+    km = c.km;
+    id = c.id;
     closest = gerarIDsProximos(lastPos.latitude,lastPos.longitude);
   }
-  kmidEl.textContent=km;
+  kmidEl.textContent=km+" | "+id;
   closestEl.textContent="IDs próximos: "+closest;
   tsEl.textContent=new Date().toLocaleString();
 }
@@ -218,7 +229,13 @@ stopBtn.onclick=stopRecording;
 pdfBtn.onclick=sendPDFWhatsApp;
 
 /* ================= Inicialização ================= */
-async function boot(){ await startCamera(); drawHUD(); updateHUDInfo(); setInterval(updateHUDInfo,1000);}
+async function boot(){
+  await loadCSV('pontos.csv'); // <-- seu CSV com km,id,lat,lon
+  await startCamera(); 
+  drawHUD(); 
+  updateHUDInfo(); 
+  setInterval(updateHUDInfo,1000);
+}
 boot();
 </script>
 </body>
