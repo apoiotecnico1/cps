@@ -146,25 +146,9 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
-function calcularKM(lat, lon){ 
-  let kmBase = 100; 
-  return `KM ${kmBase + Math.floor((lat+lon)*10)}`; 
-}
-
-function calcularID(lat, lon){ 
-  return `ID_${Math.floor(lat*1000 + lon*1000)}`; 
-}
-
-function gerarIDsProximos(lat, lon){ 
-  let ids=[]; 
-  for(let i=-2;i<=2;i++){ 
-    if(i===0) continue; 
-    const dLat = lat + i*0.0001; 
-    const dLon = lon + i*0.0001; 
-    ids.push(calcularID(dLat,dLon)); 
-  } 
-  return ids.join(', '); 
-}
+function calcularKM(lat, lon){ let kmBase = 100; return `KM ${kmBase + Math.floor((lat+lon)*10)}`; }
+function calcularID(lat, lon){ return `ID_${Math.floor(lat*1000 + lon*1000)}`; }
+function gerarIDsProximos(lat, lon){ let ids=[]; for(let i=-2;i<=2;i++){ if(i===0) continue; const dLat = lat + i*0.0001; const dLon = lon + i*0.0001; ids.push(calcularID(dLat,dLon)); } return ids.join(', '); }
 
 function updateHUDInfo(){
   if(gpsReady){
@@ -205,7 +189,7 @@ function capture(){
   x.fillStyle="#000"; 
   x.font="32px system-ui"; 
   x.fillText(tsEl.textContent,20,110);
-  const dataUrl = c.toDataURL('image/jpeg',0.5);
+  const dataUrl = c.toDataURL('image/jpeg',0.8);
   photoCollection.push(dataUrl);
 
   const imgEl = document.createElement('img'); 
@@ -262,20 +246,20 @@ function downloadVideo(){
 async function generatePDF(){
   if(photoCollection.length===0) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a5'});
-  doc.setFontSize(14); doc.text("Relatório de Rodovia", 10, 10);
-  let y = 20;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.text("Relatório de Rodovia", 14, 20);
+  let y = 30;
   for(let i=0;i<photoCollection.length;i++){
     const img = new Image();
     img.src = photoCollection[i];
     await new Promise(r=>{img.onload=r;});
-    const imgWidth = 120;
+    const imgWidth = 180;
     const ratio = img.width / img.height;
     const imgHeight = imgWidth / ratio;
-    if(y + imgHeight > 180){ doc.addPage(); y=10; }
-    doc.setFontSize(10); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,10,y-2);
-    doc.addImage(img, 'JPEG', 10, y, imgWidth, imgHeight);
-    y += imgHeight + 5;
+    if(y + imgHeight > 280){ doc.addPage(); y=20; }
+    doc.setFontSize(12); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,14,y-2);
+    doc.addImage(img, 'JPEG', 14, y, imgWidth, imgHeight);
+    y += imgHeight + 10;
   }
   return doc;
 }
