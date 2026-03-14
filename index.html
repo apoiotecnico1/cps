@@ -92,7 +92,7 @@ button#zoomIn, button#zoomOut, button#focus { background:#eee;color:#000; }
   <button id="helpBtn">?</button>
   <div id="helpBanner">
     <h3>Como usar o sistema</h3>
-    <p>1. A câmera captura imagens da rodovia automaticamente, mesmo se você rolar a tela.</p>
+    <p>1. A câmera captura imagens da rodovia automaticamente.</p>
     <p>2. Use os botões de zoom e foco para ajustar manualmente a visualização.</p>
     <p>3. Clique em 📷 Foto para salvar manualmente uma imagem no relatório.</p>
     <p>4. Clique em ⏺ Gravar para iniciar vídeo com sobreposição de KM e hora, e ⏹ Parar para finalizar.</p>
@@ -128,7 +128,11 @@ let photoCollection=[];
 let zoomLevel = 1;
 
 /* ================= GPS ================= */
-navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; updateHUDInfo(); },()=>{}, {enableHighAccuracy:true});
+navigator.geolocation.watchPosition(p=>{
+  lastPos=p.coords; 
+  gpsReady=true; 
+  updateHUDInfo(); 
+},()=>{}, {enableHighAccuracy:true});
 
 /* ================= Câmera ================= */
 async function startCamera(){
@@ -142,18 +146,31 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
-function calcularKM(lat, lon){ let kmBase = 100; return `KM ${kmBase + Math.floor((lat+lon)*10)}`; }
-function calcularID(lat, lon){ return `ID_${Math.floor(lat*1000 + lon*1000)}`; }
-function gerarIDsProximos(lat, lon){ let ids=[]; for(let i=-2;i<=2;i++){ if(i===0) continue; const dLat = lat + i*0.0001; const dLon = lon + i*0.0001; ids.push(calcularID(dLat,dLon)); } return ids.join(', '); }
+function calcularKM(lat, lon){ 
+  let kmBase = 100; 
+  return `KM ${kmBase + Math.floor((lat+lon)*10)}`; 
+}
+
+function calcularID(lat, lon){ 
+  return `ID_${Math.floor(lat*1000 + lon*1000)}`; 
+}
+
+function gerarIDsProximos(lat, lon){ 
+  let ids=[]; 
+  for(let i=-2;i<=2;i++){ 
+    if(i===0) continue; 
+    const dLat = lat + i*0.0001; 
+    const dLon = lon + i*0.0001; 
+    ids.push(calcularID(dLat,dLon)); 
+  } 
+  return ids.join(', '); 
+}
 
 function updateHUDInfo(){
-  let km="KM —", closest="—";
   if(gpsReady){
-    km = calcularKM(lastPos.latitude,lastPos.longitude);
-    closest = gerarIDsProximos(lastPos.latitude,lastPos.longitude);
+    kmidEl.textContent = calcularKM(lastPos.latitude,lastPos.longitude);
+    closestEl.textContent = "IDs próximos: " + gerarIDsProximos(lastPos.latitude,lastPos.longitude);
   }
-  kmidEl.textContent=km;
-  closestEl.textContent="IDs próximos: "+closest;
   tsEl.textContent=new Date().toLocaleString();
 }
 
@@ -162,7 +179,6 @@ function drawHUD(){
   hud.height=hud.clientHeight*devicePixelRatio;
   const W=hud.width,H=hud.height;
   ctx.clearRect(0,0,W,H);
-
   if(isRecording){
     ctx.beginPath();
     ctx.arc(W-40,H-40,16,0,Math.PI*2);
@@ -182,14 +198,14 @@ function capture(){
   c.width=vid.videoWidth; 
   c.height=vid.videoHeight;
   const x=c.getContext('2d'); 
-  x.drawImage(vid,0,0,c.width,c.height); // captura direto do vídeo ao vivo
+  x.drawImage(vid,0,0,c.width,c.height);
   x.fillStyle="#000"; 
   x.font="48px system-ui"; 
   x.fillText(kmidEl.textContent,20,60);
   x.fillStyle="#000"; 
   x.font="32px system-ui"; 
   x.fillText(tsEl.textContent,20,110);
-  const dataUrl = c.toDataURL('image/jpeg',0.5); // qualidade menor para PDF rápido
+  const dataUrl = c.toDataURL('image/jpeg',0.5);
   photoCollection.push(dataUrl);
 
   const imgEl = document.createElement('img'); 
@@ -199,7 +215,7 @@ function capture(){
 
 /* ================= Captura automática ================= */
 function startAutoCapture(){
-  setInterval(capture,5000); // captura a cada 5s
+  setInterval(capture,5000); // a cada 5s
 }
 
 /* ================= Gravação ================= */
@@ -246,7 +262,7 @@ function downloadVideo(){
 async function generatePDF(){
   if(photoCollection.length===0) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a5'}); // PDF menor
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a5'});
   doc.setFontSize(14); doc.text("Relatório de Rodovia", 10, 10);
   let y = 20;
   for(let i=0;i<photoCollection.length;i++){
