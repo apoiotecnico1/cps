@@ -3,65 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rodovia Visualização</title>
+<title>Visualização Rodovia</title>
 <style>
 :root{
   --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
   --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
+  --btn-bg:#ffd700; --btn-color:#000;
 }
-body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;overflow-y:auto;}
-.app{position:relative;width:100%;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;}
-video#vid{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;}
-canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
+.app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
+canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
+button{
+  flex:1 1 60px;height:60px;border-radius:8px;border:none;font-size:20px;font-weight:700;color:var(--btn-color);
+  background:var(--btn-bg);box-shadow:0 4px 6px rgba(0,0,0,.4);text-align:center;
+}
+#rec{background:#ef4444;color:#fff;} 
+#stop{background:#374151;color:#fff;} 
+#photo{background:#22c55e;color:#fff;} 
+#pdfSend{background:#2563eb;color:#fff;}
 #hudInfo{
   position:absolute;top:16px;left:16px;color:var(--accent);font-size:16px;font-weight:900;text-shadow:0 0 4px #000;
-  background:rgba(0,0,0,0.5);padding:8px;border-radius:12px;z-index:2;
+  background:rgba(0,0,0,0.5);padding:8px;border-radius:12px;
   display:flex;flex-direction:column;gap:4px;
 }
 #hudInfo div{margin:0;}
 #timestamp{color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
-.controls, .cameraControls{
-  position:fixed;bottom:12px;width:100%;display:flex;justify-content:center;gap:8px;z-index:10;flex-wrap:wrap;
-}
-button{
-  flex:1 1 60px;
-  height:60px;
-  border-radius:4px;
-  border:2px solid #000;
-  font-size:20px;
-  font-weight:bold;
-  color:#000;
-  background:#fff;
-  box-shadow:2px 2px 6px rgba(0,0,0,0.3);
-  text-align:center;
-}
-button#rec { background:#ff0000;color:#fff; }
-button#stop { background:#000;color:#fff; }
-button#photo { background:#ffd700;color:#000; }
-button#pdfSend { background:#1e90ff;color:#fff; }
-button#zoomIn, button#zoomOut, button#focus { background:#eee;color:#000; }
-
-#helpBtn{
-  position:fixed;top:8px;right:8px;z-index:20;width:36px;height:36px;border-radius:50%;
-  background:#1e90ff;color:#fff;font-weight:bold;font-size:18px;border:none;cursor:pointer;
-}
-#helpBanner{
-  position:fixed;top:50px;right:20px;width:300px;background:rgba(255,255,255,0.95);color:#000;
-  border:2px solid #000;padding:12px;border-radius:12px;z-index:21;display:none;max-height:400px;overflow-y:auto;font-size:14px;
-}
-.photoGallery{
-  margin-top:100vh;
-  display:flex;
-  flex-wrap:wrap;
-  gap:4px;
-  padding:8px;
-  justify-content:center;
-}
-.photoGallery img{
-  width:120px;
-  height:auto;
-  border:2px solid #000;
-}
 </style>
 </head>
 <body>
@@ -73,31 +41,11 @@ button#zoomIn, button#zoomOut, button#focus { background:#eee;color:#000; }
     <div id="closestIDs">IDs próximos: —</div>
     <div id="timestamp">Data/Hora</div>
   </div>
-
   <div class="controls">
     <button id="photo">📷 Foto</button>
     <button id="rec">⏺ Gravar</button>
     <button id="stop">⏹ Parar</button>
     <button id="pdfSend">📄 PDF/WhatsApp</button>
-  </div>
-
-  <div class="cameraControls">
-    <button id="zoomIn">🔍 +</button>
-    <button id="zoomOut">🔍 -</button>
-    <button id="focus">🎯 Focar</button>
-  </div>
-
-  <div class="photoGallery" id="photoGallery"></div>
-
-  <button id="helpBtn">?</button>
-  <div id="helpBanner">
-    <h3>Como usar o sistema</h3>
-    <p>1. A câmera captura imagens da rodovia automaticamente.</p>
-    <p>2. Use os botões de zoom e foco para ajustar manualmente a visualização.</p>
-    <p>3. Clique em 📷 Foto para salvar manualmente uma imagem no relatório.</p>
-    <p>4. Clique em ⏺ Gravar para iniciar vídeo com sobreposição de KM e hora, e ⏹ Parar para finalizar.</p>
-    <p>5. Clique em 📄 PDF/WhatsApp para gerar um relatório rápido com todas as fotos.</p>
-    <p>6. As fotos aparecem abaixo e você pode rolar a tela para visualizá-las.</p>
   </div>
 </div>
 
@@ -113,9 +61,6 @@ const pdfBtn=document.getElementById("pdfSend");
 const kmidEl=document.getElementById("kmid");
 const closestEl=document.getElementById("closestIDs");
 const tsEl=document.getElementById("timestamp");
-const photoGallery=document.getElementById("photoGallery");
-const helpBtn=document.getElementById("helpBtn");
-const helpBanner=document.getElementById("helpBanner");
 
 let lastPos={lat:0,lon:0};
 let gpsReady=false;
@@ -125,14 +70,9 @@ let mediaRecorder=null;
 let recordedChunks=[];
 let overlayCanvas, overlayCtx;
 let photoCollection=[];
-let zoomLevel = 1;
 
 /* ================= GPS ================= */
-navigator.geolocation.watchPosition(p=>{
-  lastPos=p.coords; 
-  gpsReady=true; 
-  updateHUDInfo(); 
-},()=>{}, {enableHighAccuracy:true});
+navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; updateHUDInfo(); },()=>{}, {enableHighAccuracy:true});
 
 /* ================= Câmera ================= */
 async function startCamera(){
@@ -141,7 +81,6 @@ async function startCamera(){
     vid.srcObject=stream;
     await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
     camReady=true;
-    startAutoCapture();
   }catch(e){ camReady=false; console.error(e); }
 }
 
@@ -151,10 +90,14 @@ function calcularID(lat, lon){ return `ID_${Math.floor(lat*1000 + lon*1000)}`; }
 function gerarIDsProximos(lat, lon){ let ids=[]; for(let i=-2;i<=2;i++){ if(i===0) continue; const dLat = lat + i*0.0001; const dLon = lon + i*0.0001; ids.push(calcularID(dLat,dLon)); } return ids.join(', '); }
 
 function updateHUDInfo(){
+  let km="KM —", id="ID —", closest="—";
   if(gpsReady){
-    kmidEl.textContent = calcularKM(lastPos.latitude,lastPos.longitude);
-    closestEl.textContent = "IDs próximos: " + gerarIDsProximos(lastPos.latitude,lastPos.longitude);
+    km = calcularKM(lastPos.latitude,lastPos.longitude);
+    id = calcularID(lastPos.latitude,lastPos.longitude);
+    closest = gerarIDsProximos(lastPos.latitude,lastPos.longitude);
   }
+  kmidEl.textContent=km;
+  closestEl.textContent="IDs próximos: "+closest;
   tsEl.textContent=new Date().toLocaleString();
 }
 
@@ -163,6 +106,7 @@ function drawHUD(){
   hud.height=hud.clientHeight*devicePixelRatio;
   const W=hud.width,H=hud.height;
   ctx.clearRect(0,0,W,H);
+
   if(isRecording){
     ctx.beginPath();
     ctx.arc(W-40,H-40,16,0,Math.PI*2);
@@ -177,37 +121,20 @@ function drawHUD(){
 
 /* ================= Fotos ================= */
 function capture(){
-  if(!camReady) return;
-  const c=document.createElement('canvas'); 
-  c.width=vid.videoWidth; 
-  c.height=vid.videoHeight;
-  const x=c.getContext('2d'); 
-  x.drawImage(vid,0,0,c.width,c.height);
-  x.fillStyle="#000"; 
-  x.font="48px system-ui"; 
-  x.fillText(kmidEl.textContent,20,60);
-  x.fillStyle="#000"; 
-  x.font="32px system-ui"; 
-  x.fillText(tsEl.textContent,20,110);
-  const dataUrl = c.toDataURL('image/jpeg',0.8);
-  photoCollection.push(dataUrl);
-
-  const imgEl = document.createElement('img'); 
-  imgEl.src = dataUrl;
-  photoGallery.appendChild(imgEl);
-}
-
-/* ================= Captura automática ================= */
-function startAutoCapture(){
-  setInterval(capture,5000); // a cada 5s
+  if(!vid.videoWidth || !vid.videoHeight) return;
+  const c=document.createElement('canvas'); c.width=vid.videoWidth; c.height=vid.videoHeight;
+  const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height);
+  x.fillStyle="#ff6b35"; x.font="48px system-ui"; x.fillText(kmidEl.textContent,20,60);
+  x.fillStyle="#fff"; x.font="32px system-ui"; x.fillText(tsEl.textContent,20,110);
+  photoCollection.push(c.toDataURL('image/jpeg'));
+  alert("Foto capturada! Total: "+photoCollection.length);
 }
 
 /* ================= Gravação ================= */
 function startRecording(){
-  if(isRecording || !camReady) return;
+  if(isRecording) return;
   overlayCanvas=document.createElement('canvas');
-  overlayCanvas.width=vid.videoWidth; 
-  overlayCanvas.height=vid.videoHeight;
+  overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
   overlayCtx=overlayCanvas.getContext('2d');
   const drawLoop=()=>{
     if(!isRecording) return;
@@ -235,7 +162,7 @@ function stopRecording(){
 }
 
 function downloadVideo(){
-  if(recordedChunks.length===0) return;
+  if(recordedChunks.length===0) return alert("Nenhum vídeo gravado!");
   const blob=new Blob(recordedChunks,{type:'video/webm'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='video_rodovia.webm'; a.click();
@@ -244,10 +171,10 @@ function downloadVideo(){
 
 /* ================= PDF Relatório ================= */
 async function generatePDF(){
-  if(photoCollection.length===0) return;
+  if(photoCollection.length===0) return alert("Nenhuma foto capturada!");
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("Relatório de Rodovia", 14, 20);
+  doc.setFontSize(16); doc.text("Relatório Rodovia", 14, 20);
   let y = 30;
   for(let i=0;i<photoCollection.length;i++){
     const img = new Image();
@@ -271,26 +198,10 @@ async function sendPDFWhatsApp(){
   const pdfURL = URL.createObjectURL(pdfBlob);
   const a=document.createElement('a'); a.href=pdfURL; a.download='relatorio_rodovia.pdf'; a.click();
   photoCollection=[];
-  photoGallery.innerHTML='';
+  alert("Relatório gerado e fotos limpas!");
 }
 
-/* ================= Zoom / Foco ================= */
-document.getElementById('zoomIn').onclick = ()=>{
-  zoomLevel = Math.min(zoomLevel + 0.1, 3);
-  vid.style.transform = `scale(${zoomLevel})`;
-};
-document.getElementById('zoomOut').onclick = ()=>{
-  zoomLevel = Math.max(zoomLevel - 0.1, 1);
-  vid.style.transform = `scale(${zoomLevel})`;
-};
-document.getElementById('focus').onclick = ()=>{
-  alert("Foco manual ativado! (simulação)");
-};
-
-/* ================= Help Banner ================= */
-helpBtn.onclick = ()=>{ helpBanner.style.display = helpBanner.style.display==='none'?'block':'none'; };
-
-/* ================= Eventos principais ================= */
+/* ================= Eventos ================= */
 photoBtn.onclick=capture;
 recBtn.onclick=startRecording;
 stopBtn.onclick=stopRecording;
