@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 
-<title>Inspeção Iluminação Rodovia</title>
+<title>Inspeção Iluminação Rodovia IA</title>
 
 <style>
 
@@ -52,20 +50,14 @@ z-index:10;
 }
 
 button{
-
 width:64px;
 height:64px;
-
 border-radius:50%;
 border:none;
-
 font-size:24px;
 color:white;
-
 background:rgba(0,0,0,.7);
-
 box-shadow:0 4px 10px rgba(0,0,0,.4)
-
 }
 
 #rec{background:#ef4444}
@@ -73,7 +65,6 @@ box-shadow:0 4px 10px rgba(0,0,0,.4)
 #mark{background:#f97316}
 
 </style>
-
 </head>
 
 <body>
@@ -81,7 +72,6 @@ box-shadow:0 4px 10px rgba(0,0,0,.4)
 <div class="app">
 
 <video id="video" autoplay playsinline muted></video>
-
 <canvas id="hud"></canvas>
 
 <div class="controls">
@@ -111,12 +101,11 @@ let kmPoints=[]
 
 let darkAlert=false
 
-/* distância */
+/* distancia */
 
 function hav(a,b,c,d){
 
 const R=6371000
-
 const x=(c-a)*Math.PI/180
 const y=(d-b)*Math.PI/180
 
@@ -126,8 +115,6 @@ Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2
 return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u))
 
 }
-
-/* km */
 
 function fmtKm(v){
 
@@ -143,7 +130,6 @@ return `KM ${K}+${String(m).padStart(3,'0')}`
 async function loadCSVs(){
 
 const idCSV=await fetch("Dados_Completos_Grupo_2_all.csv").then(r=>r.text())
-
 const lines=idCSV.split(/\r?\n/)
 
 for(let i=1;i<lines.length;i++){
@@ -153,9 +139,7 @@ const c=lines[i].split(";")
 if(c.length<3)continue
 
 const id=c[0]
-
 const lat=parseFloat(c[1].replace(",","."))
-
 const lon=parseFloat(c[2].replace(",","."))
 
 if(!isNaN(lat)&&!isNaN(lon))dataset.push({id,lat,lon})
@@ -163,7 +147,6 @@ if(!isNaN(lat)&&!isNaN(lon))dataset.push({id,lat,lon})
 }
 
 const kmCSV=await fetch("SNVBR116SPRJ.csv").then(r=>r.text())
-
 const l2=kmCSV.split(/\r?\n/)
 
 for(let i=1;i<l2.length;i++){
@@ -173,9 +156,7 @@ const c=l2[i].split(";")
 if(c.length<3)continue
 
 const km=parseFloat(c[0].replace(",","."))
-
 const lat=parseFloat(c[1].replace(",","."))
-
 const lon=parseFloat(c[2].replace(",","."))
 
 if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))kmPoints.push({km,lat,lon})
@@ -189,10 +170,8 @@ if(!isNaN(km)&&!isNaN(lat)&&!isNaN(lon))kmPoints.push({km,lat,lon})
 function nearestIDs(lat,lon){
 
 const arr=dataset.map(p=>({
-
 id:p.id,
 d:hav(lat,lon,p.lat,p.lon)
-
 }))
 
 arr.sort((a,b)=>a.d-b.d)
@@ -211,10 +190,8 @@ for(const p of kmPoints){
 const d=hav(lat,lon,p.lat,p.lon)
 
 if(d<bd){
-
 bd=d
 best=p
-
 }
 
 }
@@ -223,23 +200,19 @@ return best
 
 }
 
-/* gps */
+/* GPS */
 
 navigator.geolocation.watchPosition(p=>{
-
 gps=p.coords
-
 })
 
-/* câmera */
+/* camera */
 
 async function startCamera(){
 
 const stream=await navigator.mediaDevices.getUserMedia({
-
 video:{facingMode:"environment"},
 audio:false
-
 })
 
 video.srcObject=stream
@@ -263,9 +236,7 @@ const img=detectCtx.getImageData(0,0,detectCanvas.width,detectCanvas.height*0.4)
 let sum=0
 
 for(let i=0;i<img.data.length;i+=4){
-
 sum+=img.data[i]
-
 }
 
 const brightness=sum/(img.data.length/4)
@@ -289,7 +260,6 @@ ctx.clearRect(0,0,W,H)
 const band=H*0.16
 
 ctx.fillStyle="rgba(0,0,0,.65)"
-
 ctx.fillRect(0,H-band,W,band)
 
 let kmText="KM --"
@@ -306,23 +276,17 @@ ids=nearestIDs(gps.latitude,gps.longitude)
 }
 
 ctx.fillStyle="#ff6b35"
-
 ctx.font=`900 ${H*0.05}px Arial`
-
 ctx.fillText(kmText,20,H-band+40)
 
 ctx.fillStyle="#fff"
-
 ctx.font=`700 ${H*0.03}px Arial`
-
 ctx.fillText(new Date().toLocaleString(),20,H-20)
 
 ctx.textAlign="right"
 
 ids.forEach((e,i)=>{
-
 ctx.fillText(e.id,W-20,H-band+30+i*24)
-
 })
 
 if(darkAlert){
@@ -359,17 +323,13 @@ c.height=video.videoHeight
 const x=c.getContext("2d")
 
 x.drawImage(video,0,0)
-
 x.drawImage(hud,0,0,c.width,c.height)
 
 const url=c.toDataURL("image/jpeg")
 
 const a=document.createElement("a")
-
 a.href=url
-
 a.download="foto_inspecao.jpg"
-
 a.click()
 
 }
@@ -405,9 +365,7 @@ const stream=canvas.captureStream(30)
 recorder=new MediaRecorder(stream)
 
 recorder.ondataavailable=e=>{
-
 if(e.data.size>0)chunks.push(e.data)
-
 }
 
 recorder.onstop=()=>{
@@ -417,11 +375,8 @@ const blob=new Blob(chunks,{type:"video/webm"})
 const url=URL.createObjectURL(blob)
 
 const a=document.createElement("a")
-
 a.href=url
-
 a.download="inspecao_iluminacao.webm"
-
 a.click()
 
 }
@@ -435,9 +390,7 @@ recording=true
 function stopRecording(){
 
 if(!recording)return
-
 recorder.stop()
-
 recording=false
 
 }
@@ -454,9 +407,7 @@ mark.onclick=()=>navigator.vibrate?.(200)
 async function boot(){
 
 await loadCSVs()
-
 await startCamera()
-
 drawHUD()
 
 }
