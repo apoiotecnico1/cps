@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Inspeção Noturna Inteligente</title>
 <style>
-  :root{
-    --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
-    --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
-  }
-  body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
-  .app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-  video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
-  canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
-  .controls{position:absolute;bottom:16px;width:100%;display:flex;justify-content:center;gap:8px;z-index:10;flex-wrap:wrap;}
-  button{width:60px;height:60px;border-radius:50%;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
-  #rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #pdfSend{width:auto;padding:0 12px;font-size:16px;border-radius:12px;}
-  #kmid{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:18px;font-weight:900;text-shadow:0 0 4px #000;}
-  #timestamp{position:absolute;top:50px;left:16px;color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
+:root{
+  --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
+  --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
+}
+body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
+.app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
+canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
+button{flex:1 1 60px;height:60px;border-radius:12px;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
+#rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #pdfSend{background:#2563eb;}
+#kmid{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:18px;font-weight:900;text-shadow:0 0 4px #000;}
+#timestamp{position:absolute;top:50px;left:16px;color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
 </style>
 </head>
 <body>
@@ -27,10 +27,10 @@
   <div id="kmid">KM — | ID —</div>
   <div id="timestamp">Data/Hora</div>
   <div class="controls">
-    <button id="photo">📷</button>
-    <button id="rec">⏺</button>
-    <button id="stop">⏹</button>
-    <button id="pdfSend">📄 WhatsApp</button>
+    <button id="photo">📷 Foto</button>
+    <button id="rec">⏺ Gravar</button>
+    <button id="stop">⏹ Parar</button>
+    <button id="pdfSend">📄 PDF/WhatsApp</button>
   </div>
 </div>
 
@@ -73,8 +73,8 @@ async function startCamera(){
 
 /* ================= HUD ================= */
 function updateHUDInfo(){
-  const km="KM 12+345"; // Simulação, aqui você integraria o cálculo real
-  const id="ID_001";     // Simulação, pegar do dataset real
+  const km="KM 12+345"; // Simulação, integrar cálculo real
+  const id="ID_001";    // Simulação, pegar do dataset real
   const ts=new Date().toLocaleString();
   kmidEl.textContent=`${km} | ${id}`;
   tsEl.textContent=ts;
@@ -86,7 +86,6 @@ function drawHUD(){
   const W=hud.width,H=hud.height;
   ctx.clearRect(0,0,W,H);
 
-  // Indicador de gravação
   if(isRecording){
     ctx.beginPath();
     ctx.arc(W-40,H-40,16,0,Math.PI*2);
@@ -104,7 +103,6 @@ function capture(){
   if(!vid.videoWidth || !vid.videoHeight) return;
   const c=document.createElement('canvas'); c.width=vid.videoWidth; c.height=vid.videoHeight;
   const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height);
-  // Inserir KM, ID e Timestamp na foto
   x.fillStyle="#ff6b35"; x.font="48px system-ui"; x.fillText(kmidEl.textContent,20,60);
   x.fillStyle="#fff"; x.font="32px system-ui"; x.fillText(tsEl.textContent,20,110);
   photoCollection.push(c.toDataURL('image/jpeg'));
@@ -134,12 +132,14 @@ function startRecording(){
   mediaRecorder.start(10000);
   isRecording=true;
 }
+
 function stopRecording(){
   if(!isRecording) return;
   mediaRecorder.stop();
   isRecording=false;
-  setTimeout(()=>downloadVideo(),500);
+  setTimeout(downloadVideo,500);
 }
+
 function downloadVideo(){
   if(recordedChunks.length===0) return alert("Nenhum vídeo gravado!");
   const blob=new Blob(recordedChunks,{type:'video/webm'});
@@ -154,13 +154,22 @@ async function generatePDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(16); doc.text("Relatório de Inspeção Noturna", 14, 20);
-  photoCollection.forEach((p,i)=>{
-    const y=30 + (i*60);
+  let y = 30;
+  for(let i=0;i<photoCollection.length;i++){
+    const img = new Image();
+    img.src = photoCollection[i];
+    await new Promise(r=>{img.onload=r;});
+    const imgWidth = 180;
+    const ratio = img.width / img.height;
+    const imgHeight = imgWidth / ratio;
+    if(y + imgHeight > 280){ doc.addPage(); y=20; }
     doc.setFontSize(12); doc.text(`Foto ${i+1} - ${new Date().toLocaleString()}`,14,y-2);
-    doc.addImage(p,'JPEG',14,y,180,50);
-  });
+    doc.addImage(img, 'JPEG', 14, y, imgWidth, imgHeight);
+    y += imgHeight + 10;
+  }
   return doc;
 }
+
 async function sendPDFWhatsApp(){
   const doc = await generatePDF();
   if(!doc) return;
