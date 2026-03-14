@@ -14,10 +14,17 @@ body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:syste
 video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
 canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
-button{flex:1 1 60px;height:60px;border-radius:12px;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
-#rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #pdfSend{background:#2563eb;}
-#hudInfo{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:16px;font-weight:900;text-shadow:0 0 4px #000;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;}
-#hudInfo div{margin-bottom:4px;}
+button{flex:1 1 60px;height:60px;border-radius:12px;border:none;font-size:22px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
+#rec{background:#ef4444;} 
+#stop{background:#374151;} 
+#photo{background:#22c55e;} 
+#pdfSend{background:#2563eb;}
+#hudInfo{
+  position:absolute;top:16px;left:16px;color:var(--accent);font-size:16px;font-weight:900;text-shadow:0 0 4px #000;
+  background:rgba(0,0,0,0.5);padding:8px;border-radius:12px;
+  display:flex;flex-direction:column;gap:4px;
+}
+#hudInfo div{margin:0;}
 #timestamp{color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
 </style>
 </head>
