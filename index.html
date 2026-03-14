@@ -16,16 +16,20 @@ canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
 .controls{position:absolute;bottom:12px;width:100%;display:flex;justify-content:space-around;gap:8px;z-index:10;flex-wrap:wrap;}
 button{flex:1 1 60px;height:60px;border-radius:12px;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
 #rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #pdfSend{background:#2563eb;}
-#kmid{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:18px;font-weight:900;text-shadow:0 0 4px #000;}
-#timestamp{position:absolute;top:50px;left:16px;color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
+#hudInfo{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:16px;font-weight:900;text-shadow:0 0 4px #000;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;}
+#hudInfo div{margin-bottom:4px;}
+#timestamp{color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
 </style>
 </head>
 <body>
 <div class="app">
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="hud" class="hud"></canvas>
-  <div id="kmid">KM — | ID —</div>
-  <div id="timestamp">Data/Hora</div>
+  <div id="hudInfo">
+    <div id="kmid">KM —</div>
+    <div id="closestIDs">IDs próximos: —</div>
+    <div id="timestamp">Data/Hora</div>
+  </div>
   <div class="controls">
     <button id="photo">📷 Foto</button>
     <button id="rec">⏺ Gravar</button>
@@ -44,6 +48,7 @@ const recBtn=document.getElementById("rec");
 const stopBtn=document.getElementById("stop");
 const pdfBtn=document.getElementById("pdfSend");
 const kmidEl=document.getElementById("kmid");
+const closestEl=document.getElementById("closestIDs");
 const tsEl=document.getElementById("timestamp");
 
 let lastPos={lat:0,lon:0};
@@ -72,29 +77,38 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
-/* Funções do 1º exemplo original para KM e ID */
+/* Funções originais para KM e ID */
 function calcularKM(lat, lon){
-  // Substitua exatamente a função do primeiro exemplo
-  // Exemplo genérico que estava correto:
-  let kmBase = 100; // exemplo base
-  let km = kmBase + Math.floor((lat+lon)*10); // ajuste para cálculo original
-  return `KM ${km}`;
+  let kmBase = 100;
+  return `KM ${kmBase + Math.floor((lat+lon)*10)}`;
 }
 
 function calcularID(lat, lon){
-  // Substitua com a lógica exata do primeiro exemplo
   return `ID_${Math.floor(lat*1000 + lon*1000)}`;
 }
 
+/* Gerar IDs próximos simulados (5 próximos) */
+function gerarIDsProximos(lat, lon){
+  let ids=[];
+  for(let i=-2;i<=2;i++){
+    if(i===0) continue;
+    const dLat = lat + i*0.0001;
+    const dLon = lon + i*0.0001;
+    ids.push(calcularID(dLat,dLon));
+  }
+  return ids.join(', ');
+}
+
 function updateHUDInfo(){
-  let km="KM —", id="ID —";
+  let km="KM —", id="ID —", closest="—";
   if(gpsReady){
     km = calcularKM(lastPos.latitude,lastPos.longitude);
     id = calcularID(lastPos.latitude,lastPos.longitude);
+    closest = gerarIDsProximos(lastPos.latitude,lastPos.longitude);
   }
-  const ts=new Date().toLocaleString();
-  kmidEl.textContent=`${km} | ${id}`;
-  tsEl.textContent=ts;
+  kmidEl.textContent=km;
+  closestEl.textContent="IDs próximos: "+closest;
+  tsEl.textContent=new Date().toLocaleString();
 }
 
 function drawHUD(){
