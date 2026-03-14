@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vídeo Auditoria Rodovia</title>
+<title>Inspeção Noturna Inteligente</title>
 <style>
 :root{
   --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
@@ -61,7 +61,7 @@ let overlayCanvas, overlayCtx;
 let photoCollection = [];
 let csvData = [];
 
-/* ==================== Carregar CSV de pontos ==================== */
+/* ================= CSV de Pontos ================= */
 async function loadCSV(url){
   const res = await fetch(url);
   const text = await res.text();
@@ -71,17 +71,14 @@ async function loadCSV(url){
   });
 }
 
-/* ==================== Funções de KM e ID ==================== */
+/* ================= KM e ID ================= */
 function getClosestPoint(lat, lon){
   if(csvData.length===0) return {km:"KM —", id:"ID —"};
   let minDist = Infinity;
   let closest = {km:"KM —", id:"ID —"};
   csvData.forEach(p=>{
     const d = Math.hypot(lat-p.lat, lon-p.lon);
-    if(d < minDist){
-      minDist = d;
-      closest = {km:p.km, id:p.id};
-    }
+    if(d < minDist){ minDist = d; closest = {km:p.km, id:p.id}; }
   });
   return closest;
 }
@@ -93,12 +90,12 @@ function getNearestIDs(lat, lon){
   return sorted.slice(1,6).map(p=>p.id).join(', ');
 }
 
-/* ==================== GPS ==================== */
+/* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{
   lastPos=p.coords; gpsReady=true; updateHUDInfo();
 }, ()=>{}, {enableHighAccuracy:true});
 
-/* ==================== Câmera ==================== */
+/* ================= Câmera ================= */
 async function startCamera(){
   try{
     const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
@@ -108,7 +105,7 @@ async function startCamera(){
   }catch(e){ console.error(e); camReady=false; }
 }
 
-/* ==================== HUD ==================== */
+/* ================= HUD ================= */
 function updateHUDInfo(){
   let km="KM —", id="ID —", closest="—";
   if(gpsReady){
@@ -136,7 +133,7 @@ function drawHUD(){
   requestAnimationFrame(drawHUD);
 }
 
-/* ==================== Fotos ==================== */
+/* ================= Fotos ================= */
 function capturePhoto(){
   if(!vid.videoWidth || !vid.videoHeight) return;
   const c = document.createElement('canvas');
@@ -149,13 +146,13 @@ function capturePhoto(){
   alert("Foto capturada! Total: " + photoCollection.length);
 }
 
-/* ==================== Gravação ==================== */
+/* ================= Gravação ================= */
 function startRecording(){
   if(isRecording) return;
   overlayCanvas = document.createElement('canvas');
   overlayCanvas.width = vid.videoWidth; overlayCanvas.height = vid.videoHeight;
   overlayCtx = overlayCanvas.getContext('2d');
-  
+
   function drawLoop(){
     if(!isRecording) return;
     overlayCtx.drawImage(vid,0,0,overlayCanvas.width, overlayCanvas.height);
@@ -166,7 +163,7 @@ function startRecording(){
     requestAnimationFrame(drawLoop);
   }
   drawLoop();
-  
+
   const stream = overlayCanvas.captureStream(24);
   mediaRecorder = new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
   recordedChunks = [];
@@ -189,12 +186,12 @@ function downloadVideo(){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
-/* ==================== PDF Relatório ==================== */
+/* ================= PDF Relatório ================= */
 async function generatePDF(){
   if(photoCollection.length===0) return alert("Nenhuma foto capturada!");
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("Relatório de Vídeo Auditoria", 14, 20);
+  doc.setFontSize(16); doc.text("Relatório de Inspeção Noturna", 14, 20);
   let y = 30;
   for(let i=0;i<photoCollection.length;i++){
     const img = new Image(); img.src = photoCollection[i];
@@ -219,15 +216,15 @@ async function sendPDFWhatsApp(){
   photoCollection=[]; alert("Relatório gerado e fotos limpas!");
 }
 
-/* ==================== Eventos ==================== */
+/* ================= Eventos ================= */
 photoBtn.onclick = capturePhoto;
 recBtn.onclick = startRecording;
 stopBtn.onclick = stopRecording;
 pdfBtn.onclick = sendPDFWhatsApp;
 
-/* ==================== Inicialização ==================== */
+/* ================= Inicialização ================= */
 async function boot(){
-  await loadCSV('pontos.csv'); // <-- CSV com km,id,lat,lon
+  await loadCSV('pontos.csv'); // CSV com km,id,lat,lon
   await startCamera();
   drawHUD();
   updateHUDInfo();
