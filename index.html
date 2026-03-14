@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Inspeção Noturna Rodovia - HUD IA</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inspeção Noturna Inteligente</title>
 <style>
   :root{
     --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
@@ -50,21 +50,12 @@ let mediaRecorder=null;
 let recordedChunks=[];
 let currentStream=null;
 let currentTrack=null;
-let currentCap=null;
-let currentZoom=1;
-let pinchBase=null;
+let overlayCanvas, overlayCtx;
 
-const CELL=0.005;
-
-function parsePt(v){ return v==null?NaN:Number(String(v).trim().replace(/\./g,'').replace(',','.')); }
-function hav(a,b,c,d){const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u)); }
-function fmtKm(v){ let K=Math.floor(v),m=Math.round((v-K)*1000); return `KM ${K}+${String(m).padStart(3,'0')}`; }
-function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
-
-/* ================= CSVs ================= */
+/* ================= CSV ================= */
 async function loadIDs(){
   const txt=await fetch('./Dados_Completos_Grupo_2_all.csv').then(r=>r.text());
-  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+  const lines=txt.split(/\r?\n/).map(l=>l.replace(/^\uFEFF/,'').trim()).filter(Boolean);
   const head=lines[0].split(';').map(h=>h.toLowerCase());
   const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('lon'));
   const iLat=head.findIndex(h=>h.includes('lat'));
@@ -72,38 +63,24 @@ async function loadIDs(){
   dataset=[];
   for(let i=1;i<lines.length;i++){
     const c=lines[i].split(';');
-    const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
-    if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const id=String(c[iId]||'').trim(), lat=parseFloat(c[iLat]), lon=parseFloat(c[iLon]);
+    if(!id || !isFinite(lat) || !isFinite(lon)) continue;
     dataset.push({id,lat,lon});
   }
 }
 async function loadKM(){
   const txt=await fetch('./SNVBR116SPRJ.csv').then(r=>r.text());
-  const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
-  kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
-  function pickTrio(c){
-    const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
-    return Number.isFinite(t1.km)?t1:null;
-  }
-  for(let i=0;i<lines.length;i++){
-    const c=lines[i].split(';');
-    const t=pickTrio(c); if(!t) continue;
-    if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else{ const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon); if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; } }
+  const lines=txt.split(/\r?\n/).map(l=>l.replace(/^\uFEFF/,'').trim()).filter(Boolean);
+  kmPoints=[];
+  let last=null;
+  for(const l of lines){
+    const c=l.split(';');
+    const km=parseFloat(c[0]), lat=parseFloat(c[1]), lon=parseFloat(c[2]);
+    if(!isFinite(km) || !isFinite(lat) || !isFinite(lon)) continue;
+    if(!last || Math.hypot(lat-last.lat, lon-last.lon) > 0.005) kmPoints.push({km,lat,lon}), last={km,lat,lon};
   }
 }
 async function loadCSVs(){ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }
-
-/* ================= Vizinhança ================= */
-function nearestN(lat,lon,n=5){
-  const arr=dataset.map(p=>({id:p.id,d:hav(lat,lon,p.lat,p.lon)})).sort((a,b)=>a.d-b.d);
-  return arr.slice(0,n);
-}
-function nearestKM(lat,lon){
-  if(!kmPoints.length) return null;
-  let best=null,bd=Infinity;
-  for(const p of kmPoints){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;bd=d;} }
-  return best;
-}
 
 /* ================= GPS ================= */
 navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; });
@@ -112,21 +89,44 @@ navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; });
 async function startCamera(){
   try{
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
-    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
-    currentStream=st; vid.srcObject=st; await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
-    currentTrack=st.getVideoTracks()[0]; currentCap=currentTrack.getCapabilities?.();
+    currentStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    vid.srcObject=currentStream;
+    await new Promise(r=>{ if(vid.readyState>=1) r(); else vid.onloadedmetadata=r; });
+    currentTrack=currentStream.getVideoTracks()[0];
     camReady=true;
   }catch(e){ camReady=false; console.error(e); }
 }
 
 /* ================= HUD ================= */
+function fmtKm(v){ let K=Math.floor(v),m=Math.round((v-K)*1000); return `KM ${K}+${String(m).padStart(3,'0')}`; }
+function hav(a,b,c,d){const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));}
+function nearestN(lat,lon,n=5){return dataset.map(p=>({id:p.id,d:hav(lat,lon,p.lat,p.lon)})).sort((a,b)=>a.d-b.d).slice(0,n);}
+function nearestKM(lat,lon){if(!kmPoints.length) return null; let best=null,bd=Infinity; for(const p of kmPoints){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;bd=d;} } return best;}
+
+/* ================= IA - Lâmpadas apagadas ================= */
+function detectDarkAreas(){
+  if(!vid.videoWidth || !vid.videoHeight) return [];
+  const tmp=document.createElement('canvas'); tmp.width=vid.videoWidth; tmp.height=vid.videoHeight;
+  const ctx2=tmp.getContext('2d'); ctx2.drawImage(vid,0,0,tmp.width,tmp.height);
+  const data=ctx2.getImageData(0,0,tmp.width,tmp.height).data;
+  const dark=[]; const step=16;
+  for(let y=0;y<tmp.height;y+=step){
+    for(let x=0;x<tmp.width;x+=step){
+      const i=(y*tmp.width+x)*4;
+      const brightness=(data[i]+data[i+1]+data[i+2])/3;
+      if(brightness<40) dark.push({x,y});
+    }
+  }
+  return dark;
+}
+
+/* ================= HUD Draw ================= */
 function drawHUD(){
   hud.width=hud.clientWidth*devicePixelRatio;
   hud.height=hud.clientHeight*devicePixelRatio;
   const W=hud.width,H=hud.height;
   ctx.clearRect(0,0,W,H);
 
-  // banda inferior
   const band=Math.max(144*devicePixelRatio,H*0.16);
   ctx.fillStyle='rgba(0,0,0,.58)'; ctx.fillRect(0,H-band,W,band);
 
@@ -144,7 +144,12 @@ function drawHUD(){
   ctx.fillStyle='#fff'; ctx.font=`700 ${H*0.032}px Arial`; ctx.textAlign='left';
   ctx.fillText(new Date().toLocaleString(),24*devicePixelRatio,H-Math.round(band*0.22));
 
-  // gravação
+  // IA: pontos escuros
+  const dark=detectDarkAreas();
+  ctx.fillStyle='rgba(239,68,68,0.6)';
+  dark.forEach(p=>ctx.fillRect(p.x*W/vid.videoWidth,p.y*H/vid.videoHeight,12,12));
+
+  // REC
   if(isRecording){ const r=10*devicePixelRatio; ctx.beginPath(); ctx.arc(W-24*devicePixelRatio-r,24*devicePixelRatio+r,r,0,Math.PI*2); ctx.fillStyle='#ef4444'; ctx.fill(); ctx.font=`700 ${H*0.024}px Arial`; ctx.fillText('REC', W-44*devicePixelRatio,H*0.05*H); }
 
   requestAnimationFrame(drawHUD);
@@ -160,7 +165,6 @@ function capture(){
 }
 
 /* ================= Gravação ================= */
-let overlayCanvas, overlayCtx;
 function startRecording(){
   if(isRecording) return;
   overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
@@ -179,7 +183,6 @@ photoBtn.onclick=capture; recBtn.onclick=startRecording; stopBtn.onclick=stopRec
 /* ================= Inicialização ================= */
 async function boot(){ await loadCSVs(); await startCamera(); drawHUD(); }
 boot();
-
 </script>
 </body>
 </html>
