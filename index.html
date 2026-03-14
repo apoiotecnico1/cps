@@ -9,26 +9,27 @@
     --bg:#0b1020; --surface:#101830; --fg:#e6ebff;
     --accent:#ff6b35; --ok:#22c55e; --err:#ef4444;
   }
-  body, html{margin:0;padding:0;height:100%;background:#000;font-family:system-ui;}
+  body, html{margin:0;padding:0;height:100%;background:var(--bg);font-family:system-ui;}
   .app{position:relative;width:100%;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;}
   video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;}
   canvas.hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
   .controls{position:absolute;bottom:16px;width:100%;display:flex;justify-content:center;gap:8px;z-index:10;flex-wrap:wrap;}
   button{width:60px;height:60px;border-radius:50%;border:none;font-size:24px;color:white;background:rgba(0,0,0,.7);box-shadow:0 4px 10px rgba(0,0,0,.4);}
-  #rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #mark{background:#f97316;}
-  #download, #pdfSend{width:auto;padding:0 12px;font-size:16px;border-radius:12px;}
+  #rec{background:#ef4444;} #stop{background:#374151;} #photo{background:#22c55e;} #pdfSend{width:auto;padding:0 12px;font-size:16px;border-radius:12px;}
+  #kmid{position:absolute;top:16px;left:16px;color:#ff6b35;font-size:18px;font-weight:900;text-shadow:0 0 4px #000;}
+  #timestamp{position:absolute;top:50px;left:16px;color:#fff;font-size:14px;text-shadow:0 0 4px #000;}
 </style>
 </head>
 <body>
 <div class="app">
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="hud" class="hud"></canvas>
+  <div id="kmid">KM — | ID —</div>
+  <div id="timestamp">Data/Hora</div>
   <div class="controls">
     <button id="photo">📷</button>
     <button id="rec">⏺</button>
     <button id="stop">⏹</button>
-    <button id="mark">⚠</button>
-    <button id="download">⬇ Vídeo</button>
     <button id="pdfSend">📄 WhatsApp</button>
   </div>
 </div>
@@ -41,11 +42,11 @@ const ctx=hud.getContext("2d");
 const photoBtn=document.getElementById("photo");
 const recBtn=document.getElementById("rec");
 const stopBtn=document.getElementById("stop");
-const markBtn=document.getElementById("mark");
-const downloadBtn=document.getElementById("download");
 const pdfBtn=document.getElementById("pdfSend");
+const kmidEl=document.getElementById("kmid");
+const tsEl=document.getElementById("timestamp");
 
-let lastPos=null;
+let lastPos={lat:0,lon:0,acc:0};
 let gpsReady=false;
 let camReady=false;
 let isRecording=false;
@@ -55,7 +56,10 @@ let overlayCanvas, overlayCtx;
 let photoCollection=[];
 
 /* ================= GPS ================= */
-navigator.geolocation.watchPosition(p=>{ lastPos=p.coords; gpsReady=true; });
+navigator.geolocation.watchPosition(p=>{
+  lastPos=p.coords; gpsReady=true;
+  updateHUDInfo();
+},()=>{}, {enableHighAccuracy:true});
 
 /* ================= Câmera ================= */
 async function startCamera(){
@@ -68,20 +72,30 @@ async function startCamera(){
 }
 
 /* ================= HUD ================= */
+function updateHUDInfo(){
+  const km="KM 12+345"; // Simulação, aqui você integraria o cálculo real
+  const id="ID_001";     // Simulação, pegar do dataset real
+  const ts=new Date().toLocaleString();
+  kmidEl.textContent=`${km} | ${id}`;
+  tsEl.textContent=ts;
+}
+
 function drawHUD(){
   hud.width=hud.clientWidth*devicePixelRatio;
   hud.height=hud.clientHeight*devicePixelRatio;
   const W=hud.width,H=hud.height;
   ctx.clearRect(0,0,W,H);
 
-  // Overlay de aviso de gravação
+  // Indicador de gravação
   if(isRecording){
     ctx.beginPath();
     ctx.arc(W-40,H-40,16,0,Math.PI*2);
     ctx.fillStyle='#ef4444';
     ctx.fill();
+    ctx.font=`16px system-ui`;
+    ctx.fillStyle='#fff';
+    ctx.fillText('REC', W-60,H-35);
   }
-
   requestAnimationFrame(drawHUD);
 }
 
@@ -89,9 +103,11 @@ function drawHUD(){
 function capture(){
   if(!vid.videoWidth || !vid.videoHeight) return;
   const c=document.createElement('canvas'); c.width=vid.videoWidth; c.height=vid.videoHeight;
-  const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height); x.drawImage(hud,0,0,c.width,c.height);
-  const url=c.toDataURL('image/jpeg');
-  photoCollection.push(url);
+  const x=c.getContext('2d'); x.drawImage(vid,0,0,c.width,c.height);
+  // Inserir KM, ID e Timestamp na foto
+  x.fillStyle="#ff6b35"; x.font="48px system-ui"; x.fillText(kmidEl.textContent,20,60);
+  x.fillStyle="#fff"; x.font="32px system-ui"; x.fillText(tsEl.textContent,20,110);
+  photoCollection.push(c.toDataURL('image/jpeg'));
   alert("Foto capturada! Total: "+photoCollection.length);
 }
 
@@ -101,7 +117,16 @@ function startRecording(){
   overlayCanvas=document.createElement('canvas');
   overlayCanvas.width=vid.videoWidth; overlayCanvas.height=vid.videoHeight;
   overlayCtx=overlayCanvas.getContext('2d');
-  const drawLoop=()=>{ if(!isRecording) return; overlayCtx.drawImage(vid,0,0,overlayCanvas.width,overlayCanvas.height); overlayCtx.drawImage(hud,0,0,overlayCanvas.width,overlayCanvas.height); requestAnimationFrame(drawLoop); }; drawLoop();
+  const drawLoop=()=>{
+    if(!isRecording) return;
+    overlayCtx.drawImage(vid,0,0,overlayCanvas.width,overlayCanvas.height);
+    overlayCtx.fillStyle="#ff6b35"; overlayCtx.font="48px system-ui";
+    overlayCtx.fillText(kmidEl.textContent,20,60);
+    overlayCtx.fillStyle="#fff"; overlayCtx.font="32px system-ui";
+    overlayCtx.fillText(tsEl.textContent,20,110);
+    requestAnimationFrame(drawLoop);
+  };
+  drawLoop();
   const stream=overlayCanvas.captureStream(24);
   mediaRecorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8,opus'});
   recordedChunks=[];
@@ -110,7 +135,10 @@ function startRecording(){
   isRecording=true;
 }
 function stopRecording(){
-  if(!isRecording) return; mediaRecorder.stop(); isRecording=false;
+  if(!isRecording) return;
+  mediaRecorder.stop();
+  isRecording=false;
+  setTimeout(()=>downloadVideo(),500);
 }
 function downloadVideo(){
   if(recordedChunks.length===0) return alert("Nenhum vídeo gravado!");
@@ -133,29 +161,24 @@ async function generatePDF(){
   });
   return doc;
 }
-
 async function sendPDFWhatsApp(){
   const doc = await generatePDF();
   if(!doc) return;
   const pdfBlob = doc.output('blob');
   const pdfURL = URL.createObjectURL(pdfBlob);
-  // Baixar PDF automaticamente
   const a=document.createElement('a'); a.href=pdfURL; a.download='relatorio_inspecao.pdf'; a.click();
-  // Limpar lista de fotos
   photoCollection=[];
-  alert("Relatório gerado e fotos limpas. Pronto para próximo ciclo.");
+  alert("Relatório gerado e fotos limpas!");
 }
 
 /* ================= Eventos ================= */
 photoBtn.onclick=capture;
 recBtn.onclick=startRecording;
 stopBtn.onclick=stopRecording;
-downloadBtn.onclick=downloadVideo;
 pdfBtn.onclick=sendPDFWhatsApp;
-markBtn.onclick=()=>navigator.vibrate?.(200);
 
 /* ================= Inicialização ================= */
-async function boot(){ await startCamera(); drawHUD(); }
+async function boot(){ await startCamera(); drawHUD(); updateHUDInfo(); setInterval(updateHUDInfo,1000);}
 boot();
 </script>
 </body>
