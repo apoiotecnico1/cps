@@ -8,17 +8,12 @@
 <style>
   /* ======= Tema neutro ======= */
   :root{
-    --bg:#0d1117;            /* fundo principal (neutro escuro) */
-    --bg2:#0f141c;
-    --surface:#0f1726ee;     /* cartão (glass leve) */
-    --border:#1f2a3b;        /* borda neutra */
-    --fg:#e6edf3;            /* texto base */
-    --muted:#a9b1bb;         /* texto secundário */
+    --bg:#0d1117; --bg2:#0f141c;
+    --surface:#0f1726ee; --border:#1f2a3b;
+    --fg:#e6edf3; --muted:#a9b1bb;
 
-    --btn:#1e293b;           /* botão padrão */
-    --btn-border:#2a384d;
-
-    --wa:#22c35e;            /* verde WhatsApp */
+    --btn:#1e293b; --btn-border:#2a384d;
+    --wa:#22c35e;
 
     /* Câmera menor (~38% do viewport) */
     --camH: 38vh;
@@ -115,7 +110,7 @@
     font-weight:900; font-size:.95rem; color:#ffffff; box-shadow:0 4px 12px rgba(0,0,0,.25);
   }
 
-  /* Ações – SOMENTE WhatsApp */
+  /* Ações */
   .row{display:flex;gap:8px;flex-wrap:wrap}
   button{
     flex:1 1 200px; padding:12px 14px; font-size:.98rem; border:0; border-radius:10px; cursor:pointer;
@@ -125,8 +120,22 @@
   button:hover{ filter:brightness(1.06) }
   button:active{ transform: translateY(1px) }
   .btn-wa{ background: linear-gradient(180deg, #30d370, var(--wa)); color:#072b16; border-color:#1f7a44 }
+  .btn-warn{ background: linear-gradient(180deg, #f1ba4b, #d39c30); color:#291f07; border-color:#7a5a12 }
+  .btn-danger{ background: linear-gradient(180deg, #e06060, #c44444); color:#fff; border-color:#7a2a2a }
+  .btn-primary{ background: linear-gradient(180deg, #2a3a55, #1f2a3b); color:#e6edf3; border-color:#2a384d }
   button:disabled{opacity:.55;cursor:not-allowed; filter:grayscale(.2)}
   @media (max-width:420px){ button{flex:1 1 160px;font-size:.95rem} }
+
+  /* "Fotos por página no relatório" */
+  .btn-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  label.ppp{
+    display:flex; align-items:center; gap:8px; border:1px solid var(--border);
+    background: linear-gradient(180deg, #0c1431, #09102a);
+    padding:8px 10px; border-radius:10px; font-weight:800; color:#dfe7ff; font-size:.9rem
+  }
+  label.ppp select{
+    margin:0; padding:6px 8px; border-radius:8px; border:1px solid #243053; background:#0a122a; color:#dfe7ff
+  }
 
   /* Galeria */
   #foto{width:100%;display:block;border:1px solid #1e2a3b;border-radius:10px;margin-top:8px; box-shadow: 0 6px 16px rgba(0,0,0,.28)}
@@ -136,14 +145,20 @@
   .meta{padding:6px 8px;font-size:.78rem;color:#cdd6df}
 
   /* Controles recolhíveis */
-  details.controls>summary{ color:#d3dae2 }
+  details.controls>summary{ color:#d3dae2; cursor:pointer }
   details.controls[open]>summary{ color:#c2cbd5 }
+  .ctrlGrid{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:8px}
+  select, input[type=range], button.small{
+    border-radius:10px; border:1px solid var(--border);
+    background:#0c1431; color:#e7edff; font-weight:800; padding:8px 10px;
+  }
+  button.small{font-size:.9rem}
   .ctrlGrid .group{
     padding:8px; border:1px dashed #243044; border-radius:8px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;
     background:#0c1422;
   }
   .ctrlGrid label.inline{ display:flex; gap:6px; align-items:center }
-  .ctrlGrid input[type=text]{ padding:8px 10px; border:1px solid #233046; border-radius:8px; background:#0a1220; color:#dfe7ff; min-width:220px }
+  .ctrlGrid input[type=text]{ padding:8px 10px; border:1px solid #233046; border-radius:8px; background:#0a1220; color:#dfe7ff; min-width:200px }
   small.hint{display:block;color:#9aa5af;margin-top:6px}
 </style>
 </head>
@@ -159,7 +174,7 @@
 
 <!-- CONTROLES (com itens adicionais do relatório) -->
 <div class="card">
-  <details class="controls" open>
+  <details class="controls">
     <summary>Controles (toque para abrir)</summary>
     <div class="ctrlGrid">
       <label>🎥 Câmera:
@@ -176,7 +191,7 @@
 
       <!-- ITENS ADICIONAIS NO RELATÓRIO -->
       <div class="group" style="flex:1 1 100%; margin-top:4px">
-        <strong style="min-width:180px">Itens adicionais do relatório:</strong>
+        <strong style="min-width:160px">Itens adicionais do relatório:</strong>
         <label class="inline">ID:
           <input type="text" id="relId" placeholder="ID do Relatório">
         </label>
@@ -219,14 +234,37 @@
   </div>
 </div>
 
-<!-- AÇÕES – SOMENTE WHATSAPP -->
+<!-- AÇÕES – todos operacionais -->
 <div class="card">
   <div class="row">
+    <button id="btnAutoCapture" class="btn-warn">🎬 Captura Auto</button>
+    <button id="btnVideoRecord" class="btn-danger">⏺️ Gravar Vídeo</button>
+
+    <div class="btn-group">
+      <button id="btnPdf" class="btn-primary" disabled>📄 Gerar PDF</button>
+      <label class="ppp">
+        Fotos por página no relatório:
+        <select id="pppSel">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="4">4</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+    </div>
+
     <button id="btnSharePdf" class="btn-wa" disabled>Enviar por WhatsApp (PDF)</button>
     <button id="btnSharePhotos" class="btn-wa" disabled>Enviar por WhatsApp (Fotos)</button>
+    <button id="btnClear" class="btn-danger" disabled>🧹 Limpar</button>
   </div>
+
+  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
+    <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
+    Limpar automaticamente a lista depois de salvar/enviar o PDF
+  </label>
+
   <small class="hint">
-    Dica: toque no vídeo para capturar. O PDF será gerado automaticamente ao enviar por WhatsApp (2 fotos por página).
+    Toque no vídeo para capturar. Você também pode usar Captura Auto. A gravação de vídeo salva um arquivo .webm com KM e data/hora sobrepostos.
   </small>
 </div>
 
@@ -250,32 +288,31 @@ function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function dataURLtoUint8Array(dataURL){ const base64=dataURL.split(',')[1]; const raw=atob(base64); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i)&0xFF; return arr; }
 function dataURLtoBlob(dataURL){ const mime=(dataURL.split(';')[0].split(':')[1])||'image/jpeg'; return new Blob([dataURLtoUint8Array(dataURL)],{type:mime}); }
 function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'}); }
+function pdfEscape(s){ return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
 function diag(msg){ try{ console.debug('[RF]', msg); }catch{} }
 
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
-let lastPos=null; let kmUpdateInterval=null;
+let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
+let isRecordingVideo=false; let mediaRecorder=null; let recordedChunks=[];
+let kmUpdateInterval=null;
 
 const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
-const foto=document.getElementById('foto'); const ov=document.getElementById('ov'); const ovMsg=document.getElementById('ovMsg');
+const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const ov=document.getElementById('ov'); const ovMsg=document.getElementById('ovMsg'); const chip=document.getElementById('chip');
 const kmTop=document.getElementById('kmTop'); const kmLive=document.getElementById('kmLive');
 const gal=document.getElementById('gal'); const dockList=document.getElementById('dockList'); const dockRail=document.getElementById('dockRail');
-const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide=document.getElementById('btnWide'); const btnTele=document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal');
-const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos');
+const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide=document.getElementById('btnWide'); const btnTele=document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal'); const pppSel=document.getElementById('pppSel');
+const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const btnPdf=document.getElementById('btnPdf'); const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos'); const btnClear=document.getElementById('btnClear'); const autoClear=document.getElementById('autoClear');
 
 const photos=[];
 
-/* ===== Itens adicionais do relatório (controles) ===== */
+/* ===== Itens adicionais do relatório ===== */
 const rel = {
-  id: '',
-  assinatura: '',
-  incGPS: true,
-  incWX:  true,
-  incCity: true,
+  id: '', assinatura: '',
+  incGPS: true, incWX: true, incCity: true,
   city: null,
   wx: { temp: null, code: null, desc: null },
-  ctxStamp: 0,    // última atualização (ms)
-  ctxLat: null, ctxLon: null
+  ctxStamp: 0, ctxLat: null, ctxLon: null
 };
 const relId   = document.getElementById('relId');
 const relSign = document.getElementById('relSign');
@@ -309,20 +346,20 @@ async function ensurePersistence(){
 /* WAL + espelho */
 async function dbPutPhoto(rec){
   if(!db) db=await openDBv3();
-  // WAL append
+  // 1) WAL
   await new Promise((res,rej)=>{
     const tx=db.transaction('wal','readwrite');
     tx.objectStore('wal').put({id:'wal_'+rec.id, ts:Date.now(), action:'PUT_PHOTO', payload:{id:rec.id}, committed:false});
     tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
   });
-  // grava foto + espelho
+  // 2) foto + espelho
   await new Promise((res,rej)=>{
     const tx=db.transaction(['photos','photos_mirror'],'readwrite');
     tx.objectStore('photos').put(rec);
     tx.objectStore('photos_mirror').put({id:rec.id, blob:rec.blob});
     tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
   });
-  // commit WAL
+  // 3) commit
   await new Promise((res,rej)=>{
     const tx=db.transaction('wal','readwrite'); const st=tx.objectStore('wal');
     const rq=st.get('wal_'+rec.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); };
@@ -330,7 +367,6 @@ async function dbPutPhoto(rec){
   });
 }
 
-/* Snapshot leve */
 async function snapshotNow(){
   try{
     if(!db) db=await openDBv3();
@@ -344,7 +380,6 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden) snapshot
 document.addEventListener('freeze', snapshotNow);
 setInterval(snapshotNow, 45000);
 
-/* WAL replay */
 async function walReplay(){
   if(!db) db = await openDBv3();
   const pending = await new Promise((res,rej)=>{
@@ -429,17 +464,15 @@ async function loadKM(){
       }
     }
     kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
-
     if(!kmPoints.length){
-      diag('CSV de KM carregado, mas kmPoints vazio. Verifique delimitador/colunas.');
-      setOv('Aviso: não foi possível carregar os pontos de KM.', true);
+      diag('CSV de KM vazio ou inválido.'); setOv('Aviso: pontos de KM não carregados.', true);
     } else {
-      diag(`KM OK: ${kmPoints.length} pontos.`);
+      diag(`CSV de KM OK: ${kmPoints.length} pontos`);
     }
   } catch(e){
     kmPoints=[]; kmGrid.clear();
     diag('Falha ao carregar SNVBR116SPRJ.csv: '+ (e?.message||e));
-    setOv('Erro ao carregar CSV de KM (SNVBR116SPRJ.csv).', true);
+    setOv('Erro ao carregar CSV de KM.', true);
   }
 }
 
@@ -452,22 +485,19 @@ function nearestN(lat,lon,n=5){
 }
 function nearestKM(lat,lon){
   if(!kmPoints.length) return null;
-
-  // tenta pelo grid
   const cand=gridCands(kmGrid,lat,lon,120);
   if(cand && cand.length){
     let best=null,bd=Infinity;
     for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} }
     return best;
   }
-
-  // fallback (linear) se grid não devolveu nada
+  // fallback (linear)
   let best=null,bd=Infinity;
   for(const p of kmPoints){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} }
   return best;
 }
 
-/* ===== Câmera / Zoom / altura menor ===== */
+/* ===== Câmera / Altura / Zoom ===== */
 let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
 
 function updateCamHeight(){
@@ -522,8 +552,7 @@ async function startCamera(deviceIdx=deviceIndex){
     }else{ zoomWrap.style.display='none'; }
 
     camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex);
-    saveCamPrefs();
-    updateCamHeight();
+    saveCamPrefs(); updateCamHeight();
   }catch(e){ camReady=false; }
   setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
 }
@@ -541,28 +570,28 @@ btnWide .addEventListener('click', async ()=>{ if(currentCap?.zoom){ const mn=Nu
 btnTele .addEventListener('click', async ()=>{ if(currentCap?.zoom){ const mn=Number(zoomRange.min||1), mx=Number(zoomRange.max||1); await applyZoom(Math.min(Math.max(2,mn),mx)); }});
 zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
 
-/* ===== GPS ===== */
+/* Pinch‑to‑zoom */
+let pinchBase=null;
+wrap.addEventListener('touchstart', (ev)=>{ if(ev.touches.length===2 && currentCap?.zoom){ const dx=ev.touches[0].clientX-ev.touches[1].clientX; const dy=ev.touches[0].clientY-ev.touches[1].clientY; pinchBase={dist:Math.hypot(dx,dy), zoom:Number(zoomRange.value)}; } },{passive:true});
+wrap.addEventListener('touchmove', (ev)=>{ if(pinchBase && ev.touches.length===2 && currentCap?.zoom){ const dx=ev.touches[0].clientX-ev.touches[1].clientX; const dy=ev.touches[0].clientY-ev.touches[1].clientY; const dist=Math.hypot(dx,dy); const scale=dist/pinchBase.dist; const target=Math.min(zoomRange.max, Math.max(zoomRange.min, pinchBase.zoom*scale)); applyZoom(target); } },{passive:true});
+wrap.addEventListener('touchend', ()=>{ pinchBase=null; });
+
+/* ===== GPS & KM ===== */
 function startGPS(){
   if(!('geolocation' in navigator)){
     gpsReady=false; setOv('GPS não disponível', true); return;
   }
   navigator.geolocation.getCurrentPosition(p=>{
     lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true;
-    applyKmStr(); // mostra KM já no primeiro fix
-    setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
-
+    gpsReady=true; applyKmStr(); setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
     navigator.geolocation.watchPosition(pos=>{
       lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
-      applyKmStr(); // atualiza KM sempre que o GPS muda
-      scheduleContextUpdate(); // tenta atualizar clima/cidade quando GPS mudar
+      applyKmStr(); scheduleContextUpdate();
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
   }, ()=>{
     gpsReady=false; setOv('Permita o GPS para usar', true);
   }, {enableHighAccuracy:true, timeout:12000});
 }
-
-/* ===== KM em tempo real (placa + chip) ===== */
 function applyKmStr(){
   if(!lastPos){ kmTop.textContent='KM —'; if(kmLive) kmLive.textContent='KM —'; return; }
   const kmObj=nearestKM(lastPos.lat,lastPos.lon);
@@ -573,7 +602,7 @@ function applyKmStr(){
 function startKmUpdate(){ applyKmStr(); if(kmUpdateInterval) clearInterval(kmUpdateInterval); kmUpdateInterval=setInterval(applyKmStr, 500); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* ===== Dock (últimas capturas) ===== */
+/* ===== Dock & Galeria ===== */
 function renderDock(){
   if(!dockList || !dockRail) return;
   const MAX_SIDE = 12, MAX_MOB = 10;
@@ -599,12 +628,7 @@ function renderDock(){
     dockRail.appendChild(pill);
   });
 }
-
-/* ===== Captura ===== */
-function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
-function ready(){ return csvReady && camReady && gpsReady; }
-function updateActions(){ const enabled=photos.length>0; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; }
-
+function updateActions(){ const enabled=photos.length>0; btnPdf.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; btnClear.disabled=!enabled; }
 function renderGallery(){
   gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb';
     const im=document.createElement('img'); im.src=p.url;
@@ -612,6 +636,10 @@ function renderGallery(){
     d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
   }); updateActions(); renderDock();
 }
+
+/* ===== Captura (Foto) ===== */
+function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
+function ready(){ return csvReady && camReady && gpsReady; }
 
 async function capture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
@@ -645,46 +673,101 @@ async function capture(){
   setOv('Foto salva', true); setTimeout(()=> setOv('Toque p/ foto', true), 700);
 }
 
-/* ===== CONTEXTO: Clima/Temperatura e Cidade ===== */
-
-/* Mapeamento WMO -> descrição curta PT */
-function wmoToDesc(code){
-  const t = {
-    0:'Céu limpo', 1:'Principalmente limpo', 2:'Parcialmente nublado', 3:'Nublado',
-    45:'Névoa', 48:'Névoa gelada',
-    51:'Garoa leve', 53:'Garoa moderada', 55:'Garoa intensa',
-    61:'Chuva fraca', 63:'Chuva moderada', 65:'Chuva forte',
-    66:'Chuva congelante leve', 67:'Chuva congelante forte',
-    71:'Neve fraca', 73:'Neve moderada', 75:'Neve forte',
-    80:'Aguaceiros fracos', 81:'Aguaceiros moderados', 82:'Aguaceiros fortes',
-    95:'Trovoadas', 96:'Trovoadas c/ granizo leve', 99:'Trovoadas c/ granizo forte'
-  };
-  return t[code] || `Condição (${code})`;
+/* ===== Captura Automática ===== */
+function updateChip(){
+  const labels=[]; let cls=['chip','on'];
+  if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); }
+  if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
+  if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; }
+  else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; }
 }
 
+function startAutoCapture(){
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.classList.add('btn-danger'); btnAutoCapture.classList.remove('btn-warn');
+  setOv('AUTO ligado', true); updateChip();
+  autoCaptureInterval=setInterval(async ()=>{
+    if(!(csvReady && camReady && gpsReady && lastPos)) return;
+    await capture();
+  }, 700);
+}
+function stopAutoCapture(){
+  if(!isAutoCapturing) return; isAutoCapturing=false;
+  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
+  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.classList.add('btn-warn'); btnAutoCapture.classList.remove('btn-danger');
+  setOv('AUTO parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 800); updateChip();
+}
+btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
+
+/* ===== Gravação de Vídeo ===== */
+async function startVideoRecording(){
+  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
+  try{
+    const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
+    const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
+    const canvasStream=overlayCanvas.captureStream(30); const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 }; if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
+    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[];
+    mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop=()=>{
+      isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.classList.add('btn-danger'); updateChip();
+      setOv('REC parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 1000);
+    };
+    mediaRecorder.start();
+    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.classList.remove('btn-danger');
+    setOv('REC ligado', true); updateChip();
+
+    const drawLoop=()=>{
+      if(!isRecordingVideo) return;
+      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
+      overlayCtx.fillStyle='rgba(0,0,0,.62)'; overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
+      overlayCtx.fillStyle='#ffffff'; overlayCtx.textAlign='left'; overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`; overlayCtx.shadowColor='rgba(0,0,0,.35)'; overlayCtx.shadowBlur=10; overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52)); overlayCtx.shadowBlur=0;
+      const ts=new Date().toLocaleString(); overlayCtx.fillStyle='#dce3ea'; overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`; overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+      requestAnimationFrame(drawLoop);
+    };
+    drawLoop();
+  }catch(e){
+    console.error('Erro ao iniciar gravação:', e);
+    alert('Erro ao iniciar gravação: '+e.message);
+    isRecordingVideo=false; updateChip();
+  }
+}
+function stopVideoRecording(){
+  if(!isRecordingVideo || !mediaRecorder) return;
+  isRecordingVideo=false; mediaRecorder.stop();
+  setTimeout(()=>{
+    if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
+    const blob=new Blob(recordedChunks, {type: 'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
+    const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+  }, 500);
+}
+btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else { await startVideoRecording(); } });
+
+/* ===== Contexto: clima & cidade ===== */
+function wmoToDesc(code){
+  const t = {0:'Céu limpo',1:'Principalmente limpo',2:'Parcialmente nublado',3:'Nublado',45:'Névoa',48:'Névoa gelada',51:'Garoa leve',53:'Garoa moderada',55:'Garoa intensa',61:'Chuva fraca',63:'Chuva moderada',65:'Chuva forte',66:'Chuva congelante leve',67:'Chuva congelante forte',71:'Neve fraca',73:'Neve moderada',75:'Neve forte',80:'Aguaceiros fracos',81:'Aguaceiros moderados',82:'Aguaceiros fortes',95:'Trovoadas',96:'Trovoadas com granizo leve',99:'Trovoadas com granizo forte'};
+  return t[code] || `Condição (${code})`;
+}
 async function fetchWeather(lat, lon){
   try{
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
-    const r = await fetch(url, {cache:'no-store'});
-    if(!r.ok) throw new Error('WX http '+r.status);
-    const j = await r.json();
-    const temp = (j.current && Number.isFinite(j.current.temperature_2m)) ? j.current.temperature_2m : null;
-    const code = (j.current && Number.isFinite(j.current.weather_code)) ? j.current.weather_code : null;
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+    const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('WX http '+r.status);
+    const j=await r.json(); const temp=(j.current && Number.isFinite(j.current.temperature_2m))? j.current.temperature_2m : null;
+    const code=(j.current && Number.isFinite(j.current.weather_code))? j.current.weather_code : null;
     return { temp, code, desc: code!=null ? wmoToDesc(code) : null };
   }catch(e){ return { temp:null, code:null, desc:null }; }
 }
-
 async function fetchCity(lat, lon){
   try{
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
-    const r = await fetch(url, {cache:'no-store'});
-    if(!r.ok) throw new Error('CITY http '+r.status);
-    const j = await r.json();
+    const url=`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
+    const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('CITY http '+r.status);
+    const j=await r.json();
     return j.city || j.locality || j.principalSubdivision || j.countryName || null;
   }catch(e){ return null; }
 }
-
-/* Throttle de consultas de contexto (a cada 5 min ou >500 m) */
 function scheduleContextUpdate(){
   if(!lastPos) return;
   const now = Date.now();
@@ -693,50 +776,28 @@ function scheduleContextUpdate(){
     updateContextInfo();
   }
 }
-
 async function updateContextInfo(){
   if(!lastPos) return;
-  const lat = lastPos.lat, lon = lastPos.lon;
-  rel.ctxStamp = Date.now(); rel.ctxLat = lat; rel.ctxLon = lon;
-
-  if(rel.incWX){
-    rel.wx = await fetchWeather(lat, lon);
-  }
-  if(rel.incCity){
-    rel.city = await fetchCity(lat, lon);
-  }
-
-  // Atualiza texto de contexto na UI
+  const lat=lastPos.lat, lon=lastPos.lon;
+  rel.ctxStamp=Date.now(); rel.ctxLat=lat; rel.ctxLon=lon;
+  if(rel.incWX) rel.wx = await fetchWeather(lat, lon);
+  if(rel.incCity) rel.city = await fetchCity(lat, lon);
   const bits = [];
   if(rel.incCity) bits.push(`Cidade: ${rel.city || '—'}`);
-  if(rel.incWX){
-    const t = (rel.wx.temp!=null) ? `${Math.round(rel.wx.temp)}°C` : '—';
-    bits.push(`Temp: ${t}`);
-    bits.push(`Condição: ${rel.wx.desc || '—'}`);
-  }
-  if(rel.incGPS && lastPos){
-    bits.push(`GPS: ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)} (±${Math.round(lastPos.acc||0)} m)`);
-  }
+  if(rel.incWX){ const t=(rel.wx.temp!=null)? `${Math.round(rel.wx.temp)}°C` : '—'; bits.push(`Temp: ${t}`); bits.push(`Condição: ${rel.wx.desc || '—'}`); }
+  if(rel.incGPS && lastPos){ bits.push(`GPS: ${lastPos.lat.toFixed(5)}, ${lastPos.lon.toFixed(5)} (±${Math.round(lastPos.acc||0)} m)`); }
   ctxInfo.textContent = 'Contexto: ' + (bits.join(' • ') || '—');
 }
-
-/* Ligação dos controles extras */
 function initReportControls(){
-  // ID padrão
   const savedId = localStorage.getItem('rel_id');
   rel.id = savedId || ('RF-' + new Date().toISOString().replace(/[:.]/g,'-'));
   relId.value = rel.id;
-
   rel.assinatura = localStorage.getItem('rel_sign') || '';
   relSign.value = rel.assinatura;
-
   rel.incGPS  = localStorage.getItem('rel_incGPS')  !== '0';
   rel.incWX   = localStorage.getItem('rel_incWX')   !== '0';
   rel.incCity = localStorage.getItem('rel_incCity') !== '0';
-  incGps.checked  = rel.incGPS;
-  incWx.checked   = rel.incWX;
-  incCity.checked = rel.incCity;
-
+  incGps.checked=rel.incGPS; incWx.checked=rel.incWX; incCity.checked=rel.incCity;
   relId.addEventListener('input',  ()=>{ rel.id = relId.value.trim(); localStorage.setItem('rel_id', rel.id); });
   relSign.addEventListener('input',()=>{ rel.assinatura = relSign.value.trim(); localStorage.setItem('rel_sign', rel.assinatura); });
   incGps.addEventListener('change', ()=>{ rel.incGPS  = incGps.checked;  localStorage.setItem('rel_incGPS',  rel.incGPS? '1':'0'); updateContextInfo(); });
@@ -744,20 +805,9 @@ function initReportControls(){
   incCity.addEventListener('change',()=>{ rel.incCity = incCity.checked; localStorage.setItem('rel_incCity', rel.incCity? '1':'0'); updateContextInfo(); });
 }
 
-/* ===== PDF (2 fotos/página) com ANEXO DO RELATÓRIO + DISPOSITIVO ===== */
-const PER_PAGE_DEFAULT = 2;
+/* ===== PDF: anexos + grade ===== */
+const PER_PAGE_DEFAULT = ()=> Number((pppSel?.value)||2);
 
-function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
-  return new Promise((resolve)=>{ const img=new Image();
-    img.onload=()=>{ const W=img.width,H=img.height; let w=W,h=H;
-      if(Math.max(W,H)>maxDim){ if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); } else { h=maxDim; w=Math.round(W*(maxDim/H)); } }
-      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve({dataUrl:c.toDataURL('image/jpeg',quality), w,h});
-    }; img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0}); img.src=srcUrl;
-  });
-}
-
-/* Device appendix (limitado ao que o browser expõe) */
 async function collectDeviceInfo(){
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '—';
   const lang = navigator.languages?.join(', ') || navigator.language || '—';
@@ -782,7 +832,6 @@ async function collectDeviceInfo(){
     }
   }catch{}
   const gpsStr = lastPos ? `GPS: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} • ±${Math.round(lastPos.acc||0)} m` : 'GPS: n/d';
-
   const lines = [];
   lines.push('ANEXO TÉCNICO – DISPOSITIVO');
   lines.push(`Fuso: ${tz} • Idioma(s): ${lang}`);
@@ -794,11 +843,9 @@ async function collectDeviceInfo(){
   lines.push(battStr);
   lines.push(gpsStr);
   lines.push('');
-  lines.push('Campos restritos pelo navegador/OS: Operadora, nível de sinal (dBm), IMEI/Serial, IP público/local.');
+  lines.push('Campos restritos: Operadora, nível de sinal (dBm), IMEI/Serial, IP público/local.');
   return lines.join('\n');
 }
-
-/* Anexo do relatório (itens solicitados) */
 function buildReportAnnex(){
   const lines = [];
   lines.push('ANEXO – DADOS DO RELATÓRIO');
@@ -806,40 +853,31 @@ function buildReportAnnex(){
   const now = new Date();
   lines.push(`Gerado em: ${now.toLocaleString()}`);
   if(rel.assinatura) lines.push(`Assinatura: ${rel.assinatura}`);
-
-  // KM atual (ao gerar)
   const kmObj = lastPos ? nearestKM(lastPos.lat, lastPos.lon) : null;
   lines.push(`KM atual: ${kmObj? fmtKm(kmObj.km): '—'}`);
-
-  if(rel.incGPS && lastPos){
-    lines.push(`Coordenadas: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} • Precisão: ±${Math.round(lastPos.acc||0)} m`);
-  }
-  if(rel.incCity){
-    lines.push(`Cidade: ${rel.city || '—'}`);
-  }
-  if(rel.incWX){
-    const t = (rel.wx.temp!=null) ? `${Math.round(rel.wx.temp)}°C` : '—';
-    lines.push(`Temperatura: ${t}`);
-    lines.push(`Condição atmosférica: ${rel.wx.desc || '—'}`);
-  }
+  if(rel.incGPS && lastPos) lines.push(`Coordenadas: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} • Precisão: ±${Math.round(lastPos.acc||0)} m`);
+  if(rel.incCity) lines.push(`Cidade: ${rel.city || '—'}`);
+  if(rel.incWX){ const t=(rel.wx.temp!=null)? `${Math.round(rel.wx.temp)}°C` : '—'; lines.push(`Temperatura: ${t}`); lines.push(`Condição atmosférica: ${rel.wx.desc || '—'}`); }
   return lines.join('\n');
 }
-
-/* Monta PDF (grade) + anexo(s) em 2 páginas extra (se couber em 1, ótimo) */
-function pdfEscape(s){ return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+async function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
+  return new Promise((resolve)=>{ const img=new Image();
+    img.onload=()=>{ const W=img.width,H=img.height; let w=W,h=H;
+      if(Math.max(W,H)>maxDim){ if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); } else { h=maxDim; w=Math.round(W*(maxDim/H)); } }
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve({dataUrl:c.toDataURL('image/jpeg',quality), w,h});
+    }; img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0}); img.src=srcUrl;
+  });
+}
 async function makePdfWithAnnex(arr, perPage=2, annexBlocks=[]){
-  const PW=595, PH=842, M=24;
-  const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2]}; const [ROWS, COLS] = L[perPage] || [2,1];
+  const PW=595, PH=842, M=24; const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2]}; const [ROWS, COLS] = L[perPage] || [2,1];
   const CELL_W = Math.floor( (PW - 2*M) / COLS ); const CELL_H = Math.floor( (PH - 2*M) / ROWS );
-  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ];
-  const xref=[0]; let objNo=0; const off=()=>parts.reduce((a,b)=>a+b.length,0);
+  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ]; const xref=[0]; let objNo=0; const off=()=>parts.reduce((a,b)=>a+b.length,0);
   const addObj=(body)=>{ objNo++; xref.push(off()); parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo; };
   const addStream=(dict,bin)=>{ objNo++; xref.push(off()); const head=`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`; parts.push(enc.encode(head)); parts.push(bin); parts.push(enc.encode(`\nendstream\nendobj\n`)); return objNo; };
   const fontRegular = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
   const fontBold    = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`);
   const pages=[]; let i=0;
-
-  // páginas com fotos
   while(i < arr.length){
     const names=[]; const contents=[];
     for(let r=0; r<ROWS && i<arr.length; r++){
@@ -859,30 +897,19 @@ async function makePdfWithAnnex(arr, perPage=2, annexBlocks=[]){
     const pageNum=addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${names.join(' ')} >> /Font << /F1 ${fontRegular} 0 R /F2 ${fontBold} 0 R >> >> /Contents ${contNum} 0 R >>`);
     pages.push(pageNum);
   }
-
-  // anexos (cada bloco vira uma página simples)
+  // anexos
   for(const block of annexBlocks){
-    const lines = (block||'').split('\n');
-    const lh = 12; let y = PH - M - 20;
-    let content = `BT /F2 14 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(lines[0]||'ANEXO')}) Tj ET\n`;
-    y -= 18;
-    for(let idx=1; idx<lines.length; idx++){
-      if (y < M+20) break;
-      const L = lines[idx]||' ';
-      content += `BT /F1 10 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(L)}) Tj ET\n`;
-      y -= lh;
-    }
+    const lines = (block||'').split('\n'); const lh = 12; let y = PH - M - 20;
+    let content = `BT /F2 14 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(lines[0]||'ANEXO')}) Tj ET\n`; y -= 18;
+    for(let idx=1; idx<lines.length; idx++){ if (y < M+20) break; const L = lines[idx]||' '; content += `BT /F1 10 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(L)}) Tj ET\n`; y -= lh; }
     const contNum=addStream(`<< >>`, enc.encode(content));
     const pageNum=addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 ${fontRegular} 0 R /F2 ${fontBold} 0 R >> >> /Contents ${contNum} 0 R >>`);
     pages.push(pageNum);
   }
-
   const pagesNum=addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
   const catalogNum=addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
-  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
-  parts.push(enc.encode(xr));
-  parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
+  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`; for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
+  parts.push(enc.encode(xr)); parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
   return new Blob(parts,{type:'application/pdf'});
 }
 
@@ -890,44 +917,49 @@ async function makePdfWithAnnex(arr, perPage=2, annexBlocks=[]){
 function buildWhatsAppMessage(isPdf){
   const lines=[]; lines.push('*RELATÓRIO DE INSPEÇÃO*'); lines.push(`Total de fotos: ${photos.length}`); lines.push(`Gerado em: ${new Date().toLocaleString()}`); lines.push('');
   photos.forEach((p,i)=>{ let L=`${i+1}) ${p.kmStr} • ${p.ts}`; if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)},${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; } lines.push(L); });
-
-  lines.push('');
-  lines.push('*Dados do relatório*');
-  lines.push(`ID: ${rel.id||'—'}`);
-  if(rel.assinatura) lines.push(`Assinatura: ${rel.assinatura}`);
-  const kmObj = lastPos ? nearestKM(lastPos.lat,lastPos.lon) : null;
-  lines.push(`KM atual: ${kmObj? fmtKm(kmObj.km): '—'}`);
+  lines.push(''); lines.push('*Dados do relatório*'); lines.push(`ID: ${rel.id||'—'}`); if(rel.assinatura) lines.push(`Assinatura: ${rel.assinatura}`);
+  const kmObj = lastPos ? nearestKM(lastPos.lat,lastPos.lon) : null; lines.push(`KM atual: ${kmObj? fmtKm(kmObj.km): '—'}`);
   if(rel.incGPS && lastPos) lines.push(`GPS: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} (±${Math.round(lastPos.acc||0)} m)`);
   if(rel.incCity) lines.push(`Cidade: ${rel.city||'—'}`);
-  if(rel.incWX){
-    const t = (rel.wx.temp!=null) ? `${Math.round(rel.wx.temp)}°C` : '—';
-    lines.push(`Temperatura: ${t} • Condição: ${rel.wx.desc || '—'}`);
-  }
-  if(isPdf) lines.push('PDF inclui anexos com estes dados e informações técnicas do dispositivo.');
+  if(rel.incWX){ const t=(rel.wx.temp!=null)? `${Math.round(rel.wx.temp)}°C` : '—'; lines.push(`Temperatura: ${t} • Condição: ${rel.wx.desc || '—'}`); }
+  if(isPdf) lines.push('O PDF inclui anexos com esses dados e informações técnicas do dispositivo.');
   return lines.join('\n');
 }
 
-/* Botões WhatsApp */
-btnSharePdf.onclick=async ()=>{ if(!photos.length) return;
-  // atualiza contexto antes de gerar
+/* Botão PDF (download) */
+btnPdf.onclick=async ()=>{ if(!photos.length) return;
   await updateContextInfo();
+  const perPage = PER_PAGE_DEFAULT();
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const annex1 = buildReportAnnex();
-  const annex2 = await collectDeviceInfo();
-  const pdfBlob=await makePdfWithAnnex(scaled, PER_PAGE_DEFAULT, [annex1, annex2]);
-  const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${PER_PAGE_DEFAULT}ppg.pdf`,{type:'application/pdf'});
+  const annex1 = buildReportAnnex(); const annex2 = await collectDeviceInfo();
+  const blob=await makePdfWithAnnex(scaled, perPage, [annex1, annex2]);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
+  if (autoClear?.checked) { await clearList(true); }
+};
+
+/* WhatsApp – PDF */
+btnSharePdf.onclick=async ()=>{ if(!photos.length) return;
+  await updateContextInfo();
+  const perPage = PER_PAGE_DEFAULT();
+  const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
+  const pdfBlob=await makePdfWithAnnex(scaled, perPage, [buildReportAnnex(), await collectDeviceInfo()]);
+  const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'});
   const text=buildWhatsAppMessage(true);
   try{
     if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
       await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
+      if (autoClear?.checked) { await clearList(true); }
     }else{
-      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${PER_PAGE_DEFAULT}ppg.pdf`; a.click();
+      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Compartilhamento direto não suportado. Baixei o PDF e abri o WhatsApp com o texto pronto.');
+      if (autoClear?.checked) { await clearList(true); }
     }
   }catch(e){ alert('Compartilhamento cancelado/indisponível.'); }
 };
 
+/* WhatsApp – FOTOS */
 btnSharePhotos.onclick=async ()=>{ if(!photos.length) return;
   await updateContextInfo();
   const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg'));
@@ -942,6 +974,16 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return;
     await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'});
   }}catch(e){ alert('Compartilhamento cancelado/indisponível.'); }
 };
+
+/* Limpeza */
+async function clearList(silent=false){
+  if(!photos.length) return;
+  if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
+  if(!db) db=await openDBv3();
+  await new Promise((res,rej)=>{ const tx=db.transaction(['photos','wal','photos_mirror'],'readwrite'); tx.objectStore('photos').clear(); tx.objectStore('wal').clear(); tx.objectStore('photos_mirror').clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+  photos.length=0; foto.src=''; foto.removeAttribute('data-filename'); renderGallery(); snapshotNow();
+}
+btnClear.onclick = () => { clearList(false); };
 
 /* Restauração + boot */
 async function dbGetAllPhotos(){ if(!db) db=await openDBv3();
@@ -966,11 +1008,14 @@ async function boot(){
   await walReplay();
 
   await Promise.all([loadIDs(), loadKM()]);
+  csvReady = dataset.length>0 && kmPoints.length>0;
+
   await enumerateCameras();
   await startCamera(deviceIndex);
+  camReady = !!vid.videoWidth;
+
   startGPS();
   await restoreSavedPhotos();
-
   initReportControls();
   updateCamHeight();
   startKmUpdate();
@@ -980,9 +1025,8 @@ async function boot(){
   tick();
 }
 
-/* Interações básicas */
 document.addEventListener('DOMContentLoaded', boot);
-document.getElementById('wrap').addEventListener('click', ()=>{ if(csvReady && camReady && gpsReady){ capture(); } });
+wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else if(csvReady && camReady && gpsReady){ capture(); } });
 </script>
 
 </body>
