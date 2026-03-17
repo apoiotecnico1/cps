@@ -6,29 +6,15 @@
 <meta name="theme-color" content="#0b1020" />
 <title>Relatório Fotográfico – Iluminação</title>
 <style>
-  /* ================== Tema / Tokens ================== */
   :root{
-    --bg:#080c17;            /* fundo principal */
-    --bg2:#0b1224;           /* fundo profundo */
-    --surface:#0f1731cc;     /* cartão (glass leve) */
-    --surface-strong:#111a38;/* cartão forte */
-    --fg:#e8eeff;            /* texto */
-    --muted:#a9b7df;         /* texto secundário */
-    --border:#1e284d;        /* borda */
-    --glow:#43ff9b;          /* neon verde */
-    --glow2:#29e3ff;         /* neon ciano */
-    --warn:#eab308;
-    --danger:#ef4444;
-    --ok:#22c55e;
-    --wa:#25D366;
-
+    --bg:#080c17; --bg2:#0b1224; --surface:#0f1731cc; --surface-strong:#111a38;
+    --fg:#e8eeff; --muted:#a9b7df; --border:#1e284d;
+    --glow:#43ff9b; --glow2:#29e3ff; --warn:#eab308; --danger:#ef4444; --ok:#22c55e; --wa:#25D366;
     --shadow: 0 10px 28px rgba(0,0,0,.38);
     --radius: 14px;
-
-    /* altura da câmera fixa no topo (pode ajustar) */
-    --camH: 42vh;
+    /* A altura da câmera será calculada via JS conforme o aspecto do vídeo */
+    --camH: 42vh; /* fallback */
   }
-
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
@@ -41,7 +27,6 @@
   }
   h1{margin:0 0 10px;text-align:center;font-size:1.28rem; letter-spacing:.02em}
 
-  /* Cards — vidro sutil + borda */
   .card{
     background: linear-gradient(180deg, var(--surface), rgba(15,23,49,.7));
     backdrop-filter: saturate(140%) blur(6px);
@@ -52,14 +37,11 @@
     max-width:980px; box-shadow: var(--shadow);
   }
 
-  /* ============ Controles recolhíveis ============ */
   details.controls > summary{
     cursor:pointer; list-style:none; outline:none; user-select:none;
     font-weight:900; color:#dfe7ff; display:flex; align-items:center; gap:8px;
   }
-  details.controls > summary::before{
-    content:'⚙️'; display:inline-block; transform:translateY(1px);
-  }
+  details.controls > summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
   details.controls > summary::-webkit-details-marker{display:none}
   details.controls[open] > summary{ color:#b6caff }
   .ctrlGrid{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:8px}
@@ -69,38 +51,31 @@
   }
   button.small{font-size:.9rem}
 
-  /* ============ Câmera fixa no topo ============ */
+  /* ===== Câmera fixa no topo ===== */
   #camCard{
-    position: fixed; left: 50%; top: 0; transform: translateX(-50%);
+    position: fixed; left: 50%; top: calc( env(safe-area-inset-top, 0px) + 0px ); transform: translateX(-50%);
     width: calc(100vw - 24px); max-width:980px; height: var(--camH);
     z-index: 100; padding: 0; margin: 12px auto; border-radius: var(--radius);
     background: linear-gradient(180deg, #0b1230, #07102a);
     border:1px solid #213066; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
   }
   #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
-  /* Sem corte lateral (letterbox quando necessário) */
+  /* O modo de preenchimento (contain/cover) é gerenciado por JS e salvo no localStorage */
   #vid{
     width: 100%; height: 100%; display: block; background:#000; border-radius: var(--radius);
     object-fit: contain; object-position: center; touch-action:none;
   }
   #can{display:none}
-  /* Espaçador empurra conteúdo para baixo da câmera fixa */
-  #camSpacer{ height: calc(var(--camH) + 24px); max-width:980px; margin: 0 auto 8px; }
+  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
 
-  /* Overlay mensagem */
-  .ov{
-    position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:flex-start;
-    pointer-events:none; padding:10px;
-  }
+  .ov{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:flex-start; pointer-events:none; padding:10px; }
   .ov .msg{
     background:linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.55));
     border:1px solid rgba(255,255,255,.18);
     color:#e6ebff; padding:6px 10px; border-radius:10px;
-    font-size:.8rem; font-weight:900; letter-spacing:.02em;
-    text-shadow:0 1px 0 rgba(0,0,0,.4);
+    font-size:.8rem; font-weight:900; letter-spacing:.02em; text-shadow:0 1px 0 rgba(0,0,0,.4);
   }
 
-  /* Chip de status (REC/AUTO) */
   .chip{
     position: absolute; right: 12px; top: 12px;
     background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.55));
@@ -113,7 +88,6 @@
   .chip.rec{ background: linear-gradient(180deg, rgba(127,29,29,.8), rgba(90,14,14,.72)); border-color:#dc2626; color:#ffe2e2; }
   .chip.auto{ background: linear-gradient(180deg, rgba(90,50,17,.78), rgba(77,38,7,.72)); border-color:#f59e0b; color:#fde68a; }
 
-  /* Ações */
   .row{display:flex;gap:8px;flex-wrap:wrap}
   button{
     flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
@@ -132,7 +106,6 @@
 
   @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
 
-  /* Grupo PDF (botão + seletor compacto) */
   .btn-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
   label.ppp{
     display:flex; align-items:center; gap:8px;
@@ -144,51 +117,39 @@
     margin:0; padding:6px 8px; border-radius:10px; border:1px solid #243053; background:#0a122a; color:#dfe7ff
   }
 
-  /* Foto/Galeria */
   #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: var(--shadow)}
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
   .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
   .thumb img{width:100%;display:block}
   .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
 
-  /* Placa KM */
   #kmPlaque{
     text-align:center; padding:8px 12px;
     background: linear-gradient(180deg, #0d3b8e, #0a2e6d);
     border:2px solid #e6ecff; border-radius:12px; margin:0 auto 8px; max-width:980px;
-    font-weight:900; font-size:1rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28);
-    text-shadow: 0 1px 0 rgba(0,0,0,.35);
+    font-weight:900; font-size:1rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28); text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
   #kmPlaque span{ letter-spacing:.02em }
 
-  /* Tooltip menor */
   small.hint{display:block;color:#9fb4fc;margin-top:6px}
 
-  /* ============ SPLASH Matrix ============ */
+  /* ===== Splash Matrix ===== */
   #splash{
     position: fixed; inset: 0; z-index: 2000;
     background: radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12;
     display:flex; align-items:center; justify-content:center; overflow:hidden;
   }
   #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
-  .splash-inner{
-    position: relative; z-index: 2; text-align: center; padding: 24px 18px;
-  }
+  .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px; }
   .title{
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
     letter-spacing: .06em; color: #b7ffcf;
-    text-shadow:
-      0 0 10px #22c55e55,
-      0 0 22px #22c55e77,
-      0 0 40px #22c55e55,
-      0 1px 0 #0b1d14;
+    text-shadow: 0 0 10px #22c55e55, 0 0 22px #22c55e77, 0 0 40px #22c55e55, 0 1px 0 #0b1d14;
     white-space: nowrap; overflow: hidden; border-right: 2px solid #43ff9b;
-    margin: 0 auto 10px; width: 0; /* start typing width=0 */
+    margin: 0 auto 10px; width: 0;
   }
-  .subtitle{
-    font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9
-  }
+  .subtitle{ font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9 }
   .splash-actions{ margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
   .splash-btn{
     padding:10px 14px; border-radius:12px; border:1px solid #1b3b32;
@@ -197,27 +158,16 @@
   }
   .splash-btn:hover{ filter: brightness(1.08) }
   .splash-fade{ animation: splashout .6s ease forwards }
-  @keyframes splashout{
-    to{ opacity:0; transform: scale(1.01) }
-  }
-  /* typing effect */
-  @keyframes typing {
-    from { width: 0 }
-    to   { width: 24ch } /* ajustado ao tamanho do texto */
-  }
-  @keyframes caret {
-    0%, 100% { border-right-color: transparent }
-    50%      { border-right-color: #43ff9b }
-  }
+  @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
+  @keyframes typing { from { width: 0 } to { width: 24ch } }
+  @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
 
-  /* Melhorias de legibilidade em mobile */
   @media (max-width:420px){ h1{font-size:1.12rem} }
-
 </style>
 </head>
 <body>
 
-<!-- ============ SPLASH (sem senha) ============ -->
+<!-- ===== SPLASH (sem senha) ===== -->
 <div id="splash" aria-label="Tela de abertura do relatório fotográfico">
   <canvas id="rainCanvas"></canvas>
   <div class="splash-inner">
@@ -231,13 +181,11 @@
 
 <h1>📸 Relatório Fotográfico</h1>
 
-<!-- Espaçador da câmera fixa para evitar sobreposição -->
 <div id="camSpacer"></div>
 
-<!-- KM ATUAL (placa azul) -->
 <div id="kmPlaque"><span id="kmTop">KM —</span></div>
 
-<!-- CONTROLES recolhidos -->
+<!-- CONTROLES -->
 <div class="card">
   <details class="controls">
     <summary>Controles (toque para abrir)</summary>
@@ -253,12 +201,22 @@
         <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
         <span id="zoomVal" style="margin-left:6px">1.0×</span>
       </label>
+
+      <!-- NOVO: Modo de preenchimento -->
+      <label>🖼️ Preenchimento:
+        <select id="fitModeSel" title="Como a imagem ocupa o espaço do topo">
+          <option value="auto" selected>Auto (inteligente)</option>
+          <option value="contain">Sem corte</option>
+          <option value="cover">Cobrir (pode cortar)</option>
+        </select>
+      </label>
+
       <span style="color:#9fe9ff;font-size:.85rem">💾 Salvamento automático (anti‑perda): ATIVO</span>
     </div>
   </details>
 </div>
 
-<!-- VÍDEO (toque para capturar) – FIXO NO TOPO -->
+<!-- VÍDEO -->
 <div class="card" id="camCard">
   <div id="wrap">
     <video id="vid" autoplay playsinline muted></video>
@@ -314,7 +272,7 @@
 </div>
 
 <script>
-/* ========================= Splash (Matrix) ========================= */
+/* ===== Splash (Matrix) ===== */
 (function(){
   const splash = document.getElementById('splash');
   const title  = document.getElementById('splashTitle');
@@ -334,49 +292,35 @@
   window.addEventListener('resize', resize);
 
   function draw(){
-    // fundo translúcido (trilha)
-    ctx.fillStyle = 'rgba(6,10,18,0.08)';
-    ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#39ff88'; // verde matrix
+    ctx.fillStyle = 'rgba(6,10,18,0.08)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#39ff88';
     ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     for(let i=0;i<drops.length;i++){
-      const char = String.fromCharCode(0x30A0 + Math.floor(Math.random()*96)); // katakana
+      const char = String.fromCharCode(0x30A0 + Math.floor(Math.random()*96));
       ctx.fillText(char, i*fontSize, drops[i]*fontSize);
       if(drops[i]*fontSize > H && Math.random() > 0.975) drops[i] = 0;
       drops[i]++;
     }
     raf = requestAnimationFrame(draw);
   }
-
   function typeIn(){
-    // efeito digitação
     title.style.animation = `typing 1200ms steps(24, end) forwards, caret 650ms step-end 6`;
   }
-
   function start(){
     if(started) return; started = true;
-    // Finaliza animação e chama boot
     splash.classList.add('splash-fade');
     setTimeout(()=>{ splash.style.display='none'; boot(); }, 580);
   }
-
   resize(); draw(); typeIn();
-
-  // Auto-saída em ~2.6s
   const auto = setTimeout(start, 2600);
-  btnStart.addEventListener('click', ()=>{
-    clearTimeout(auto);
-    start();
-  });
-
-  // interrompe animação ao sair
+  btnStart.addEventListener('click', ()=>{ clearTimeout(auto); start(); });
   document.addEventListener('visibilitychange', ()=>{
     if(document.hidden && raf){ cancelAnimationFrame(raf); raf = null; }
     else if(!raf){ raf = requestAnimationFrame(draw); }
   }, {passive:true});
 })();
 
-/* ========================= Utilitários ========================= */
+/* ===== Utilitários ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
@@ -385,57 +329,103 @@ function dataURLtoUint8Array(dataURL){ const base64=dataURL.split(',')[1]; const
 function dataURLtoBlob(dataURL){ const mime=(dataURL.split(';')[0].split(':')[1])||'image/jpeg'; return new Blob([dataURLtoUint8Array(dataURL)],{type:mime}); }
 function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'}); }
 
-/* ========================= Estado ========================= */
+/* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
 let isRecordingVideo=false; let mediaRecorder=null; let recordedChunks=[];
 let kmUpdateInterval=null;
 
+/* ===== Referências ===== */
 const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
 const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const ov=document.getElementById('ov'); const ovMsg=document.getElementById('ovMsg'); const chip=document.getElementById('chip');
 const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const autoClear=document.getElementById('autoClear'); const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
 const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide =document.getElementById('btnWide'); const btnTele =document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal'); const pppSel=document.getElementById('pppSel');
-const photos=[]; // {id,url,blob,w,h,ts,kmStr,idsTxt,filename,lat,lon,acc}
+const fitModeSel=document.getElementById('fitModeSel');
+const photos=[];
 
-/* ========================= IndexedDB (anti-perda) ========================= */
-const DB_NAME='inspecaoDB', DB_VER=1, STORE='photos'; let db=null;
-function openDB(){ return new Promise((resolve,reject)=>{ const req=indexedDB.open(DB_NAME,DB_VER); req.onupgradeneeded=(e)=>{ const db=e.target.result; if(!db.objectStoreNames.contains(STORE)){ const st=db.createObjectStore(STORE,{keyPath:'id'}); st.createIndex('ts','ts',{unique:false}); } }; req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }); }
-async function dbPut(rec){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(rec); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
-async function dbGetAll(){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).index('ts').getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
-async function dbClearAll(){ if(!db) db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+/* ===== IndexedDB (anti-perda) + Persistência ===== */
+const DB_NAME='inspecaoDB', DB_VER=3;
+const STORES = ['photos','edits','reports','wal','snapshots','photos_mirror'];
+let db=null;
 
-/* ========================= CSVs (IDs + KM) ========================= */
+function openDBv3(){ return new Promise((resolve,reject)=>{ const req=indexedDB.open(DB_NAME, DB_VER);
+  req.onupgradeneeded=(e)=>{ const db=e.target.result;
+    STORES.forEach(s=>{ if(!db.objectStoreNames.contains(s)){ const st=db.createObjectStore(s,{keyPath:'id'});
+      if (s==='photos' || s==='edits') st.createIndex('ts','ts',{unique:false});
+      if (s==='wal') st.createIndex('ts','ts',{unique:false});
+    }});
+  };
+  req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
+});}
+async function ensurePersistence(){
+  try{ if (navigator.storage?.persist) {
+    const already = await navigator.storage.persisted();
+    if (!already) await navigator.storage.persist();
+  } }catch(e){}
+}
+async function dbPutPhoto(rec){ // simples (com WAL light)
+  if(!db) db=await openDBv3();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['photos','photos_mirror','wal'],'readwrite');
+    tx.objectStore('wal').put({id:'wal_'+rec.id, ts:Date.now(), action:'PUT_PHOTO', payload:{id:rec.id}, committed:false});
+    tx.objectStore('photos').put(rec);
+    tx.objectStore('photos_mirror').put({id:rec.id, blob:rec.blob});
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  }).then(async()=>{ // commit WAL
+    const d=db; await new Promise((res,rej)=>{
+      const tx=d.transaction('wal','readwrite'); const st=tx.objectStore('wal');
+      const rq=st.get('wal_'+rec.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); }; rq.onerror=()=>rej(rq.error);
+    });
+  });
+}
+async function dbGetAllPhotos(){ if(!db) db=await openDBv3();
+  return new Promise((res,rej)=>{ const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').index('ts').getAll();
+    rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
+  });
+}
+async function dbClearAll(){ if(!db) db=await openDBv3();
+  return new Promise((res,rej)=>{ const tx=db.transaction(['photos','wal','photos_mirror'],'readwrite'); tx.objectStore('photos').clear(); tx.objectStore('wal').clear(); tx.objectStore('photos_mirror').clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+}
+async function snapshotNow(){
+  try{
+    if(!db) db=await openDBv3();
+    const state = { ts: Date.now(), count: photos.length, last: photos[photos.length-1]?.id||null };
+    await new Promise((res,rej)=>{ const tx=db.transaction('snapshots','readwrite'); tx.objectStore('snapshots').put({id:'last', ...state}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+  }catch(e){}
+}
+function fastCheckpoint(){ snapshotNow(); }
+window.addEventListener('pagehide', fastCheckpoint);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) fastCheckpoint(); });
+window.addEventListener('beforeunload', fastCheckpoint);
+
+/* ===== CSVs (IDs + KM) ===== */
 const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
 function gridCands(grid,lat,lon,minCount=60,maxR=5){
   const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[];
   for(let r=0;r<=maxR && out.length<minCount;r++){
-    for(let dy=-r;dy<=r;dy++){
-      const y=ky+dy;
+    for(let dy=-r;dy<=r;dy++){ const y=ky+dy;
       for(let dx=-r;dx<=r;dx++){
         if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
         const a=grid.get(`${y},${kx+dx}`); if(a) out.push(...a);
       }
     }
-  }
-  return out.length?out:[];
+  } return out.length?out:[];
 }
 async function loadIDs(){
   const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
   const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
   const head=lines[0].split(';').map(h=>h.toLowerCase());
   const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long'));
-  const iLat=head.findIndex(h=>h.includes('lat'));
-  const iLon=head.findIndex(h=>h.includes('lon'));
+  const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon'));
   dataset=[];
   for(let i=1;i<lines.length;i++){
     const c=lines[i].split(';');
     const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
     if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    if(lat===0 && lon===0) continue;
-    if(Math.abs(lat)>90 || Math.abs(lon)>180) continue;
-    const p={id,lat,lon}; dataset.push(p);
+    if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue;
+    dataset.push({id,lat,lon});
   }
   idGrid.clear(); for(const p of dataset) gridInsert(idGrid,p);
 }
@@ -451,8 +441,7 @@ async function loadKM(){
   const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
   kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
   for(let i=0;i<lines.length;i++){
-    const c=lines[i].split(';');
-    if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
+    const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
     const t=pickTrio(c); if(!t) continue;
     if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
     if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else {
@@ -464,7 +453,7 @@ async function loadKM(){
 }
 async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; } catch{ csvReady=false; } setOv(csvReady ? 'Toque p/ foto' : 'Erro ao carregar CSVs', true); }
 
-/* ========================= Busca de vizinhos ========================= */
+/* ===== Vizinho/KM ===== */
 function nearestN(lat,lon,n=5){
   if(!dataset.length) return [];
   const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20));
@@ -473,25 +462,20 @@ function nearestN(lat,lon,n=5){
 }
 function nearestKM(lat,lon){
   if(!kmPoints.length) return null;
-  const cand=gridCands(kmGrid,lat,lon,120);
-  if(!cand.length) return null;
-  let best=null,bd=Infinity;
-  for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} }
-  return best;
+  const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null;
+  let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
-/* ========================= Câmera / Zoom ========================= */
+/* ===== Câmera / Zoom / Preenchimento ===== */
 let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
-function lensHint(label=''){
-  const s=String(label).toLowerCase();
+let videoAR = 16/9; // aspecto do vídeo, atualizado ao carregar metadados
+function lensHint(label=''){ const s=String(label).toLowerCase();
   if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
   if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
-  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide';
-  return '';
+  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide'; return '';
 }
 function saveCamPrefs(){
-  const dev=deviceList[deviceIndex];
-  if(dev){
+  const dev=deviceList[deviceIndex]; if(dev){
     localStorage.setItem('camDeviceId',dev.deviceId);
     const z=Number(zoomRange.value||1);
     if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId,z);
@@ -502,23 +486,49 @@ async function enumerateCameras(){
   try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
   const devices=await navigator.mediaDevices.enumerateDevices();
   deviceList=devices.filter(d=>d.kind==='videoinput');
-  deviceList.sort((a,b)=>{
-    const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label);
-    if(A && !B) return -1; if(!A && B) return 1;
-    return a.label.localeCompare(b.label);
-  });
+  deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); });
   cameraSel.innerHTML='';
-  deviceList.forEach((d,i)=>{
-    const o=document.createElement('option');
-    const tag=lensHint(d.label);
-    o.value=String(i);
-    o.textContent=d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`;
-    cameraSel.appendChild(o);
+  deviceList.forEach((d,i)=>{ const o=document.createElement('option'); const tag=lensHint(d.label);
+    o.value=String(i); o.textContent=d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`; cameraSel.appendChild(o);
   });
-  const savedId=localStorage.getItem('camDeviceId');
-  const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
+  const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
   deviceIndex=idx>=0?idx:0; cameraSel.value=String(deviceIndex);
 }
+/* ===== Ajuste de preenchimento (melhorado) =====
+   - Lê modo do seletor (auto/contain/cover)
+   - Calcula altura ideal = largura disponível / aspecto do vídeo
+   - Em 'auto': se ideal > limite vertical, usa 'cover' para preencher sem encolher demais
+   - Atualiza '--camH' e 'object-fit'
+*/
+function computeAvailableW(){ const pad = 24; return Math.min(window.innerWidth - pad, 980); }
+function computeMaxH(){ // reserva espaço para placa + primeira card
+  const safeTop = (window.visualViewport?.offsetTop || 0) + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) || 0);
+  const reserve = 160; // espaço para HUD/placa
+  return Math.max(220, window.innerHeight - reserve - safeTop);
+}
+function applyFit(mode){
+  const w = computeAvailableW();
+  const idealH = Math.round(w / (videoAR || (16/9)));
+  const maxH = computeMaxH();
+
+  let objectFit = 'contain';
+  let targetH = idealH;
+
+  if(mode === 'contain'){ objectFit='contain'; targetH = Math.min(idealH, maxH); }
+  else if(mode === 'cover'){ objectFit='cover'; targetH = Math.min(idealH, maxH); /* cover não depende do ideal, mas mantém estética */ }
+  else { // auto
+    if(idealH <= maxH){ objectFit='contain'; targetH=idealH; }
+    else { objectFit='cover'; targetH=maxH; }
+  }
+
+  document.documentElement.style.setProperty('--camH', targetH + 'px');
+  vid.style.objectFit = objectFit;
+}
+function updateCamLayout(){ const mode = localStorage.getItem('fitMode') || fitModeSel.value || 'auto'; applyFit(mode); }
+fitModeSel.addEventListener('change', ()=>{ localStorage.setItem('fitMode', fitModeSel.value); updateCamLayout(); });
+window.addEventListener('resize', updateCamLayout);
+
+/* ===== Start/Zoom ===== */
 async function startCamera(deviceIdx=deviceIndex){
   try{
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
@@ -527,20 +537,23 @@ async function startCamera(deviceIdx=deviceIndex){
     const constraints=dev? {video:{deviceId:{exact:dev.deviceId}},audio:false} : {video:{facingMode:{ideal:'environment'}},audio:false};
     const st=await navigator.mediaDevices.getUserMedia(constraints);
     currentStream=st; vid.srcObject=st;
+
     await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
     currentTrack=st.getVideoTracks()[0];
     currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
+
+    // Atualiza aspecto real do vídeo
+    if (vid.videoWidth && vid.videoHeight) { videoAR = vid.videoWidth / vid.videoHeight; }
+    updateCamLayout(); // ajusta altura/fit ao aspecto
 
     if(currentCap && currentCap.zoom){
       zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
       let z=loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
       z=Math.min(zoomRange.max, Math.max(zoomRange.min, z)); await applyZoom(z,true);
       zoomWrap.style.display='';
-    }else{
-      zoomWrap.style.display='none';
-    }
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex);
-    saveCamPrefs();
+    }else{ zoomWrap.style.display='none'; }
+
+    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex); saveCamPrefs();
   }catch(e){ camReady=false; }
   setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
 }
@@ -549,11 +562,11 @@ async function applyZoom(val, noSave=false){
   const z=Number(val);
   try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }
   catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-  zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`;
-  if(!noSave) saveCamPrefs();
+  zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`; if(!noSave) saveCamPrefs();
 }
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); });
+cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); updateCamLayout(); });
 btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
+
 async function switchLens(target){
   const idx=deviceList.findIndex(d=>lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
   if(idx>=0){ await startCamera(idx); return; }
@@ -578,7 +591,7 @@ wrap.addEventListener('touchstart', (ev)=>{ if(ev.touches.length===2 && currentC
 wrap.addEventListener('touchmove', (ev)=>{ if(pinchBase && ev.touches.length===2 && currentCap?.zoom){ const dx=ev.touches[0].clientX-ev.touches[1].clientX; const dy=ev.touches[0].clientY-ev.touches[1].clientY; const dist=Math.hypot(dx,dy); const scale=dist/pinchBase.dist; const target=Math.min(zoomRange.max, Math.max(zoomRange.min, pinchBase.zoom*scale)); applyZoom(target); } },{passive:true});
 wrap.addEventListener('touchend', ()=>{ pinchBase=null; });
 
-/* ========================= GPS ========================= */
+/* ===== GPS ===== */
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); return; }
   navigator.geolocation.getCurrentPosition(p=>{
@@ -592,25 +605,16 @@ function startGPS(){
   }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ========================= Captura ========================= */
-function updateActions(){
-  const n=photos.length, enabled=n>0;
-  btnPdf.disabled=!enabled; btnClear.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled;
-}
+/* ===== Captura ===== */
+function updateActions(){ const n=photos.length, enabled=n>0; btnPdf.disabled=!enabled; btnClear.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; }
 function renderGallery(){
-  gal.innerHTML=''; photos.forEach((p,idx)=>{
-    const d=document.createElement('div'); d.className='thumb';
-    const im=document.createElement('img'); im.src=p.url;
-    const meta=document.createElement('div'); meta.className='meta';
-    meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`;
-    d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
-  });
-  updateActions();
+  gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb'; const im=document.createElement('img'); im.src=p.url;
+    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`; d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
+  }); updateActions();
 }
 async function capture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ setOv('Aguardando CSV/Câmera/GPS…', true); return; }
-  const w=vid.videoWidth||1280, h=vid.videoHeight||720;
-  can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+  const w=vid.videoWidth||1280, h=vid.videoHeight||720; can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
 
   const bandH=Math.max(144,Math.round(h*0.16));
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
@@ -622,8 +626,7 @@ async function capture(){
 
   ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
   ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-  ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
-  ctx.shadowBlur=0;
+  ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
 
   ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`;
   ctx.fillText(ts,20,h-Math.round(bandH*0.22));
@@ -631,129 +634,69 @@ async function capture(){
   ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
   ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
 
-  const url=can.toDataURL('image/jpeg',0.92);
-  const blob=dataURLtoBlob(url);
-  foto.src=url;
-
-  const safeKm=kmStr.replace('KM ','').replace('+','_');
-  const fname=`KM_${safeKm}.jpg`;
-  foto.dataset.filename=fname;
-
+  const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url);
+  foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
   const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
-  await dbPut({...rec, url: undefined});
-  photos.push(rec); renderGallery();
+  await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
 
-  setOv('Foto salva', true);
-  setTimeout(()=> setOv('Toque p/ foto', true), 700);
+  setOv('Foto salva', true); setTimeout(()=> setOv('Toque p/ foto', true), 700);
 }
 
-/* ========================= Chip de status + controles ========================= */
+/* ===== Chip + controles ===== */
 const detailsControls=document.querySelector('details.controls'); let controlsPrevOpen=null;
-function updateChip(){
-  const labels=[]; let cls=['chip','on'];
-  if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); }
-  if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
-  if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; }
-  else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; }
-}
-function minimizeControls(busy){
-  if(!detailsControls) return;
-  if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{} }
-  else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; }
-}
+function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); } if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
+  if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; } else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; } }
+function minimizeControls(busy){ if(!detailsControls) return; if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{} } else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; } }
 
-/* ========================= Captura Automática ========================= */
+/* ===== Captura Automática ===== */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
   setOv('AUTO ligado', true); updateChip(); minimizeControls(true);
-
-  autoCaptureInterval=setInterval(()=>{
-    if(csvReady && camReady && gpsReady && lastPos){
-      const w=vid.videoWidth||1280, h=vid.videoHeight||720;
-      can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
-
-      const bandH=Math.max(144,Math.round(h*0.16));
-      ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      const ids=nearestN(lastPos.lat,lastPos.lon,5);
-      const ts=new Date().toLocaleString();
-
-      ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
-      ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
-      ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52));
-      ctx.shadowBlur=0;
-
-      ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`;
-      ctx.fillText(ts,20,h-Math.round(bandH*0.22));
-
-      ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
-      ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
-
-      const url=can.toDataURL('image/jpeg',0.92);
-      const blob=dataURLtoBlob(url);
-      foto.src=url;
-
-      const safeKm=kmStr.replace('KM ','').replace('+','_');
-      const fname=`KM_${safeKm}.jpg`;
-      foto.dataset.filename=fname;
-
+  autoCaptureInterval=setInterval(()=>{ if(csvReady && camReady && gpsReady && lastPos){
+      const w=vid.videoWidth||1280, h=vid.videoHeight||720; can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+      const bandH=Math.max(144,Math.round(h*0.16)); ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
+      ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
+      ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
+      ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
+      const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url); foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
       const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
-      dbPut({...rec, url: undefined}); photos.push(rec); renderGallery();
-    }
-  }, 500);
+      dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
+  }}, 500);
 }
 function stopAutoCapture(){
-  if(!isAutoCapturing) return;
-  isAutoCapturing=false;
+  if(!isAutoCapturing) return; isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
-  btnAutoCapture.textContent='🎬 Captura Auto';
-  btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
-  setOv('AUTO parado', true);
-  setTimeout(()=> setOv('Toque p/ foto', true), 800);
-  updateChip(); minimizeControls(false);
+  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
+  setOv('AUTO parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 800); updateChip(); minimizeControls(false);
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 
-/* ========================= Limpeza ========================= */
+/* ===== Limpeza ===== */
 async function clearList(silent=false){
   if(!photos.length) return;
   if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
-  photos.length = 0; await dbClearAll();
-  foto.src = ''; foto.removeAttribute('data-filename'); renderGallery();
+  photos.length = 0; await dbClearAll(); foto.src = ''; foto.removeAttribute('data-filename'); renderGallery(); snapshotNow();
 }
 btnClear.onclick = () => { clearList(false); };
 
-/* ========================= Downscale p/ PDF ========================= */
+/* ===== PDF ===== */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
-  return new Promise((resolve)=>{
-    const img=new Image();
-    img.onload=()=>{
-      const W=img.width,H=img.height; let w=W,h=H;
-      if(Math.max(W,H)>maxDim){
-        if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); }
-        else { h=maxDim; w=Math.round(W*(maxDim/H)); }
-      }
-      const c=document.createElement('canvas'); c.width=w; c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
+  return new Promise((resolve)=>{ const img=new Image();
+    img.onload=()=>{ const W=img.width,H=img.height; let w=W,h=H;
+      if(Math.max(W,H)>maxDim){ if(W>=H){ w=maxDim; h=Math.round(H*(maxDim/W)); } else { h=maxDim; w=Math.round(W*(maxDim/H)); } }
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
       resolve({dataUrl:c.toDataURL('image/jpeg',quality), w,h});
-    };
-    img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0});
-    img.src=srcUrl;
+    }; img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0}); img.src=srcUrl;
   });
 }
-
-/* ========================= PDF em grade ========================= */
 async function makePdfGrid(arr, perPage=1){
   const PW=595, PH=842, M=24;
-  const LAYOUT = { 1:[1,1], 2:[2,1], 4:[2,2], 8:[4,2] };
-  const [ROWS, COLS] = LAYOUT[perPage] || [1,1];
-  const CELL_W = Math.floor( (PW - 2*M) / COLS );
-  const CELL_H = Math.floor( (PH - 2*M) / ROWS );
-  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ];
-  const xref=[0]; let objNo=0; const off=()=>parts.reduce((a,b)=>a+b.length,0);
+  const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2]}; const [ROWS, COLS] = L[perPage] || [1,1];
+  const CELL_W = Math.floor( (PW - 2*M) / COLS ); const CELL_H = Math.floor( (PH - 2*M) / ROWS );
+  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ]; const xref=[0]; let objNo=0;
+  const off=()=>parts.reduce((a,b)=>a+b.length,0);
   const addObj=(body)=>{ objNo++; xref.push(off()); parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo; };
   const addStream=(dict,bin)=>{ objNo++; xref.push(off()); const head=`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`; parts.push(enc.encode(head)); parts.push(bin); parts.push(enc.encode(`\nendstream\nendobj\n`)); return objNo; };
   const pages=[]; let i=0;
@@ -778,184 +721,104 @@ async function makePdfGrid(arr, perPage=1){
   }
   const pagesNum=addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
   const catalogNum=addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
-  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
-  for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
+  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`; for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
   parts.push(enc.encode(xr));
   parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
   return new Blob(parts,{type:'application/pdf'});
 }
-
-/* Botão PDF */
 const btnPdf=document.getElementById('btnPdf');
-btnPdf.onclick=async ()=>{
-  if(!photos.length) return; stopAutoCapture();
+btnPdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
-  const scaled=[];
-  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const blob=await makePdfGrid(scaled, perPage);
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`;
-  document.body.appendChild(a); a.click();
+  const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
+  const blob=await makePdfGrid(scaled, perPage); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; document.body.appendChild(a); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
   if (autoClear?.checked) { await clearList(true); }
 };
 
-/* ========================= KM em tempo real ========================= */
+/* ===== KM em tempo real ===== */
 function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(updateKmDisplay, 300); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* ========================= Gravação de Vídeo ========================= */
+/* ===== Vídeo ===== */
 async function startVideoRecording(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   try{
     const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
-    const overlayCanvas=document.createElement('canvas');
-    overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720;
-    const overlayCtx=overlayCanvas.getContext('2d');
-    const canvasStream=overlayCanvas.captureStream(30);
-    const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
-    if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
-    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[];
-    mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop=()=>{
-      isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false);
-    };
+    const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
+    const canvasStream=overlayCanvas.captureStream(30); const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 }; if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
+    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[]; mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop=()=>{ isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false); };
     mediaRecorder.start();
-    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #cc3e36, #a12b25)';
-    setOv('REC ligado', true); updateChip(); minimizeControls(true);
+    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #cc3e36, #a12b25)'; setOv('REC ligado', true); updateChip(); minimizeControls(true);
 
     const drawLoop=()=>{
       if(!isRecordingVideo) return;
       overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon);
-      const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
       const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
-      overlayCtx.fillStyle='rgba(0,0,0,.62)';
-      overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
-      overlayCtx.fillStyle='#b7ffcf';
-      overlayCtx.textAlign='left';
-      overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`;
-      overlayCtx.shadowColor='rgba(34,197,94,.45)'; overlayCtx.shadowBlur=16;
-      overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52));
-      overlayCtx.shadowBlur=0;
-      const ts=new Date().toLocaleString();
-      overlayCtx.fillStyle='#fff'; overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`;
-      overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+      overlayCtx.fillStyle='rgba(0,0,0,.62)'; overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
+      overlayCtx.fillStyle='#b7ffcf'; overlayCtx.textAlign='left'; overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`; overlayCtx.shadowColor='rgba(34,197,94,.45)'; overlayCtx.shadowBlur=16; overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52)); overlayCtx.shadowBlur=0;
+      const ts=new Date().toLocaleString(); overlayCtx.fillStyle='#fff'; overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`; overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
       requestAnimationFrame(drawLoop);
     };
     drawLoop(); startKmUpdate();
-  }catch(e){
-    console.error('Erro ao iniciar gravação:', e);
-    alert('Erro ao iniciar gravação: '+e.message);
-    isRecordingVideo=false; updateChip(); minimizeControls(false);
-  }
+  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); minimizeControls(false); }
 }
 function stopVideoRecording(){
   if(!isRecordingVideo || !mediaRecorder) return;
   isRecordingVideo=false; mediaRecorder.stop(); stopKmUpdate();
-  setTimeout(()=>{
-    if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
-    const blob=new Blob(recordedChunks, {type: 'video/webm'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url;
-    const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-');
-    a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
-    setOv('Vídeo salvo', true);
-    setTimeout(()=>setOv('Toque p/ foto', true), 1500);
-    updateChip(); minimizeControls(false);
+  setTimeout(()=>{ if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
+    const blob=new Blob(recordedChunks, {type: 'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
+    const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+    setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); minimizeControls(false);
   }, 500);
 }
-btnVideoRecord.addEventListener('click', async ()=>{
-  if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); }
-  else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; }
-});
+btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
 
-// Tap no vídeo: parar/alternar/capturar
-wrap.addEventListener('click', ()=>{
-  if(isRecordingVideo){ stopVideoRecording(); }
-  else if(isAutoCapturing){ stopAutoCapture(); }
-  else if(csvReady && camReady && gpsReady){ capture(); }
-});
+wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else if(csvReady && camReady && gpsReady){ capture(); } });
 
 function buildWhatsAppMessage(isPdf){
-  const lines=[];
-  lines.push('*RELATÓRIO DE INSPEÇÃO*');
-  lines.push(`Total de fotos: ${photos.length}`);
-  lines.push(`Gerado em: ${new Date().toLocaleString()}`);
-  lines.push('');
-  photos.forEach((p,i)=>{
-    let L=`${i+1}) ${p.kmStr} • ${p.ts}`;
-    if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){
-      L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
-    }
-    lines.push(L);
-  });
-  if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf');
-  return lines.join('\n');
+  const lines=[]; lines.push('*RELATÓRIO DE INSPEÇÃO*'); lines.push(`Total de fotos: ${photos.length}`); lines.push(`Gerado em: ${new Date().toLocaleString()}`); lines.push('');
+  photos.forEach((p,i)=>{ let L=`${i+1}) ${p.kmStr} • ${p.ts}`; if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; } lines.push(L); });
+  if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf'); return lines.join('\n');
 }
-
-/* WhatsApp – PDF */
 const btnSharePdf=document.getElementById('btnSharePdf');
-btnSharePdf.onclick=async ()=>{
-  if(!photos.length) return; stopAutoCapture();
+btnSharePdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
-  const scaled=[];
-  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const pdfBlob=await makePdfGrid(scaled, perPage);
-  const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'});
-  const text=buildWhatsAppMessage(true);
+  const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
+  const pdfBlob=await makePdfGrid(scaled, perPage); const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'}); const text=buildWhatsAppMessage(true);
   try{
-    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
-      await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
-      if (autoClear?.checked) { await clearList(true); }
-    }else{
-      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; a.click();
+    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){ await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'}); if (autoClear?.checked) { await clearList(true); } }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
       if (autoClear?.checked) { await clearList(true); }
     }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
-  }
+  }catch(e){ alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.'); }
 };
-
-/* WhatsApp – FOTOS */
 const btnSharePhotos=document.getElementById('btnSharePhotos');
-btnSharePhotos.onclick=async ()=>{
-  if(!photos.length) return; stopAutoCapture();
-  const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg'));
-  const text=buildWhatsAppMessage(false);
-  const MAX=10;
+btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
+  const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg')); const text=buildWhatsAppMessage(false); const MAX=10;
   if(!(navigator.canShare && navigator.canShare({files:files.slice(0,Math.min(files.length,MAX))}))){
     window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente. Se preferir, gere e envie o PDF.)'),'_blank');
-    alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.');
-    return;
+    alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.'); return;
   }
-  try{
-    for(let i=0;i<files.length;i+=MAX){
-      const lote=files.slice(i,i+MAX);
-      const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`;
-      await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'});
-    }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.');
-  }
+  try{ for(let i=0;i<files.length;i+=MAX){ const lote=files.slice(i,i+MAX); const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`; await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'}); } }
+  catch(e){ alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.'); }
 };
 
-/* ========================= Boot + restauração ========================= */
+/* ===== Restauração + OV + Boot ===== */
 async function restoreSavedPhotos(){
-  const rows=await dbGetAll(); if(!rows.length) return;
+  const rows=await dbGetAllPhotos(); if(!rows.length) return;
   for(const r of rows){
     const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(r.blob); });
     photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc });
   }
-  if(photos.length){
-    foto.src=photos[photos.length-1].url; foto.dataset.filename=photos[photos.length-1].filename;
-  }
+  if(photos.length){ foto.src=photos[photos.length-1].url; foto.dataset.filename=photos[photos.length-1].filename; }
   renderGallery();
 }
 function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
@@ -963,12 +826,17 @@ function ready(){ return csvReady && camReady && gpsReady; }
 
 async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
-  db=await openDB();
+  await ensurePersistence();
+  db=await openDBv3();
   await Promise.all([loadCSVs(), enumerateCameras()]);
   await startCamera(deviceIndex);
   startGPS();
   await restoreSavedPhotos();
   startKmUpdate();
+
+  // Ajusta seletor de preenchimento ao valor salvo
+  const savedFit = localStorage.getItem('fitMode'); if(savedFit) fitModeSel.value = savedFit; updateCamLayout();
+
   const tick=()=>{ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); }; tick();
 }
 </script>
