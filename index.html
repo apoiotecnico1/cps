@@ -1,294 +1,210 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Inspeção Profissional</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Inteligente</title>
 <style>
-:root{
-  --bg:#020617;
-  --card:#0b1225;
-  --text:#e5edff;
-  --accent:#22c55e;
-  --danger:#ef4444;
-  --warn:#facc15;
-
-  --camH:65vh;
-}
-
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:system-ui;
-  background:var(--bg);
-  color:var(--text);
-}
-
-/* ===== CAMERA ===== */
-#camCard{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:var(--camH);
-  background:#000;
-  z-index:100;
-}
-
-#wrap{
-  width:100%;
-  height:100%;
-  position:relative;
-}
-
-#vid{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-#can{display:none}
-
-/* ===== HUD ===== */
-#hud{
-  position:absolute;
-  top:10px;
-  left:10px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-#hudKm{
-  font-size:1.2rem;
-  font-weight:900;
-  background:rgba(0,0,0,.6);
-  padding:6px 10px;
-  border-radius:8px;
-}
-
-#hudStatus{
-  font-size:.75rem;
-  padding:4px 8px;
-  border-radius:6px;
-  background:rgba(0,0,0,.5);
-}
-
-/* ===== overlay original ===== */
-#ov{
-  position:absolute;
-  bottom:10px;
-  left:10px;
-}
-
-#ov .msg{
-  background:rgba(0,0,0,.6);
-  padding:6px 10px;
-  border-radius:8px;
-  font-size:.8rem;
-}
-
-/* ===== chip ===== */
-#chip{
-  position:absolute;
-  top:10px;
-  right:10px;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(0,0,0,.6);
-  font-size:.75rem;
-}
-
-/* ===== espaço ===== */
-#camSpacer{
-  height:calc(var(--camH) + 10px);
-}
-
-/* ===== KM placa ===== */
-#kmPlaque{
-  text-align:center;
-  font-size:1.1rem;
-  font-weight:900;
-  padding:8px;
-  margin:10px;
-  border-radius:10px;
-  background:linear-gradient(#1e3a8a,#1e40af);
-}
-
-/* ===== BOTÕES ===== */
-.card{
-  background:var(--card);
-  margin:10px;
-  padding:10px;
-  border-radius:12px;
-}
-
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-button{
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  font-size:1rem;
-  font-weight:900;
-}
-
-/* principais */
-#btnAutoCapture,
-#btnVideoRecord{
-  grid-column:1/-1;
-  font-size:1.1rem;
-}
-
-#btnAutoCapture{background:#f97316;color:#fff;}
-#btnVideoRecord{background:var(--danger);color:#fff;}
-#btnPdf{background:var(--warn);}
-#btnSharePdf,#btnSharePhotos{background:#25D366;}
-#btnClear{background:var(--danger);}
-
-/* ===== FAB ===== */
-#fabCapture{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:85px;
-  height:85px;
-  border-radius:50%;
-  border:none;
-  font-size:2rem;
-  font-weight:900;
-  background:var(--accent);
-  color:#022c22;
-  box-shadow:0 10px 30px rgba(0,0,0,.7);
-  z-index:999;
-}
-
-#fabCapture:active{
-  transform:scale(.9);
-}
-
-/* ===== FOTO ===== */
-#foto{
-  width:100%;
-  border-radius:10px;
-}
-
-/* ===== GALERIA ===== */
-.gallery{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
-  gap:6px;
-}
-
-.thumb img{
-  width:100%;
-  border-radius:10px;
-}
-
-/* ===== CLEAN MODE ===== */
-.clean .card,
-.clean #kmPlaque{
-  display:none !important;
-}
+    /* Reset básico */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #1e1e2f; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 20px; }
+    
+    h1 { margin-bottom: 10px; color: #00f0ff; text-align: center; text-shadow: 0 0 10px #00f0ff; }
+    
+    /* Container principal */
+    .camera-container { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 600px; }
+    
+    video { border-radius: 12px; width: 100%; height: auto; border: 3px solid #00f0ff; box-shadow: 0 0 20px #00f0ff; }
+    
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; }
+    
+    button { background: #00f0ff; color: #1e1e2f; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 0 10px #00f0ff; }
+    button:hover { background: #00d4e6; transform: scale(1.05); }
+    
+    .hud { margin-top: 15px; background: rgba(0,0,0,0.6); padding: 12px 20px; border-radius: 10px; width: 100%; display: flex; justify-content: space-between; box-shadow: 0 0 15px #00f0ff; }
+    
+    .hud span { font-weight: bold; }
+    
+    /* Galeria de fotos */
+    .gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center; }
+    .gallery img { width: 120px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #00f0ff; transition: 0.3s; cursor: pointer; }
+    .gallery img:hover { transform: scale(1.1); box-shadow: 0 0 15px #00f0ff; }
+    
+    /* Timer */
+    .timer { font-size: 1.2em; color: #00ff85; font-weight: bold; text-shadow: 0 0 8px #00ff85; }
+    
+    /* FAB estilo */
+    .fab { position: fixed; bottom: 30px; right: 30px; background: #00f0ff; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8em; cursor: pointer; box-shadow: 0 0 20px #00f0ff; transition: 0.3s; }
+    .fab:hover { background: #00d4e6; transform: scale(1.1); }
 </style>
 </head>
-
 <body>
 
-<!-- CAMERA -->
-<div id="camCard">
-  <div id="wrap">
-    <video id="vid" autoplay playsinline muted></video>
-    <canvas id="can"></canvas>
+<h1>📸 Camera Inteligente</h1>
 
-    <!-- HUD -->
-    <div id="hud">
-      <div id="hudKm">KM —</div>
-      <div id="hudStatus">PRONTO</div>
+<div class="camera-container">
+    <video id="video" autoplay playsinline></video>
+    
+    <div class="controls">
+        <button id="btnFoto">📷 Tirar Foto</button>
+        <button id="btnVideo">🎥 Gravar Vídeo</button>
+        <button id="btnPDF">📄 Gerar PDF</button>
+        <button id="btnShare">🔗 Compartilhar</button>
+        <button id="btnClear">🗑 Limpar</button>
     </div>
 
-    <!-- overlay original -->
-    <div id="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
-
-    <!-- chip -->
-    <div id="chip"></div>
-  </div>
+    <div class="hud">
+        <span>Status: <span id="status">Pronto</span></span>
+        <span>KM: <span id="km">0</span></span>
+        <span class="timer" id="timer">00:00</span>
+    </div>
 </div>
 
-<div id="camSpacer"></div>
+<div class="gallery" id="gallery"></div>
 
-<!-- KM -->
-<div id="kmPlaque"><span id="kmTop">KM —</span></div>
-
-<!-- BOTÕES -->
-<div class="card">
-  <div class="row">
-    <button id="btnAutoCapture">🎬 AUTO</button>
-    <button id="btnVideoRecord">⏺️ GRAVAR</button>
-
-    <button id="btnPdf">📄 PDF</button>
-    <button id="btnSharePdf">📤 PDF</button>
-
-    <button id="btnSharePhotos">📷 FOTOS</button>
-    <button id="btnClear">🧹 LIMPAR</button>
-  </div>
-</div>
-
-<!-- FOTO -->
-<div class="card">
-  <img id="foto">
-</div>
-
-<!-- GALERIA -->
-<div class="card">
-  <div id="gal" class="gallery"></div>
-</div>
-
-<!-- FAB -->
-<button id="fabCapture">📸</button>
+<div class="fab" id="fab">⏱</div>
 
 <script>
-// FAB ação
-fabCapture.onclick = () => {
-  if (isRecordingVideo) stopVideoRecording();
-  else if (isAutoCapturing) stopAutoCapture();
-  else capture();
-};
+    // Acessar câmera
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+    const km = document.getElementById('km');
+    const timerEl = document.getElementById('timer');
+    const gallery = document.getElementById('gallery');
 
-// HUD
-setInterval(()=>{
-  hudKm.textContent = kmTop.textContent;
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let timerInterval = null;
+    let seconds = 0;
 
-  if (isRecordingVideo){
-    hudStatus.textContent='REC';
-    hudStatus.style.color='#f87171';
-  }
-  else if (isAutoCapturing){
-    hudStatus.textContent='AUTO';
-    hudStatus.style.color='#facc15';
-  }
-  else{
-    hudStatus.textContent='PRONTO';
-    hudStatus.style.color='#4ade80';
-  }
-},300);
+    async function initCamera() {
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            video.srcObject = mediaStream;
+            status.textContent = 'Câmera ativa';
+        } catch (err) {
+            alert('Erro ao acessar a câmera: ' + err);
+        }
+    }
 
-// modo clean
-let lastTap=0;
-document.addEventListener('touchend',()=>{
-  const now=Date.now();
-  if(now-lastTap<300){
-    document.body.classList.toggle('clean');
-  }
-  lastTap=now;
-});
+    function formatTime(sec) {
+        const m = String(Math.floor(sec / 60)).padStart(2,'0');
+        const s = String(sec % 60).padStart(2,'0');
+        return `${m}:${s}`;
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        seconds = 0;
+        timerEl.textContent = formatTime(seconds);
+        timerInterval = setInterval(() => {
+            seconds++;
+            timerEl.textContent = formatTime(seconds);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    // Foto
+    document.getElementById('btnFoto').addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const imgData = canvas.toDataURL('image/png');
+        const img = document.createElement('img');
+        img.src = imgData;
+        gallery.appendChild(img);
+        status.textContent = 'Foto tirada';
+        km.textContent = parseInt(km.textContent) + 1;
+    });
+
+    // Gravar vídeo
+    document.getElementById('btnVideo').addEventListener('click', () => {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+            mediaRecorder = new MediaRecorder(mediaStream);
+            recordedChunks = [];
+            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const vid = document.createElement('video');
+                vid.src = url;
+                vid.controls = true;
+                vid.width = 200;
+                gallery.appendChild(vid);
+                status.textContent = 'Vídeo gravado';
+            };
+            mediaRecorder.start();
+            status.textContent = 'Gravando...';
+            startTimer();
+        } else if(mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            status.textContent = 'Parando gravação...';
+            stopTimer();
+        }
+    });
+
+    // Gerar PDF
+    document.getElementById('btnPDF').addEventListener('click', () => {
+        if (gallery.children.length === 0) { alert('Nenhuma foto para gerar PDF'); return; }
+        const pdf = new jsPDF();
+        Array.from(gallery.children).forEach((el, i) => {
+            if(el.tagName === 'IMG') pdf.addImage(el.src, 'PNG', 10, 10, 180, 160);
+            if(i < gallery.children.length -1) pdf.addPage();
+        });
+        pdf.save('fotos.pdf');
+        status.textContent = 'PDF gerado';
+    });
+
+    // Compartilhar
+    document.getElementById('btnShare').addEventListener('click', async () => {
+        try {
+            const files = Array.from(gallery.children).map(el => {
+                if(el.tagName==='IMG') return fetch(el.src).then(r=>r.blob()).then(b=>new File([b], 'foto.png',{type:'image/png'}));
+            }).filter(f=>f);
+            if(navigator.canShare && files.length) {
+                await navigator.share({ files });
+                status.textContent = 'Compartilhado com sucesso!';
+            } else alert('Compartilhamento não suportado');
+        } catch(err) { alert('Erro ao compartilhar: '+err); }
+    });
+
+    // Limpar
+    document.getElementById('btnClear').addEventListener('click', () => {
+        gallery.innerHTML = '';
+        km.textContent = '0';
+        status.textContent = 'Galeria limpa';
+    });
+
+    // FAB auto foto
+    document.getElementById('fab').addEventListener('click', () => {
+        status.textContent = 'Auto-captura ativada';
+        let count = 0;
+        const interval = setInterval(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const imgData = canvas.toDataURL('image/png');
+            const img = document.createElement('img');
+            img.src = imgData;
+            gallery.appendChild(img);
+            km.textContent = parseInt(km.textContent) + 1;
+            count++;
+            if(count >= 5) { // tira 5 fotos automáticas
+                clearInterval(interval);
+                status.textContent = 'Auto-captura finalizada';
+            }
+        }, 2000);
+    });
+
+    initCamera();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </body>
 </html>
