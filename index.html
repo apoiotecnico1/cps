@@ -3,44 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camera Inteligente</title>
+<title>Camera Inteligente Ultra</title>
 <style>
-    /* Reset básico */
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: #1e1e2f; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 20px; }
+    /* Reset e fonte moderna */
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: linear-gradient(160deg, #0f0c29, #302b63, #24243e); color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:20px; overflow-x:hidden; }
     
-    h1 { margin-bottom: 10px; color: #00f0ff; text-align: center; text-shadow: 0 0 10px #00f0ff; }
-    
+    h1 { margin-bottom:15px; color:#00f0ff; text-align:center; font-size:2.2em; text-shadow: 0 0 15px #00f0ff, 0 0 30px #00f0ff; }
+
     /* Container principal */
-    .camera-container { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 600px; }
-    
-    video { border-radius: 12px; width: 100%; height: auto; border: 3px solid #00f0ff; box-shadow: 0 0 20px #00f0ff; }
-    
-    .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; }
-    
-    button { background: #00f0ff; color: #1e1e2f; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 0 10px #00f0ff; }
-    button:hover { background: #00d4e6; transform: scale(1.05); }
-    
-    .hud { margin-top: 15px; background: rgba(0,0,0,0.6); padding: 12px 20px; border-radius: 10px; width: 100%; display: flex; justify-content: space-between; box-shadow: 0 0 15px #00f0ff; }
-    
-    .hud span { font-weight: bold; }
-    
-    /* Galeria de fotos */
-    .gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center; }
-    .gallery img { width: 120px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #00f0ff; transition: 0.3s; cursor: pointer; }
-    .gallery img:hover { transform: scale(1.1); box-shadow: 0 0 15px #00f0ff; }
-    
-    /* Timer */
-    .timer { font-size: 1.2em; color: #00ff85; font-weight: bold; text-shadow: 0 0 8px #00ff85; }
-    
-    /* FAB estilo */
-    .fab { position: fixed; bottom: 30px; right: 30px; background: #00f0ff; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8em; cursor: pointer; box-shadow: 0 0 20px #00f0ff; transition: 0.3s; }
-    .fab:hover { background: #00d4e6; transform: scale(1.1); }
+    .camera-container { display:flex; flex-direction:column; align-items:center; gap:15px; width:100%; max-width:700px; position:relative; }
+    video { border-radius:15px; width:100%; height:auto; border:4px solid #00f0ff; box-shadow:0 0 30px #00f0ff; transition: transform 0.3s; }
+    video:hover { transform: scale(1.02); }
+
+    /* Controles */
+    .controls { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:10px; }
+    button { background:#00f0ff; color:#1e1e2f; border:none; padding:14px 22px; border-radius:12px; cursor:pointer; font-weight:bold; font-size:1em; box-shadow:0 0 20px #00f0ff; transition: all 0.3s; }
+    button:hover { background:#00d4e6; transform: scale(1.1); }
+
+    /* HUD flutuante */
+    .hud { position:absolute; top:10px; left:50%; transform:translateX(-50%); background: rgba(0,0,0,0.6); padding:12px 25px; border-radius:15px; display:flex; gap:25px; box-shadow:0 0 25px #00f0ff; font-weight:bold; font-size:1em; backdrop-filter: blur(6px); }
+    .hud span { text-shadow:0 0 8px #00ff85; }
+    .timer { color:#00ff85; }
+
+    /* Galeria com animação */
+    .gallery { display:flex; flex-wrap:wrap; gap:12px; margin-top:25px; justify-content:center; transition: all 0.5s ease; }
+    .gallery img, .gallery video { width:140px; height:90px; object-fit:cover; border-radius:10px; border:2px solid #00f0ff; transition: transform 0.4s, box-shadow 0.4s; cursor:pointer; }
+    .gallery img:hover, .gallery video:hover { transform: scale(1.15); box-shadow:0 0 25px #00f0ff; }
+
+    /* FAB ultra */
+    .fab { position:fixed; bottom:30px; right:30px; background:#00f0ff; width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2em; cursor:pointer; box-shadow:0 0 30px #00f0ff; transition: all 0.3s; animation: pulse 2s infinite; }
+    .fab:hover { background:#00d4e6; transform: scale(1.15); }
+    @keyframes pulse { 0%{box-shadow:0 0 30px #00f0ff}50%{box-shadow:0 0 50px #00f0ff}100%{box-shadow:0 0 30px #00f0ff} }
+
 </style>
 </head>
 <body>
 
-<h1>📸 Camera Inteligente</h1>
+<h1>📸 Camera Inteligente Ultra</h1>
 
 <div class="camera-container">
     <video id="video" autoplay playsinline></video>
@@ -64,147 +64,141 @@
 
 <div class="fab" id="fab">⏱</div>
 
-<script>
-    // Acessar câmera
-    const video = document.getElementById('video');
-    const status = document.getElementById('status');
-    const km = document.getElementById('km');
-    const timerEl = document.getElementById('timer');
-    const gallery = document.getElementById('gallery');
-
-    let mediaStream = null;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let timerInterval = null;
-    let seconds = 0;
-
-    async function initCamera() {
-        try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            video.srcObject = mediaStream;
-            status.textContent = 'Câmera ativa';
-        } catch (err) {
-            alert('Erro ao acessar a câmera: ' + err);
-        }
-    }
-
-    function formatTime(sec) {
-        const m = String(Math.floor(sec / 60)).padStart(2,'0');
-        const s = String(sec % 60).padStart(2,'0');
-        return `${m}:${s}`;
-    }
-
-    function startTimer() {
-        clearInterval(timerInterval);
-        seconds = 0;
-        timerEl.textContent = formatTime(seconds);
-        timerInterval = setInterval(() => {
-            seconds++;
-            timerEl.textContent = formatTime(seconds);
-        }, 1000);
-    }
-
-    function stopTimer() {
-        clearInterval(timerInterval);
-    }
-
-    // Foto
-    document.getElementById('btnFoto').addEventListener('click', () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const imgData = canvas.toDataURL('image/png');
-        const img = document.createElement('img');
-        img.src = imgData;
-        gallery.appendChild(img);
-        status.textContent = 'Foto tirada';
-        km.textContent = parseInt(km.textContent) + 1;
-    });
-
-    // Gravar vídeo
-    document.getElementById('btnVideo').addEventListener('click', () => {
-        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-            mediaRecorder = new MediaRecorder(mediaStream);
-            recordedChunks = [];
-            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const vid = document.createElement('video');
-                vid.src = url;
-                vid.controls = true;
-                vid.width = 200;
-                gallery.appendChild(vid);
-                status.textContent = 'Vídeo gravado';
-            };
-            mediaRecorder.start();
-            status.textContent = 'Gravando...';
-            startTimer();
-        } else if(mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            status.textContent = 'Parando gravação...';
-            stopTimer();
-        }
-    });
-
-    // Gerar PDF
-    document.getElementById('btnPDF').addEventListener('click', () => {
-        if (gallery.children.length === 0) { alert('Nenhuma foto para gerar PDF'); return; }
-        const pdf = new jsPDF();
-        Array.from(gallery.children).forEach((el, i) => {
-            if(el.tagName === 'IMG') pdf.addImage(el.src, 'PNG', 10, 10, 180, 160);
-            if(i < gallery.children.length -1) pdf.addPage();
-        });
-        pdf.save('fotos.pdf');
-        status.textContent = 'PDF gerado';
-    });
-
-    // Compartilhar
-    document.getElementById('btnShare').addEventListener('click', async () => {
-        try {
-            const files = Array.from(gallery.children).map(el => {
-                if(el.tagName==='IMG') return fetch(el.src).then(r=>r.blob()).then(b=>new File([b], 'foto.png',{type:'image/png'}));
-            }).filter(f=>f);
-            if(navigator.canShare && files.length) {
-                await navigator.share({ files });
-                status.textContent = 'Compartilhado com sucesso!';
-            } else alert('Compartilhamento não suportado');
-        } catch(err) { alert('Erro ao compartilhar: '+err); }
-    });
-
-    // Limpar
-    document.getElementById('btnClear').addEventListener('click', () => {
-        gallery.innerHTML = '';
-        km.textContent = '0';
-        status.textContent = 'Galeria limpa';
-    });
-
-    // FAB auto foto
-    document.getElementById('fab').addEventListener('click', () => {
-        status.textContent = 'Auto-captura ativada';
-        let count = 0;
-        const interval = setInterval(() => {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const imgData = canvas.toDataURL('image/png');
-            const img = document.createElement('img');
-            img.src = imgData;
-            gallery.appendChild(img);
-            km.textContent = parseInt(km.textContent) + 1;
-            count++;
-            if(count >= 5) { // tira 5 fotos automáticas
-                clearInterval(interval);
-                status.textContent = 'Auto-captura finalizada';
-            }
-        }, 2000);
-    });
-
-    initCamera();
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const video = document.getElementById('video');
+const status = document.getElementById('status');
+const km = document.getElementById('km');
+const timerEl = document.getElementById('timer');
+const gallery = document.getElementById('gallery');
 
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let timerInterval = null;
+let seconds = 0;
+
+async function initCamera() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+        video.srcObject = mediaStream;
+        status.textContent = 'Câmera ativa';
+    } catch(err) { alert('Erro ao acessar a câmera: '+err); }
+}
+
+function formatTime(sec){
+    const m = String(Math.floor(sec/60)).padStart(2,'0');
+    const s = String(sec%60).padStart(2,'0');
+    return `${m}:${s}`;
+}
+
+function startTimer(){
+    clearInterval(timerInterval);
+    seconds=0;
+    timerEl.textContent = formatTime(seconds);
+    timerInterval = setInterval(()=>{seconds++; timerEl.textContent=formatTime(seconds)},1000);
+}
+
+function stopTimer(){ clearInterval(timerInterval); }
+
+// Tirar foto
+document.getElementById('btnFoto').addEventListener('click', ()=>{
+    const canvas=document.createElement('canvas');
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    canvas.getContext('2d').drawImage(video,0,0);
+    const imgData=canvas.toDataURL('image/png');
+    const img=document.createElement('img');
+    img.src=imgData;
+    gallery.appendChild(img);
+    status.textContent='Foto tirada';
+    km.textContent=parseInt(km.textContent)+1;
+});
+
+// Gravar vídeo
+document.getElementById('btnVideo').addEventListener('click', ()=>{
+    if(!mediaRecorder || mediaRecorder.state==='inactive'){
+        mediaRecorder = new MediaRecorder(mediaStream);
+        recordedChunks=[];
+        mediaRecorder.ondataavailable = e=>{if(e.data.size>0) recordedChunks.push(e.data);};
+        mediaRecorder.onstop = ()=>{
+            const blob = new Blob(recordedChunks,{type:'video/webm'});
+            const url = URL.createObjectURL(blob);
+            const vid = document.createElement('video');
+            vid.src = url;
+            vid.controls=true;
+            vid.width=200;
+            gallery.appendChild(vid);
+            status.textContent='Vídeo gravado';
+        };
+        mediaRecorder.start();
+        status.textContent='Gravando...';
+        startTimer();
+    } else if(mediaRecorder.state==='recording'){
+        mediaRecorder.stop();
+        status.textContent='Parando gravação...';
+        stopTimer();
+    }
+});
+
+// Gerar PDF
+document.getElementById('btnPDF').addEventListener('click', ()=>{
+    if(gallery.children.length===0){alert('Nenhuma foto para gerar PDF'); return;}
+    const pdf = new jspdf.jsPDF();
+    Array.from(gallery.children).forEach((el,i)=>{
+        if(el.tagName==='IMG') pdf.addImage(el.src,'PNG',10,10,180,160);
+        if(i<gallery.children.length-1) pdf.addPage();
+    });
+    pdf.save('fotos.pdf');
+    status.textContent='PDF gerado';
+});
+
+// Compartilhar
+document.getElementById('btnShare').addEventListener('click', async ()=>{
+    try{
+        const files = await Promise.all(Array.from(gallery.children).map(async el=>{
+            if(el.tagName==='IMG'){
+                const blob = await fetch(el.src).then(r=>r.blob());
+                return new File([blob],'foto.png',{type:'image/png'});
+            }
+        }).filter(f=>f));
+        if(navigator.canShare && files.length){
+            await navigator.share({files});
+            status.textContent='Compartilhado com sucesso!';
+        } else alert('Compartilhamento não suportado');
+    } catch(err){ alert('Erro ao compartilhar: '+err); }
+});
+
+// Limpar
+document.getElementById('btnClear').addEventListener('click', ()=>{
+    gallery.innerHTML='';
+    km.textContent='0';
+    status.textContent='Galeria limpa';
+});
+
+// Auto-foto FAB
+document.getElementById('fab').addEventListener('click', ()=>{
+    status.textContent='Auto-captura ativada';
+    let count=0;
+    const interval = setInterval(()=>{
+        const canvas=document.createElement('canvas');
+        canvas.width=video.videoWidth;
+        canvas.height=video.videoHeight;
+        canvas.getContext('2d').drawImage(video,0,0);
+        const imgData=canvas.toDataURL('image/png');
+        const img=document.createElement('img');
+        img.src=imgData;
+        gallery.appendChild(img);
+        km.textContent=parseInt(km.textContent)+1;
+        count++;
+        if(count>=10){ // agora 10 fotos ultra
+            clearInterval(interval);
+            status.textContent='Auto-captura finalizada';
+        }
+    },1500);
+});
+
+initCamera();
+</script>
 </body>
 </html>
