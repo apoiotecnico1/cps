@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Inspeção Fotográfica – Iluminação (v5.3.4 – KM corrigido, compacto)</title>
+<style>
+  :root{ --bg:#0b1020; --surface:#101830; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --btn:#22c55e; --btn3:#eab308; --btn4:#ef4444; --whatsapp:#25D366; --camH: 42vh; --dim:#6b7280 }
+  *{box-sizing:border-box}
+  html,body{height:100%; overflow-x:hidden}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:10px; line-height:1.35}
+  h1{margin:0 0 8px;text-align:center;font-size:1.05rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px; margin:0 auto 10px; max-width:1100px; width:100%}
+  .banner{ max-width:1100px; margin:0 auto 8px; padding:8px 10px; border-radius:10px; background:#3b1a00; border:1px solid #6b3d0b; color:#ffedd5; font-weight:800; display:none }
+
+  /* Câmera fixa / sem rolagem horizontal */
+  #camCard{ position: fixed; left: 50%; top: 0; transform: translateX(-50%); width: min(1100px, calc(100vw - 20px)); height: var(--camH); z-index: 100; padding: 0; margin: 8px auto; box-shadow: 0 10px 24px rgba(0,0,0,.35); border-radius:12px; overflow:hidden }
+  #wrap{ position: relative; height: 100%; border-radius: 12px; overflow: hidden; background:#000 }
+  #vid{ width: 100%; height: 100%; display: block; object-fit: cover; touch-action:none; max-width:100% }
+  #ovlive{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; display:block }
+  #can{display:none}
+  #camSpacer{ height: calc(var(--camH) + 16px); max-width:1100px; width:100%; margin: 0 auto 8px }
+
+  /* Status mínimo */
+  .miniStat{ position:absolute; background:rgba(0,0,0,.6); color:#e6ebff; border:1px solid rgba(255,255,255,.22); padding:3px 6px; border-radius:999px; font-size:.72rem; font-weight:900; display:none; align-items:center; gap:6px; backdrop-filter: blur(4px) }
+  .miniStat.on{ display:inline-flex }
+  .dot{ width:7px; height:7px; border-radius:999px; display:inline-block; background:#9ca3af }
+  .dot.rec{ background:#ef4444 }
+  .dot.auto{ background:#f59e0b }
+
+  /* Drawer compact */
+  #drawerMask{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; z-index:120 }
+  #drawer{ position:fixed; right:10px; top:8px; width:min(92vw,480px); max-height:calc(100vh - 16px); overflow:auto; background:#0f1533; border:1px solid #263166; border-radius:12px; padding:10px; box-shadow:0 16px 36px rgba(0,0,0,.6); display:none; z-index:130 }
+  #drawer h3{ margin:0 0 6px; font-size:.95rem }
+  .opt-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; margin:6px 0 }
+  .opt-col{ display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid #22305a; border-radius:10px; background:#0b1333; flex:1 1 240px }
+  .opt-col label{ display:flex; gap:6px; align-items:center; font-size:.85rem; color:#dfe7ff }
+  .dim{ opacity:.55 }
+  .hide{ display:none !important }
+  select, input[type=range], input[type=text], input[type=number], input[type=color]{ border-radius:10px; border:1px solid var(--border); background:#0d1430; color:#dfe7ff; font-weight:700; padding:6px 8px; font-size:.85rem }
+  .small{ font-size:.82rem; padding:7px 9px }
+
+  /* FABs menores */
+  .fab{ position:absolute; right:10px; bottom:10px; width:38px; height:38px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(13,20,48,.7); color:#e6ebff; cursor:pointer; display:grid; place-items:center; font-size:.95rem; box-shadow:0 6px 16px rgba(0,0,0,.35); backdrop-filter: blur(6px) }
+  #btnCfg{ bottom:10px; right:10px }
+  #btnCam{ bottom:54px; right:10px }
+
+  /* Ações compactas */
+  .row{display:flex;gap:6px;flex-wrap:wrap}
+  button{ flex:1 1 140px; padding:8px 10px; font-size:.9rem; border:0; border-radius:9px; cursor:pointer; background:#0d1430; color:#dfe7ff; font-weight:800 }
+  #btnPdf{background:var(--btn3);color:#000}
+  #btnSharePdf,#btnSharePhotos{background:var(--whatsapp);color:#053d19}
+  #btnClear{background:var(--btn4);color:#fff}
+  button:disabled{opacity:.55;cursor:not-allowed}
+
+  /* Lock simples */
+  #lock{ position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85)); display:flex; align-items:center; justify-content:center; z-index:9999 }
+  .lock-card{ width:min(92vw,400px); background:#0f1533; border:1px solid #263166; border-radius:12px; padding:14px; box-shadow:0 10px 28px rgba(0,0,0,.6); text-align:center }
+  .lock-row{display:flex; gap:6px; align-items:center; justify-content:center; margin:8px 0}
+  #pwd{ flex:1 1 auto; padding:10px; border:1px solid #2a3a7a; border-radius:10px; background:#0b1130; color:#e6ebff; font-size:.95rem; outline:none }
+  #btnEnter{ padding:10px 14px; border:0; border-radius:10px; background:#22c55e; color:#072414; font-weight:900; cursor:pointer }
+  #err{color:#ff9aa2; font-size:.9rem; min-height:1.2em; margin-top:6px}
+
+  .overlayCenter{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center }
+  .startBox{ background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.25); padding:12px; border-radius:12px; text-align:center; display:none }
+  .startBox h3{ margin:0 0 6px; font-size:.95rem }
+  .startBox p{ margin:0 0 8px; color:#c9d4ff; font-size:.85rem }
+  .startBox button{ background:#22c55e; color:#072414; font-weight:900; border:0; border-radius:10px; padding:8px 12px; cursor:pointer; font-size:.9rem }
+
+  img, canvas, video{ max-width:100% }
+</style>
+</head>
+<body>
+
+<div id="httpsWarning" class="banner">Abra via <b>HTTPS</b> ou <b>localhost</b> para garantir acesso à câmera.</div>
+
+<!-- Lock (senha: nox) -->
+<div id="lock">
+  <div class="lock-card">
+    <h2>🔒 Acesso restrito</h2>
+    <p>Senha legado: <b>nox</b></p>
+    <div class="lock-row">
+      <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" />
+      <button id="btnEnter">Entrar</button>
+    </div>
+    <label style="display:flex; align-items:center; gap:6px; justify-content:center; color:#cbd5ff; font-size:.85rem; margin-top:6px">
+      <input id="remember" type="checkbox" /> Lembrar nesta sessão
+    </label>
+    <div id="err"></div>
+  </div>
+</div>
+
+<h1>📸 Inspeção Fotográfica</h1>
+<div id="camSpacer"></div>
+
+<!-- CÂMERA -->
+<div class="card" id="camCard">
+  <div id="wrap">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="ovlive"></canvas>
+    <canvas id="can" width="1280" height="720"></canvas>
+
+    <div class="overlayCenter"><div id="startBox" class="startBox">
+      <h3>Permitir acesso à câmera</h3>
+      <p>Toque em <b>Iniciar câmera</b> e autorize o navegador.</p>
+      <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap">
+        <button id="btnStartCam">Iniciar câmera</button>
+      </div>
+      <small id="camErr" style="display:block; margin-top:6px; color:#ffb4b4"></small>
+    </div></div>
+
+    <!-- status mínimo -->
+    <div id="miniStat" class="miniStat" style="left:10px; top:10px">
+      <span class="dot" id="dotRec"></span>
+      <span class="dot" id="dotAuto"></span>
+      <span id="countLabel" style="display:none">0</span>
+    </div>
+
+    <!-- FABs -->
+    <button id="btnCfg" class="fab" title="Controles">⚙️</button>
+    <button id="btnCam" class="fab" title="Trocar câmera">🎥</button>
+  </div>
+</div>
+
+<!-- Drawer de Controles -->
+<div id="drawerMask"></div>
+<div id="drawer">
+  <h3>⚙️ Overlay e Relatório (padrão: KM + Data/Hora)</h3>
+  <div class="opt-row">
+    <div class="opt-col">
+      <label>🎥 Câmera
+        <select id="cameraSel"></select>
+      </label>
+      <div style="display:flex; gap:6px; flex-wrap:wrap">
+        <button id="btnCycle" class="small" title="Trocar">Trocar</button>
+        <button id="btnRear" class="small" title="Traseira">Traseira</button>
+        <button id="btnFront" class="small" title="Frontal">Frontal</button>
+      </div>
+      <div class="opt-col" style="margin-top:6px">
+        <strong>CSV (fallback se não carregar automático)</strong>
+        <label>KM CSV <input id="fileKm" type="file" accept=".csv" /></label>
+        <label>IDs CSV <input id="fileIds" type="file" accept=".csv" /></label>
+        <small style="color:#9fb4fc">Esperado: <b>SNVBR116SPRJ.csv</b> e <b>Dados_Completos_Grupo_2_all.csv</b> no mesmo diretório.</small>
+      </div>
+    </div>
+
+    <div class="opt-col">
+      <strong>Campos do Overlay (na tela e na foto)</strong>
+      <label><input id="chkOvKm" type="checkbox" checked /> KM</label>
+      <label><input id="chkOvTs" type="checkbox" checked /> Data/Hora</label>
+      <div id="grpOvGps" class="dim">
+        <label style="margin-top:6px"><input id="chkOvGps" type="checkbox" /> GPS</label>
+        <div id="ovGpsOpts" class="hide" style="margin-left:10px">
+          <label>Precisão GPS (decimais)
+            <input id="numGpsDec" type="number" min="3" max="7" step="1" value="6" style="width:90px" />
+          </label>
+          <label>Formato coord.
+            <select id="selCoordFmt">
+              <option value="dd">Decimal (DD)</option>
+              <option value="dms">Graus/Min/Seg (DMS)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="grpOvIds" class="dim">
+        <label style="margin-top:6px"><input id="chkOvIds" type="checkbox" /> IDs próximos</label>
+      </div>
+      <label style="margin-top:6px">Cor da faixa <input id="ovColor" type="color" value="#000000" /></label>
+      <label>Opacidade <input id="ovAlpha" type="range" min="30" max="90" step="1" value="62" /></label>
+      <label>Altura faixa (%) <input id="ovBandPct" type="range" min="12" max="22" step="1" value="16" /></label>
+      <label>Tam. fonte (%) <input id="ovFontPct" type="range" min="90" max="130" step="5" value="100" /></label>
+    </div>
+
+    <div class="opt-col">
+      <strong>Relatório/PDF (mesma seleção)</strong>
+      <label><input id="chkMsgKm" type="checkbox" checked/> KM</label>
+      <label><input id="chkMsgTs" type="checkbox" checked/> Data/Hora</label>
+      <div id="grpMsgGps" class="dim">
+        <label style="margin-top:6px"><input id="chkMsgGps" type="checkbox" /> GPS</label>
+      </div>
+      <div id="grpMsgIds" class="dim">
+        <label style="margin-top:6px"><input id="chkMsgIds" type="checkbox" /> IDs</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AÇÕES -->
+<div class="card">
+  <div class="row">
+    <button id="btnAutoCapture" style="background:#ff6b35;color:#fff">🎬 Captura Auto</button>
+    <button id="btnVideoRecord" style="background:#e74c3c;color:#fff">⏺️ Vídeo</button>
+    <button id="btnPdf" disabled>📄 PDF</button>
+    <button id="btnSharePdf" disabled>WhatsApp (PDF)</button>
+    <button id="btnSharePhotos" disabled>WhatsApp (Fotos)</button>
+    <button id="btnClear" disabled>🧹 Limpar</button>
+  </div>
+</div>
+
+<!-- Prévia + Galeria -->
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:.95rem">Foto mais recente</h2>
+  <img id="foto" alt="Prévia da foto capturada">
+</div>
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:.95rem">Lista de fotos</h2>
+  <div id="gal" class="gallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px"></div>
+</div>
+
+<script>
+/***************** Helpers *****************/
+const $=id=>document.getElementById(id);
+function pad2(n){return String(n).padStart(2,'0')}
+function fmtDate(ts,fmt){const d=new Date(ts);if(fmt==='ISO')return d.toISOString().replace('T',' ').slice(0,19);const Y=d.getFullYear();const M=pad2(d.getMonth()+1);const D=pad2(d.getDate());const h=pad2(d.getHours());const m=pad2(d.getMinutes());if(fmt==='YYYY-MM-DD HH:mm')return `${Y}-${M}-${D} ${h}:${m}`;if(fmt==='DD/MM HH:mm')return `${pad2(D)}/${pad2(M)} ${h}:${m}`;return `${pad2(D)}/${pad2(M)}/${Y} ${h}:${m}`}
+function toDMS(val, latlon){const abs=Math.abs(val);const deg=Math.floor(abs);const minFloat=(abs-deg)*60;const min=Math.floor(minFloat);const sec=Math.round((minFloat-min)*60);const hemi=latlon==='lat'?(val>=0?'N':'S'):(val>=0?'E':'W');return `${deg}°${pad2(min)}'${pad2(sec)}"${hemi}`}
+function fmtGps(lat,lon,fmt,dec){if(fmt==='dms'){return `${toDMS(lat,'lat')}, ${toDMS(lon,'lon')}`}const d=Math.min(7,Math.max(3,Number(dec||6)));return `${lat.toFixed(d)}, ${lon.toFixed(d)}`}
+function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); // PT-BR: separador decimal vírgula
+  // remove separador de milhar (ponto) e troca vírgula por ponto
+  if(/[\d]\.[\d]{3}[\.,]/.test(s) || /,\d+$/.test(s)){ return Number(s.replace(/\./g,'').replace(',','.')) } return Number(s) }
+function cleanLine(l){ return String(l||'').replace(/^\uFEFF/,'').trim(); }
+function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
+
+/***************** Estado *****************/
+let camReady=false; let currentStream=null,currentTrack=null; let deviceList=[], deviceIndex=0; let lastPos=null; let gpsReady=false; const photos=[];
+const vid=$('vid'), can=$('can'), ctx=can.getContext('2d',{alpha:false}); const ovlive=$('ovlive'), ovctx=ovlive.getContext('2d');
+const btnStartCam=$('btnStartCam'), startBox=$('startBox'), camErr=$('camErr');
+const drawer=$('drawer'), drawerMask=$('drawerMask'), btnCfg=$('btnCfg'), btnCam=$('btnCam');
+const cameraSel=$('cameraSel'), btnCycle=$('btnCycle'), btnRear=$('btnRear'), btnFront=$('btnFront');
+const chkOvKm=$('chkOvKm'), chkOvTs=$('chkOvTs'), chkOvGps=$('chkOvGps'), chkOvIds=$('chkOvIds');
+const chkMsgKm=$('chkMsgKm'), chkMsgTs=$('chkMsgTs'), chkMsgGps=$('chkMsgGps'), chkMsgIds=$('chkMsgIds');
+const grpOvGps=$('grpOvGps'), grpOvIds=$('grpOvIds'), grpMsgGps=$('grpMsgGps'), grpMsgIds=$('grpMsgIds');
+const ovColor=$('ovColor'), ovAlpha=$('ovAlpha'), ovBandPct=$('ovBandPct'), ovFontPct=$('ovFontPct');
+const numGpsDec=$('numGpsDec'), selCoordFmt=$('selCoordFmt');
+const btnAutoCapture=$('btnAutoCapture'), btnVideoRecord=$('btnVideoRecord'); const btnPdf=$('btnPdf'), btnSharePdf=$('btnSharePdf'), btnSharePhotos=$('btnSharePhotos'), btnClear=$('btnClear');
+const gal=$('gal'), foto=$('foto'); const miniStat=$('miniStat'), dotRec=$('dotRec'), dotAuto=$('dotAuto'), countLabel=$('countLabel');
+const fileKm=$('fileKm'), fileIds=$('fileIds');
+
+/***************** Drawer *****************/
+function openDrawer(){ drawer.style.display='block'; drawerMask.style.display='block'; }
+function closeDrawer(){ drawer.style.display='none'; drawerMask.style.display='none'; }
+btnCfg.onclick=()=>{ (drawer.style.display==='block')? closeDrawer(): openDrawer(); };
+drawerMask.onclick=closeDrawer; btnCam.onclick=()=>btnCycle.click();
+
+/***************** HTTPS aviso *****************/
+if(!window.isSecureContext){ document.getElementById('httpsWarning').style.display='block'; }
+
+/***************** GPS *****************/
+function startGPS(){ if(!('geolocation' in navigator)){ gpsReady=false; return; } navigator.geolocation.getCurrentPosition(p=>{ lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy}; gpsReady=true; navigator.geolocation.watchPosition(pos=>{ lastPos={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy}; },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000}); },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000}); }
+
+/***************** Dados KM/IDs com grid **************/
+let kmPoints=[], idPoints=[]; const CELL=0.005; const kmGrid=new Map(), idGrid=new Map();
+function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}` }
+function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); if(a) a.push(p); else grid.set(k,[p]); }
+function gridCands(grid,lat,lon,minCount=60,maxR=6){ const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[]; for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ const y=ky+dy; for(let dx=-r;dx<=r;dx++){ if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue; const a=grid.get(`${y},${kx+dx}`); if(a) out.push(...a); } } } return out }
+function pickTrio(c){ // tenta duas colunas possíveis (alguns CSV tem trio em 0..2 ou 7..9)
+  const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])}; if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1;
+  const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])}; if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2; return null }
+async function loadKM_fromText(txt){ kmPoints=[]; kmGrid.clear(); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); let lastKeep=null; const MIN_STEP=5; for(let i=0;i<lines.length;i++){ const c=lines[i].split(';'); if(!c.length) continue; const t=pickTrio(c); if(!t) continue; if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue; if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else { const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon); if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; } } } kmPoints.forEach(p=>gridInsert(kmGrid,p)); }
+async function loadIDs_fromText(txt){ idPoints=[]; idGrid.clear(); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); if(!lines.length) return; const head=lines[0].split(';').map(h=>h.toLowerCase()); const iId=head.findIndex(h=>h.includes('id') && !h.includes('lat') && !h.includes('long')); const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon'));
+  for(let i=1;i<lines.length;i++){ const c=lines[i].split(';'); const id=String(c[iId]||'').trim(); const lat=parsePt(c[iLat]); const lon=parsePt(c[iLon]); if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue; if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; const p={id,lat,lon}; idPoints.push(p); gridInsert(idGrid,p); }
+}
+async function tryFetchCSVs(){ try{ const km=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text()); await loadKM_fromText(km); }catch(e){ console.warn('KM CSV não carregado via fetch', e); }
+  try{ const ids=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text()); await loadIDs_fromText(ids); }catch(e){ console.warn('IDs CSV não carregado via fetch', e); } }
+fileKm?.addEventListener('change', async ()=>{ const f=fileKm.files?.[0]; if(!f) return; const txt=await f.text(); await loadKM_fromText(txt); alert(`KM carregado: ${kmPoints.length} pontos.`); });
+fileIds?.addEventListener('change', async ()=>{ const f=fileIds.files?.[0]; if(!f) return; const txt=await f.text(); await loadIDs_fromText(txt); alert(`IDs carregados: ${idPoints.length} pontos.`); });
+
+function nearestKM(lat,lon){ if(!kmPoints.length) return null; const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null; let best=null, bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){ bd=d; best=p; } } return best }
+function fmtKmStr(k){ if(!k||!Number.isFinite(k.km)) return 'KM —'; let K=Math.floor(k.km), m=Math.round((k.km-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}` }
+function nearestIDs(lat,lon,n=5){ if(!idPoints.length) return []; const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20)); const arr=cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0,n).map(o=>o.id) }
+
+/***************** Mostrar/ocultar grupos extras *****************/
+function syncExtras(){ // Overlay GPS
+  if(chkOvGps.checked){ grpOvGps.classList.remove('dim'); $('ovGpsOpts').classList.remove('hide'); } else { grpOvGps.classList.add('dim'); $('ovGpsOpts').classList.add('hide'); }
+  if(chkOvIds.checked){ grpOvIds.classList.remove('dim'); } else { grpOvIds.classList.add('dim'); }
+  if(chkMsgGps.checked){ grpMsgGps.classList.remove('dim'); } else { grpMsgGps.classList.add('dim'); }
+  if(chkMsgIds.checked){ grpMsgIds.classList.remove('dim'); } else { grpMsgIds.classList.add('dim'); }
+}
+['chkOvGps','chkOvIds','chkMsgGps','chkMsgIds'].forEach(id=> $(id).addEventListener('change',syncExtras));
+
+/***************** Overlay (tela = salvo) *****************/
+function resizeOverlay(){ const w=vid.videoWidth||1280, h=vid.videoHeight||720; ovlive.width=w; ovlive.height=h; }
+function drawOverlay(ctx,w,h,kmStr,ids,ts){ const pct=Math.min(22,Math.max(12,Number(ovBandPct.value||16)))/100; const bandH=Math.max(70,Math.round(h*pct)); const alpha=Math.min(0.9,Math.max(0.3,Number(ovAlpha.value||62)/100)); const rgb=ovColor.value||'#000000'; ctx.clearRect(0,0,w,h); ctx.fillStyle=hexToRgba(rgb,alpha); ctx.fillRect(0,h-bandH,w,bandH); ctx.fillStyle='#fff'; ctx.textAlign='left'; const scale=Math.min(1.3,Math.max(0.85,Number(ovFontPct.value||100)/100)); let y=h-bandH+Math.round(bandH*0.52);
+  if(chkOvKm.checked){ ctx.font=`900 ${Math.round(h*0.05*scale)}px system-ui`; ctx.fillText(kmStr,16,y); }
+  let y2=h-Math.round(bandH*0.22);
+  if(chkOvTs.checked){ ctx.font=`700 ${Math.round(h*0.029*scale)}px system-ui`; ctx.fillText(ts,16,y2); y2-=Math.round(h*0.032*scale); }
+  if(chkOvGps.checked && Number.isFinite(lastPos?.lat) && Number.isFinite(lastPos?.lon)){
+    ctx.font=`600 ${Math.round(h*0.026*scale)}px system-ui`; ctx.fillText(`GPS: ${fmtGps(lastPos.lat,lastPos.lon, selCoordFmt.value, numGpsDec.value||6)}`,16, h-Math.round(bandH*0.08));
+  }
+  if(chkOvIds.checked && ids?.length){ ctx.textAlign='right'; ctx.font=`600 ${Math.round(h*0.026*scale)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e,w-16,h-bandH+24+i*24)); }
+}
+function liveTick(){ if(!camReady){ requestAnimationFrame(liveTick); return; } const w=ovlive.width,h=ovlive.height; let kmStr='KM —', ids=[]; const ts=fmtDate(new Date(),'DD/MM/YYYY HH:mm'); if(gpsReady && lastPos){ const k=nearestKM(lastPos.lat,lastPos.lon); kmStr=fmtKmStr(k); if(chkOvIds.checked) ids=nearestIDs(lastPos.lat,lastPos.lon,5); } drawOverlay(ovctx,w,h,kmStr,ids,ts); requestAnimationFrame(liveTick); }
+
+/***************** Câmera *****************/
+function setStartVisible(v){ startBox.style.display=v?'block':'none'; }
+function showCamErr(m){ camErr.textContent=m||''; }
+async function enumerateCameras(){ try{ const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput'); cameraSel.innerHTML=''; deviceList.forEach((d,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=d.label||`Câmera ${i+1}`; cameraSel.appendChild(o); }); if(deviceList.length){ cameraSel.value='0'; deviceIndex=0; } }catch{} }
+async function startCameraWith(constraints){ try{ if(currentStream) currentStream.getTracks().forEach(t=>t.stop()); const st=await navigator.mediaDevices.getUserMedia(constraints); currentStream=st; vid.srcObject=st; await new Promise(res=>{ if(vid.readyState>=1&&vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,900); }); currentTrack=st.getVideoTracks()[0]; camReady=!!vid.videoWidth; resizeOverlay(); setStartVisible(false); showCamErr(''); return true; }catch(e){ showCamErr((e&&e.name? e.name: e)||'Erro câmera'); setStartVisible(true); return false; } }
+async function startCameraLadder(){ const savedId=localStorage.getItem('camDeviceId'); if(savedId){ if(await startCameraWith({video:{deviceId:{exact:savedId}}})) return true; }
+  if(await startCameraWith({video:{facingMode:{exact:'environment'}}})) return true; if(await startCameraWith({video:{facingMode:{exact:'user'}}})) return true; if(await startCameraWith({video:true})) return true; return false; }
+btnStartCam.onclick=async()=>{ await enumerateCameras(); const ok=await startCameraLadder(); if(ok){ setStartVisible(false); }};
+cameraSel.onchange=async()=>{ const i=Number(cameraSel.value||0); const dev=deviceList[i]; localStorage.setItem('camDeviceId', dev?.deviceId||''); await startCameraWith({video:{deviceId:{exact:dev?.deviceId}}}); };
+btnCycle.onclick=async()=>{ if(!deviceList.length) await enumerateCameras(); deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); cameraSel.value=String(deviceIndex); const dev=deviceList[deviceIndex]; localStorage.setItem('camDeviceId', dev?.deviceId||''); await startCameraWith({video:{deviceId:{exact:dev?.deviceId}}}); };
+btnRear.onclick=()=>startCameraWith({video:{facingMode:{exact:'environment'}}});
+btnFront.onclick=()=>startCameraWith({video:{facingMode:{exact:'user'}}});
+
+/***************** Captura *****************/
+function updateActions(){ const n=photos.length, enabled=n>0; btnPdf.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; btnClear.disabled=!enabled; countLabel.style.display='inline'; countLabel.textContent=String(n); }
+function renderGallery(){ gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb'; d.style.border='1px solid #243053'; d.style.borderRadius='8px'; d.style.overflow='hidden'; const im=document.createElement('img'); im.src=p.url; const meta=document.createElement('div'); meta.style.padding='4px 6px'; meta.style.fontSize='.78rem'; meta.style.color='#c7d2fe'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`; d.appendChild(im); d.appendChild(meta); gal.appendChild(d); }); updateActions(); }
+function capture(){ if(!camReady) return; const W=ovlive.width, H=ovlive.height; can.width=W; can.height=H; const c=can.getContext('2d'); c.drawImage(vid,0,0,W,H); let kmStr='KM —', ids=[]; if(gpsReady && lastPos){ const k=nearestKM(lastPos.lat,lastPos.lon); kmStr=fmtKmStr(k); if(chkOvIds.checked) ids=nearestIDs(lastPos.lat,lastPos.lon,5); }
+  const ts=fmtDate(new Date(),'DD/MM/YYYY HH:mm'); drawOverlay(c,W,H,kmStr,ids,ts); const url=can.toDataURL('image/jpeg',0.92); foto.src=url; const rec={id:Date.now()+Math.random().toString(36).slice(2), url, ts, kmStr}; photos.push(rec); renderGallery(); }
+
+/***************** Vídeo/Auto (simplificados) *****************/
+btnVideoRecord.onclick=()=>{ const recON=dotRec.classList.contains('rec'); if(recON){ dotRec.classList.remove('rec'); btnVideoRecord.textContent='⏺️ Vídeo'; } else { if(!camReady) return; dotRec.classList.add('rec'); btnVideoRecord.textContent='⏹️ Parar'; } };
+let autoTimer=null; btnAutoCapture.onclick=()=>{ const on=dotAuto.classList.contains('auto'); if(on){ clearInterval(autoTimer); dotAuto.classList.remove('auto'); btnAutoCapture.textContent='🎬 Captura Auto'; } else { if(!camReady) return; dotAuto.classList.add('auto'); btnAutoCapture.textContent='⏹️ Parar'; autoTimer=setInterval(capture,700); } };
+
+/***************** Eventos *****************/
+window.addEventListener('resize', resizeOverlay);
+wrap.addEventListener('click', ()=>{ if(!camReady){ btnStartCam.click(); } else { capture(); } });
+
+/***************** Boot *****************/
+(async function boot(){
+  // Defaults: KM+Data/Hora ON, GPS/IDs OFF
+  syncExtras();
+  // Tenta carregar CSVs por fetch; se não der, usuário usa inputs
+  tryFetchCSVs();
+  startGPS();
+  resizeOverlay();
+  requestAnimationFrame(liveTick);
+})();
+</script>
+</body>
+</html>
