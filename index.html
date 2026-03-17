@@ -6,9 +6,7 @@
 <meta name="theme-color" content="#0b1020" />
 <title>Relatório Fotográfico – Iluminação</title>
 <style>
-  /* ========= THEME inspirado Motiva (sem nome) =========
-     Paleta digital: Anil/Violeta/Turquesa/Laranja/Neutros (guia de marca).
-  */
+  /* ========= TEMA (cores “anil/violeta/turquesa”) ========= */
   :root{
     --anil:#5E22F3; --violeta:#BA39E4; --turquesa:#2FC8E3; --laranja:#DD511A;
     --preto:#000; --branco:#FFF;
@@ -19,13 +17,15 @@
           radial-gradient(1000px 600px at 120% 10%, #153B6A55, transparent 70%),
           #0B0F22;
     --surface:#11173AEE; --border:#1E2B55; --fg:#EAF0FF; --muted:#A7B3D8;
+
     --btn-primary:linear-gradient(180deg, var(--anil), #4310CF);
     --btn-accent: linear-gradient(180deg, var(--turquesa), #1DA8C1);
     --btn-warning:linear-gradient(180deg, var(--laranja), #BB3E0C);
     --btn-danger: linear-gradient(180deg, var(--err-60), #BE003F);
+
     --cam-bg: linear-gradient(180deg, #1C1348, #0D1235);
 
-    /* Altura da câmera (ajustada dinamicamente por JS) */
+    /* Altura dinâmica da câmera – calculada via JS (fallback abaixo) */
     --camH: 42vh;
   }
 
@@ -68,7 +68,7 @@
     z-index: 100; padding: 0; margin: 12px auto; border-radius: 14px;
     background: var(--cam-bg); border:1px solid #22306A; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
   }
-  /* empurra conteúdo para baixo da câmera fixa */
+  /* Empurra conteúdo para baixo do card fixo */
   #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top,0px)); max-width:980px; margin:0 auto 8px }
 
   /* Split: vídeo + últimas capturas */
@@ -81,29 +81,16 @@
   #can{ display:none }
 
   /* Sidebar (desktop) de últimas capturas */
-  #sideDock{
-    display:none; height:100%;
-    border-left:1px solid #21306655; padding-left:10px;
-  }
+  #sideDock{ display:none; height:100%; border-left:1px solid #21306655; padding-left:10px }
   #sideDock h3{ margin:0 0 6px; font-size:.9rem; color:#CFE3FF; letter-spacing:.02em }
-  #dockList{
-    height: calc(100% - 22px);
-    overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px;
-  }
-  .dock-item{
-    display:flex; gap:8px; align-items:center;
-    background:#0A132C; border:1px solid #223066; border-radius:10px; padding:6px 8px; cursor:pointer;
-  }
+  #dockList{ height: calc(100% - 22px); overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px }
+  .dock-item{ display:flex; gap:8px; align-items:center; background:#0A132C; border:1px solid #223066; border-radius:10px; padding:6px 8px; cursor:pointer }
   .dock-item:hover{ filter:brightness(1.06) }
   .dock-thumb{ width:74px; height:46px; object-fit:cover; border-radius:6px; border:1px solid #2A3C70 }
   .dock-meta{ font-size:.78rem; color:#C7D2FE; line-height:1.2 }
 
   /* Dock inferior (mobile) */
-  #dockBar{
-    position:absolute; left:0; right:0; bottom:6px; padding:6px 8px;
-    background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55));
-    border-top:1px solid rgba(255,255,255,.12); border-radius:12px;
-  }
+  #dockBar{ position:absolute; left:0; right:0; bottom:6px; padding:6px 8px; background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55)); border-top:1px solid rgba(255,255,255,.12); border-radius:12px }
   #dockRail{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none }
   #dockRail::-webkit-scrollbar{ display:none }
   .dock-pill{ flex:0 0 auto; width:76px; height:48px; border-radius:8px; border:1px solid #2A3C70; background:#0A132C; overflow:hidden }
@@ -174,62 +161,10 @@
   }
   #kmPlaque span{ letter-spacing:.02em }
   small.hint{display:block;color:#9fb4fc;margin-top:6px}
-
-  /* ===== Splash (Matrix) ===== */
-  #splash{ position: fixed; inset: 0; z-index: 2000; background: radial-gradient(1200px 600px at 50% -10%, #142F56, transparent 65%), #060A12; display:flex; align-items:center; justify-content:center; overflow:hidden }
-  #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
-  .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px }
-  .title{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
-    letter-spacing: .06em; color: #CFE3FF;
-    text-shadow: 0 0 10px #5E22F355, 0 0 22px #BA39E477, 0 0 34px #5E22F355;
-    white-space: nowrap; overflow: hidden; border-right: 2px solid #5E22F3;
-    margin: 0 auto 10px; width: 0;
-  }
-  .subtitle{ font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9 }
-  .splash-actions{ margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
-  .splash-btn{ padding:10px 14px; border-radius:12px; border:1px solid #1b3b32; background: var(--btn-accent); color:#062A30; font-weight:900; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,.35) }
-  .splash-btn:hover{ filter: brightness(1.08) }
-  .splash-fade{ animation: splashout .6s ease forwards }
-  @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
-  @keyframes typing { from { width: 0 } to { width: 24ch } }
-  @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #5E22F3 } }
-
-  /* Ícone de ondas (sem nome) */
-  .brand-dot{ position:fixed; left:14px; top:14px; z-index:120; opacity:.98; pointer-events:none }
   @media (max-width:420px){ h1{font-size:1.12rem} }
 </style>
 </head>
 <body>
-
-<!-- Ícone “ondas” autoral (evoca o conceito, sem nome) -->
-<div class="brand-dot" aria-hidden="true">
-  <svg id="ico-ondas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="56" height="56">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%"  stop-color="#5E22F3"/>
-        <stop offset="100%" stop-color="#BA39E4"/>
-      </linearGradient>
-    </defs>
-    <circle cx="64" cy="64" r="60" fill="url(#g)" opacity="0.14"/>
-    <path d="M18,46 C34,36 54,38 74,48 C94,58 110,58 118,54" fill="none" stroke="#5E22F3" stroke-opacity=".85" stroke-width="8" stroke-linecap="round"/>
-    <path d="M18,64 C36,52 56,54 76,64 C96,74 110,74 118,70"  fill="none" stroke="#BA39E4" stroke-opacity=".95" stroke-width="8" stroke-linecap="round"/>
-    <path d="M18,82 C36,70 56,72 78,82 C100,92 112,92 118,88" fill="none" stroke="#2FC8E3" stroke-opacity=".95" stroke-width="8" stroke-linecap="round"/>
-  </svg>
-</div>
-
-<!-- ===== SPLASH ===== -->
-<div id="splash" aria-label="Tela de abertura do relatório fotográfico">
-  <canvas id="rainCanvas"></canvas>
-  <div class="splash-inner">
-    <h2 class="title" id="splashTitle">RELATÓRIO FOTOGRÁFICO</h2>
-    <div class="subtitle">Inspeção de Iluminação • Rodovia</div>
-    <div class="splash-actions">
-      <button class="splash-btn" id="btnStart">Entrar agora</button>
-    </div>
-  </div>
-</div>
 
 <h1>📸 Relatório Fotográfico</h1>
 
@@ -293,7 +228,7 @@
     <div class="btn-group">
       <button id="btnPdf" disabled>📄 PDF</button>
       <label class="ppp">
-        Fotos/página:
+        Fotos por página no relatório:
         <select id="pppSel">
           <option value="1" selected>1</option>
           <option value="2">2</option>
@@ -330,54 +265,6 @@
 </div>
 
 <script>
-/* ===== Splash (Matrix) ===== */
-(function(){
-  const splash = document.getElementById('splash');
-  const title  = document.getElementById('splashTitle');
-  const btnStart = document.getElementById('btnStart');
-  const canvas = document.getElementById('rainCanvas');
-  const ctx = canvas.getContext('2d');
-
-  let W, H, columns, fontSize = 16, drops = [], raf = null, started = false;
-
-  function resize(){
-    canvas.width = W = window.innerWidth;
-    canvas.height = H = window.innerHeight;
-    fontSize = Math.max(14, Math.min(24, Math.floor(W / 64)));
-    columns = Math.floor(W / fontSize);
-    drops = new Array(columns).fill(1);
-  }
-  window.addEventListener('resize', resize);
-
-  function draw(){
-    ctx.fillStyle = 'rgba(6,10,18,0.08)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#39ff88';
-    ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
-    for(let i=0;i<drops.length;i++){
-      const char = String.fromCharCode(0x30A0 + Math.floor(Math.random()*96));
-      ctx.fillText(char, i*fontSize, drops[i]*fontSize);
-      if(drops[i]*fontSize > H && Math.random() > 0.975) drops[i] = 0;
-      drops[i]++;
-    }
-    raf = requestAnimationFrame(draw);
-  }
-  function typeIn(){
-    title.style.animation = `typing 1200ms steps(24, end) forwards, caret 650ms step-end 6`;
-  }
-  function start(){
-    if(started) return; started = true;
-    splash.classList.add('splash-fade');
-    setTimeout(()=>{ splash.style.display='none'; boot(); }, 580);
-  }
-  resize(); draw(); typeIn();
-  const auto = setTimeout(start, 2600);
-  btnStart.addEventListener('click', ()=>{ clearTimeout(auto); start(); });
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.hidden && raf){ cancelAnimationFrame(raf); raf = null; }
-    else if(!raf){ raf = requestAnimationFrame(draw); }
-  }, {passive:true});
-})();
-
 /* ===== Utilitários ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
@@ -386,6 +273,7 @@ function cleanLine(l){ return l.replace(/^\uFEFF/,'').trim(); }
 function dataURLtoUint8Array(dataURL){ const base64=dataURL.split(',')[1]; const raw=atob(base64); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i)&0xFF; return arr; }
 function dataURLtoBlob(dataURL){ const mime=(dataURL.split(';')[0].split(':')[1])||'image/jpeg'; return new Blob([dataURLtoUint8Array(dataURL)],{type:mime}); }
 function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'}); }
+function pdfEscape(s){ return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
 
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
@@ -398,7 +286,7 @@ const foto=document.getElementById('foto'); const wrap=document.getElementById('
 const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const autoClear=document.getElementById('autoClear'); const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
 const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide =document.getElementById('btnWide'); const btnTele =document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal'); const pppSel=document.getElementById('pppSel');
 const dockList = document.getElementById('dockList'); const dockRail = document.getElementById('dockRail');
-const photos=[]; // {id,url,blob,w,h,ts,kmStr,idsTxt,filename,lat,lon,acc}
+const photos=[];
 
 /* ===== IndexedDB + Persistência + WAL ===== */
 const DB_NAME='inspecaoDB', DB_VER=3;
@@ -422,7 +310,7 @@ async function ensurePersistence(){
   } }catch(e){}
 }
 
-/* WAL + espelho */
+/* WAL + espelho (write-before-show) */
 async function dbPutPhoto(rec){
   if(!db) db=await openDBv3();
   // 1) WAL append (uncommitted)
@@ -444,15 +332,6 @@ async function dbPutPhoto(rec){
     const rq=st.get('wal_'+rec.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); };
     rq.onerror=()=>rej(rq.error);
   });
-}
-
-async function dbGetAllPhotos(){ if(!db) db=await openDBv3();
-  return new Promise((res,rej)=>{ const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').index('ts').getAll();
-    rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
-  });
-}
-async function dbClearAll(){ if(!db) db=await openDBv3();
-  return new Promise((res,rej)=>{ const tx=db.transaction(['photos','wal','photos_mirror'],'readwrite'); tx.objectStore('photos').clear(); tx.objectStore('wal').clear(); tx.objectStore('photos_mirror').clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
 }
 
 /* Snapshot leve do estado (ponteiros) */
@@ -482,13 +361,11 @@ async function walReplay(){
   for(const r of pending){
     if(r.action === 'PUT_PHOTO' && r.payload?.id){
       const photoId = r.payload.id;
-      // verifica se já existe
       const has = await new Promise((res)=>{
         const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').get(photoId);
         rq.onsuccess=()=>res(!!rq.result); rq.onerror=()=>res(false);
       });
       if(!has){
-        // tenta restaurar do espelho
         await new Promise((res)=>{
           const tx=db.transaction(['photos','photos_mirror'],'readwrite');
           const stP=tx.objectStore('photos'); const stM=tx.objectStore('photos_mirror');
@@ -500,7 +377,6 @@ async function walReplay(){
           rq.onerror=()=>res();
         });
       }
-      // marca como committed
       await new Promise((res)=>{
         const tx=db.transaction('wal','readwrite'); const st=tx.objectStore('wal');
         const rq=st.get(r.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); }; rq.onerror=()=>res();
@@ -577,7 +453,7 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
-/* ===== Câmera / Zoom ===== */
+/* ===== Câmera / Zoom + Enquadramento Dinâmico ===== */
 let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
 function lensHint(label=''){ const s=String(label).toLowerCase();
   if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
@@ -592,6 +468,19 @@ function saveCamPrefs(){
   }
 }
 function loadCamPrefsFor(id){ const z=localStorage.getItem('camZoom_'+id); return z?Number(z):null; }
+
+/* Ajusta a altura do card da câmera pelo aspecto real do vídeo */
+function updateCamHeight(){
+  const pad=24, maxW = Math.min(window.innerWidth - pad, 980);
+  const ar = (vid.videoWidth && vid.videoHeight) ? (vid.videoWidth/vid.videoHeight) : (16/9);
+  let idealH = Math.round(maxW / ar);
+  const reserve = 160; /* espaço p/ placa KM/primeiro card */
+  const maxH = Math.max(220, window.innerHeight - reserve);
+  if (idealH > maxH) idealH = maxH;
+  document.documentElement.style.setProperty('--camH', idealH + 'px');
+}
+window.addEventListener('resize', updateCamHeight);
+
 async function enumerateCameras(){
   try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
   const devices=await navigator.mediaDevices.enumerateDevices();
@@ -616,8 +505,18 @@ async function startCamera(deviceIdx=deviceIndex){
     currentTrack=st.getVideoTracks()[0];
     currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
 
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex);
-    saveCamPrefs();
+    // Enquadramento ajustado ao aspecto do vídeo
+    updateCamHeight();
+    vid.addEventListener('loadedmetadata', updateCamHeight, {once:true});
+
+    if(currentCap && currentCap.zoom){
+      zoomRange.min=currentCap.zoom.min??1; zoomRange.max=currentCap.zoom.max??1; zoomRange.step=currentCap.zoom.step??0.1;
+      let z=loadCamPrefsFor(dev?.deviceId) ?? (currentCap.zoom.min ?? 1);
+      z=Math.min(zoomRange.max, Math.max(zoomRange.min, z)); await applyZoom(z,true);
+      zoomWrap.style.display='';
+    }else{ zoomWrap.style.display='none'; }
+
+    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex); saveCamPrefs();
   }catch(e){ camReady=false; }
   setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
 }
@@ -628,8 +527,9 @@ async function applyZoom(val, noSave=false){
   catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
   zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`; if(!noSave) saveCamPrefs();
 }
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); });
+cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); updateCamHeight(); });
 btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
+
 async function switchLens(target){
   const idx=deviceList.findIndex(d=>lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
   if(idx>=0){ await startCamera(idx); return; }
@@ -668,51 +568,31 @@ function startGPS(){
   }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ===== Dock de últimas capturas (sidebar + mobile) ===== */
+/* ===== Dock de últimas capturas ===== */
 function renderDock(){
+  const dockList = document.getElementById('dockList');
+  const dockRail = document.getElementById('dockRail');
   if(!dockList || !dockRail) return;
-  const MAX_SIDE = 12;  // quantas no painel lateral
-  const MAX_MOB  = 10;  // quantas no dock inferior
 
-  const arr = photos.slice().reverse(); // recentes primeiro
+  const MAX_SIDE = 12, MAX_MOB  = 10;
+  const arr = photos.slice().reverse();
 
-  // Sidebar (desktop)
+  // Sidebar
   dockList.innerHTML = '';
   arr.slice(0, MAX_SIDE).forEach((p)=>{
-    const it = document.createElement('div');
-    it.className = 'dock-item';
-    it.title = `${p.kmStr} • ${p.ts}`;
-    it.addEventListener('click', ()=>{
-      foto.src = p.url;
-      foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg';
-    });
-
-    const im = document.createElement('img');
-    im.className='dock-thumb';
-    im.src=p.url;
-
-    const meta = document.createElement('div');
-    meta.className='dock-meta';
-    meta.textContent = `${p.kmStr} • ${p.ts}`;
-
-    it.appendChild(im); it.appendChild(meta);
-    dockList.appendChild(it);
+    const it = document.createElement('div'); it.className = 'dock-item'; it.title = `${p.kmStr} • ${p.ts}`;
+    it.addEventListener('click', ()=>{ foto.src = p.url; foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg'; });
+    const im = document.createElement('img'); im.className='dock-thumb'; im.src=p.url;
+    const meta = document.createElement('div'); meta.className='dock-meta'; meta.textContent = `${p.kmStr} • ${p.ts}`;
+    it.appendChild(im); it.appendChild(meta); dockList.appendChild(it);
   });
 
-  // Dock inferior (mobile)
+  // Dock mobile
   dockRail.innerHTML = '';
   arr.slice(0, MAX_MOB).forEach(p=>{
-    const pill = document.createElement('div');
-    pill.className='dock-pill';
-    pill.title = `${p.kmStr} • ${p.ts}`;
-    pill.addEventListener('click', ()=>{
-      foto.src = p.url;
-      foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg';
-    });
-    const im = document.createElement('img');
-    im.src = p.url;
-    pill.appendChild(im);
-    dockRail.appendChild(pill);
+    const pill = document.createElement('div'); pill.className='dock-pill'; pill.title = `${p.kmStr} • ${p.ts}`;
+    pill.addEventListener('click', ()=>{ foto.src = p.url; foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg'; });
+    const im = document.createElement('img'); im.src = p.url; pill.appendChild(im); dockRail.appendChild(pill);
   });
 }
 
@@ -762,7 +642,7 @@ function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVid
   if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; } else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; } }
 function minimizeControls(busy){ if(!detailsControls) return; if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{} } else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; } }
 
-/* Captura Automática (salva antes de exibir) */
+/* Auto-captura (salva antes de exibir) */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
@@ -779,7 +659,7 @@ function startAutoCapture(){
     const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url); foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
     const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
     await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery(); snapshotSoon();
-  }, 600); // 0,6s; dá tempo para escrita no IDB
+  }, 600);
 }
 function stopAutoCapture(){
   if(!isAutoCapturing) return; isAutoCapturing=false;
@@ -797,7 +677,65 @@ async function clearList(silent=false){
 }
 btnClear.onclick = () => { clearList(false); };
 
-/* PDF */
+/* ===== Coleta de dados técnicos do aparelho/sessão ===== */
+async function collectDeviceInfo(){
+  const now = new Date();
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '—';
+  const lang = navigator.languages?.join(', ') || navigator.language || '—';
+  const ua = navigator.userAgent || '—';
+
+  let uaDataStr = '';
+  try{
+    if(navigator.userAgentData?.getHighEntropyValues){
+      const d = await navigator.userAgentData.getHighEntropyValues(['platform','platformVersion','architecture','bitness','model','uaFullVersion']);
+      uaDataStr = `Plataforma: ${d.platform||'—'} ${d.platformVersion||''} • CPU: ${d.architecture||'—'} ${d.bitness||''} • Modelo: ${d.model||'—'} • Navegador (full): ${d.uaFullVersion||'—'}`;
+    }
+  }catch{}
+
+  const cores = navigator.hardwareConcurrency ?? '—';
+  const ramGB = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : '—';
+  const scr = `${window.screen?.width||'—'}x${window.screen?.height||'—'} @${window.devicePixelRatio||1}x • Profundidade: ${window.screen?.colorDepth||'—'} bits`;
+
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const connStr = conn ? `Tipo: ${conn.type||'—'} • effectiveType: ${conn.effectiveType||'—'} • downlink: ${conn.downlink||'—'}Mbps • RTT: ${conn.rtt||'—'}ms • saveData: ${conn.saveData? 'Sim':'Não'}` : 'Conexão: dados indisponíveis (API não suportada)';
+
+  let battStr = 'Bateria: dados indisponíveis (API não suportada)';
+  try{
+    if(navigator.getBattery){
+      const b = await navigator.getBattery();
+      battStr = `Bateria: ${Math.round(b.level*100)}% • Carregando: ${b.charging? 'Sim':'Não'} • Tempo até cheio: ${b.chargingTime||0}s • Até esgotar: ${b.dischargingTime||0}s`;
+    }
+  }catch{}
+
+  const gpsStr = lastPos ? `GPS: ${lastPos.lat.toFixed(6)}, ${lastPos.lon.toFixed(6)} • Precisão: ±${Math.round(lastPos.acc||0)} m` : 'GPS: sem fix';
+
+  // Câmera selecionada
+  const currentDev = (deviceList && deviceList[deviceIndex]) ? (deviceList[deviceIndex].label||`Câmera ${deviceIndex+1}`) : '—';
+  const vres = (vid.videoWidth && vid.videoHeight) ? `${vid.videoWidth}x${vid.videoHeight}` : '—';
+
+  const lines = [];
+  lines.push('ANEXO TÉCNICO – DISPOSITIVO');
+  lines.push('');
+  lines.push(`Gerado em: ${now.toLocaleString()} • Fuso: ${tz}`);
+  lines.push(`Idioma(s): ${lang}`);
+  lines.push(`User-Agent: ${ua}`);
+  if(uaDataStr) lines.push(uaDataStr);
+  lines.push(`CPU (threads): ${cores} • Memória aprox.: ${ramGB}`);
+  lines.push(`Tela: ${scr}`);
+  lines.push(connStr);
+  lines.push(battStr);
+  lines.push(gpsStr);
+  lines.push(`Câmera: ${currentDev} • Resolução vídeo: ${vres}`);
+  lines.push('');
+  lines.push('Campos restritos por segurança do navegador/OS:');
+  lines.push('Operadora de rede móvel: Indisponível (restrição do navegador)');
+  lines.push('Nível de sinal celular/Wi‑Fi (dBm): Indisponível (restrição do navegador)');
+  lines.push('IMEI / Número de série do aparelho: Indisponível (restrição do navegador)');
+  lines.push('Endereço IP público/local: Indisponível sem serviço externo');
+  return lines.join('\n');
+}
+
+/* ===== PDF com ANEXO TÉCNICO ===== */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   return new Promise((resolve)=>{ const img=new Image();
     img.onload=()=>{ const W=img.width,H=img.height; let w=W,h=H;
@@ -807,15 +745,25 @@ function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
     }; img.onerror=()=>resolve({dataUrl:srcUrl,w:0,h:0}); img.src=srcUrl;
   });
 }
-async function makePdfGrid(arr, perPage=1){
+
+/* Constrói PDF (fotos em grade) + última página com texto (anexo técnico) */
+async function makePdfWithAppendix(arr, perPage=1, appendixText=''){
   const PW=595, PH=842, M=24;
-  const L={1:[1,1],2:[2,1],4:[2,2],8:[4,2]}; const [ROWS, COLS] = L[perPage] || [1,1];
-  const CELL_W = Math.floor( (PW - 2*M) / COLS ); const CELL_H = Math.floor( (PH - 2*M) / ROWS );
-  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ]; const xref=[0]; let objNo=0;
-  const off=()=>parts.reduce((a,b)=>a+b.length,0);
+  const LAYOUT = { 1:[1,1], 2:[2,1], 4:[2,2], 8:[4,2] };
+  const [ROWS, COLS] = LAYOUT[perPage] || [1,1];
+  const CELL_W = Math.floor( (PW - 2*M) / COLS );
+  const CELL_H = Math.floor( (PH - 2*M) / ROWS );
+  const enc=new TextEncoder(); const parts=[ enc.encode('%PDF-1.4\n') ];
+  const xref=[0]; let objNo=0; const off=()=>parts.reduce((a,b)=>a+b.length,0);
   const addObj=(body)=>{ objNo++; xref.push(off()); parts.push(enc.encode(`${objNo} 0 obj\n${body}\nendobj\n`)); return objNo; };
   const addStream=(dict,bin)=>{ objNo++; xref.push(off()); const head=`${objNo} 0 obj\n${dict.replace('>>','')} /Length ${bin.length} >>\nstream\n`; parts.push(enc.encode(head)); parts.push(bin); parts.push(enc.encode(`\nendstream\nendobj\n`)); return objNo; };
+
+  // Fontes (core fonts)
+  const fontRegular = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
+  const fontBold    = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`);
+
   const pages=[]; let i=0;
+  // Páginas com imagens (grade)
   while(i < arr.length){
     const names=[]; const contents=[];
     for(let r=0; r<ROWS && i<arr.length; r++){
@@ -835,80 +783,64 @@ async function makePdfGrid(arr, perPage=1){
     const pageNum=addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << ${names.join(' ')} >> >> /Contents ${contNum} 0 R >>`);
     pages.push(pageNum);
   }
+
+  // Página final de texto (ANEXO TÉCNICO)
+  if(appendixText){
+    const lines = appendixText.split('\n');
+    const lh = 12; let y = PH - M - 20;
+    let content = '';
+    // Título
+    content += `BT /F2 14 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(lines[0]||'ANEXO TÉCNICO')}) Tj ET\n`;
+    y -= 18;
+    // Demais linhas
+    for(let idx=1; idx<lines.length; idx++){
+      if (y < M+20) break; // evita sair da página (simples)
+      const L = lines[idx]||' ';
+      content += `BT /F1 10 Tf 1 0 0 1 ${M} ${y} Tm (${pdfEscape(L)}) Tj ET\n`;
+      y -= lh;
+    }
+    const contNum=addStream(`<< >>`, enc.encode(content));
+    const pageNum=addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 ${fontRegular} 0 R /F2 ${fontBold} 0 R >> >> /Contents ${contNum} 0 R >>`);
+    pages.push(pageNum);
+  }
+
   const pagesNum=addObj(`<< /Type /Pages /Kids [ ${pages.map(n=>`${n} 0 R`).join(' ')} ] /Count ${pages.length} >>`);
   const catalogNum=addObj(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
-  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`; for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
+  const sx=off(); let xr=`xref\n0 ${xref.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<xref.length;i++){ xr+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; }
   parts.push(enc.encode(xr));
   parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
   return new Blob(parts,{type:'application/pdf'});
 }
+
+/* Botão PDF (com anexo técnico) */
 const btnPdf=document.getElementById('btnPdf');
 btnPdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
-  const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const blob=await makePdfGrid(scaled, perPage); const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; document.body.appendChild(a); a.click();
+  const scaled=[];
+  for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
+  const appendix = await collectDeviceInfo();
+  const blob=await makePdfWithAppendix(scaled, perPage, appendix);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`;
+  document.body.appendChild(a); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
   if (autoClear?.checked) { await clearList(true); }
 };
 
-/* KM em tempo real */
-function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
-function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(updateKmDisplay, 300); }
-function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
-
-/* Vídeo (gravação com overlay) */
-async function startVideoRecording(){
-  if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  try{
-    const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
-    const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
-    const canvasStream=overlayCanvas.captureStream(30); const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 }; if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
-    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[]; mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop=()=>{ isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false); };
-    mediaRecorder.start();
-    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #cc3e36, #a12b25)'; setOv('REC ligado', true); updateChip(); minimizeControls(true);
-
-    const drawLoop=()=>{
-      if(!isRecordingVideo) return;
-      overlayCtx.drawImage(vid, 0, 0, overlayCanvas.width, overlayCanvas.height);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
-      const bandH=Math.max(144,Math.round(overlayCanvas.height*0.16));
-      overlayCtx.fillStyle='rgba(0,0,0,.62)'; overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
-      overlayCtx.fillStyle='#b7ffcf'; overlayCtx.textAlign='left'; overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`; overlayCtx.shadowColor='rgba(34,197,94,.45)'; overlayCtx.shadowBlur=16; overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52)); overlayCtx.shadowBlur=0;
-      const ts=new Date().toLocaleString(); overlayCtx.fillStyle='#fff'; overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`; overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
-      requestAnimationFrame(drawLoop);
-    };
-    drawLoop(); startKmUpdate();
-  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); minimizeControls(false); }
-}
-function stopVideoRecording(){
-  if(!isRecordingVideo || !mediaRecorder) return;
-  isRecordingVideo=false; mediaRecorder.stop(); stopKmUpdate();
-  setTimeout(()=>{ if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
-    const blob=new Blob(recordedChunks, {type: 'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
-    const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
-    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
-    setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); minimizeControls(false);
-  }, 500);
-}
-btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
-
-/* Tap no vídeo: parar/alternar/capturar */
-wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else if(csvReady && camReady && gpsReady){ capture(); } });
-
-/* WhatsApp */
+/* WhatsApp – PDF (com anexo técnico) */
 function buildWhatsAppMessage(isPdf){
   const lines=[]; lines.push('*RELATÓRIO DE INSPEÇÃO*'); lines.push(`Total de fotos: ${photos.length}`); lines.push(`Gerado em: ${new Date().toLocaleString()}`); lines.push('');
-  photos.forEach((p,i)=>{ let L=`${i+1}) ${p.kmStr} • ${p.ts}`; if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; } lines.push(L); });
-  if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf'); return lines.join('\n');
+  photos.forEach((p,i)=>{ let L=`${i+1}) ${p.kmStr} • ${p.ts}`; if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)},${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; } lines.push(L); });
+  if(isPdf) lines.push('Anexo técnico ao final do PDF.');
+  return lines.join('\n');
 }
 const btnSharePdf=document.getElementById('btnSharePdf');
 btnSharePdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const pdfBlob=await makePdfGrid(scaled, perPage);
+  const appendix = await collectDeviceInfo();
+  const pdfBlob=await makePdfWithAppendix(scaled, perPage, appendix);
   const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'});
   const text=buildWhatsAppMessage(true);
   try{
@@ -925,6 +857,8 @@ btnSharePdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
     alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
   }
 };
+
+/* WhatsApp – FOTOS */
 const btnSharePhotos=document.getElementById('btnSharePhotos');
 btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg')); const text=buildWhatsAppMessage(false); const MAX=10;
@@ -937,6 +871,11 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
 };
 
 /* Restauração + OV + Boot */
+async function dbGetAllPhotos(){ if(!db) db=await openDBv3();
+  return new Promise((res,rej)=>{ const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').index('ts').getAll();
+    rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
+  });
+}
 async function restoreSavedPhotos(){
   const rows=await dbGetAllPhotos(); if(!rows.length) return;
   for(const r of rows){
@@ -953,15 +892,18 @@ async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
   await ensurePersistence();
   db=await openDBv3();
-  await walReplay();                    // reconstrói se caiu no meio da escrita
+  await walReplay();
   await Promise.all([loadCSVs(), enumerateCameras()]);
   await startCamera(deviceIndex);
   startGPS();
   await restoreSavedPhotos();
+  updateCamHeight(); // garante bom enquadramento ao abrir
   startKmUpdate();
-
   const tick=()=>{ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); }; tick();
 }
+
+/* Inicia direto (sem splash) */
+document.addEventListener('DOMContentLoaded', boot);
 </script>
 
 </body>
