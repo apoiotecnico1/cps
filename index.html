@@ -17,7 +17,7 @@
   --muted:#94a3b8;
   --radius:14px;
 
-  --camH:60vh; /* 🔥 foco total na câmera */
+  --camH:55vh;
 }
 
 *{box-sizing:border-box}
@@ -29,16 +29,7 @@ body{
   color:var(--text);
 }
 
-/* ===== HEADER ===== */
-.header{
-  text-align:center;
-  font-weight:800;
-  font-size:1rem;
-  padding:6px;
-  opacity:.8;
-}
-
-/* ===== CAMERA ===== */
+/* CAMERA FIXA */
 #camCard{
   position:fixed;
   top:0;
@@ -49,41 +40,52 @@ body{
   background:#000;
 }
 
+#wrap{
+  position:relative;
+  width:100%;
+  height:100%;
+}
+
 #vid{
   width:100%;
   height:100%;
   object-fit:cover;
 }
 
+#can{display:none}
+
 /* overlay */
-.overlay{
+#ov{
   position:absolute;
   bottom:10px;
   left:10px;
-  font-size:.8rem;
+}
+
+#ov .msg{
   background:rgba(0,0,0,.6);
   padding:6px 10px;
   border-radius:8px;
+  font-size:.8rem;
 }
 
 /* chip */
-.chip{
+#chip{
   position:absolute;
   top:10px;
   right:10px;
-  background:rgba(0,0,0,.6);
   padding:6px 10px;
   border-radius:999px;
+  background:rgba(0,0,0,.6);
   font-size:.75rem;
 }
 
-/* ===== SPACE ===== */
-.spacer{
+/* espaço */
+#camSpacer{
   height:calc(var(--camH) + 10px);
 }
 
-/* ===== KM ===== */
-.km{
+/* KM */
+#kmPlaque{
   text-align:center;
   font-size:1.2rem;
   font-weight:900;
@@ -93,12 +95,11 @@ body{
   margin:10px;
 }
 
-/* ===== BUTTONS ===== */
-.actions{
+/* BOTÕES */
+.row{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
-  padding:10px;
 }
 
 button{
@@ -109,74 +110,80 @@ button{
   font-weight:900;
 }
 
-.big{
-  grid-column:1 / -1;
+#btnAutoCapture,
+#btnVideoRecord{
+  grid-column:1/-1;
   font-size:1.1rem;
 }
 
-/* cores */
-.auto{background:#f97316;color:#fff;}
-.rec{background:var(--red);}
-.pdf{background:var(--yellow);color:#000;}
-.whats{background:#25D366;color:#053d19;}
-.clear{background:var(--red);}
+#btnAutoCapture{background:#f97316;color:#fff;}
+#btnVideoRecord{background:var(--red);color:#fff;}
+#btnPdf{background:var(--yellow);}
+#btnSharePdf,#btnSharePhotos{background:#25D366;}
+#btnClear{background:var(--red);}
 
-/* ===== GALERIA ===== */
+/* GALERIA */
 .gallery{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
   gap:6px;
-  padding:10px;
 }
 
-.gallery img{
+.thumb img{
   width:100%;
   border-radius:10px;
 }
 
-/* ===== FOOT ===== */
-.footer{
+/* CARDS */
+.card{
+  background:var(--card);
   padding:10px;
-  text-align:center;
-  font-size:.8rem;
-  color:var(--muted);
+  margin:10px;
+  border-radius:12px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">📸 INSPEÇÃO</div>
-
-<!-- CAMERA -->
+<!-- câmera -->
 <div id="camCard">
-  <video id="vid" autoplay playsinline muted></video>
-  <div class="overlay">Toque para capturar</div>
-  <div class="chip" id="chip">●</div>
+  <div id="wrap">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="can"></canvas>
+
+    <div id="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
+    <div id="chip"></div>
+  </div>
 </div>
 
-<div class="spacer"></div>
+<div id="camSpacer"></div>
 
 <!-- KM -->
-<div class="km" id="kmTop">KM —</div>
+<div id="kmPlaque"><span id="kmTop">KM —</span></div>
 
-<!-- BUTTONS -->
-<div class="actions">
-  <button class="big auto" id="btnAutoCapture">🎬 AUTO</button>
-  <button class="big rec" id="btnVideoRecord">⏺️ GRAVAR</button>
+<!-- BOTÕES -->
+<div class="card">
+  <div class="row">
+    <button id="btnAutoCapture">🎬 AUTO</button>
+    <button id="btnVideoRecord">⏺️ GRAVAR</button>
 
-  <button class="pdf" id="btnPdf">📄 PDF</button>
-  <button class="whats" id="btnSharePdf">📤 PDF</button>
+    <button id="btnPdf">📄 PDF</button>
+    <button id="btnSharePdf">📤 PDF</button>
 
-  <button class="whats" id="btnSharePhotos">📷 FOTOS</button>
-  <button class="clear" id="btnClear">🧹 LIMPAR</button>
+    <button id="btnSharePhotos">📷 FOTOS</button>
+    <button id="btnClear">🧹 LIMPAR</button>
+  </div>
+</div>
+
+<!-- FOTO -->
+<div class="card">
+  <img id="foto" style="width:100%;border-radius:10px">
 </div>
 
 <!-- GALERIA -->
-<div class="gallery" id="gal"></div>
-
-<div class="footer">
-Modo otimizado para uso em veículo 🚗
+<div class="card">
+  <div id="gal" class="gallery"></div>
 </div>
 
 </body>
