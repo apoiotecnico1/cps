@@ -3,21 +3,18 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Inspeção Fotográfica</title>
+<title>Inspeção Profissional</title>
 
 <style>
 :root{
-  --bg:#030712;
+  --bg:#020617;
   --card:#0b1225;
-  --accent:#2563eb;
-  --green:#22c55e;
-  --red:#ef4444;
-  --yellow:#facc15;
   --text:#e5edff;
-  --muted:#94a3b8;
-  --radius:14px;
+  --accent:#22c55e;
+  --danger:#ef4444;
+  --warn:#facc15;
 
-  --camH:55vh;
+  --camH:65vh;
 }
 
 *{box-sizing:border-box}
@@ -29,21 +26,21 @@ body{
   color:var(--text);
 }
 
-/* CAMERA FIXA */
+/* ===== CAMERA ===== */
 #camCard{
   position:fixed;
   top:0;
   left:0;
   width:100%;
   height:var(--camH);
-  z-index:100;
   background:#000;
+  z-index:100;
 }
 
 #wrap{
-  position:relative;
   width:100%;
   height:100%;
+  position:relative;
 }
 
 #vid{
@@ -54,7 +51,32 @@ body{
 
 #can{display:none}
 
-/* overlay */
+/* ===== HUD ===== */
+#hud{
+  position:absolute;
+  top:10px;
+  left:10px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+#hudKm{
+  font-size:1.2rem;
+  font-weight:900;
+  background:rgba(0,0,0,.6);
+  padding:6px 10px;
+  border-radius:8px;
+}
+
+#hudStatus{
+  font-size:.75rem;
+  padding:4px 8px;
+  border-radius:6px;
+  background:rgba(0,0,0,.5);
+}
+
+/* ===== overlay original ===== */
 #ov{
   position:absolute;
   bottom:10px;
@@ -68,7 +90,7 @@ body{
   font-size:.8rem;
 }
 
-/* chip */
+/* ===== chip ===== */
 #chip{
   position:absolute;
   top:10px;
@@ -79,23 +101,30 @@ body{
   font-size:.75rem;
 }
 
-/* espaço */
+/* ===== espaço ===== */
 #camSpacer{
   height:calc(var(--camH) + 10px);
 }
 
-/* KM */
+/* ===== KM placa ===== */
 #kmPlaque{
   text-align:center;
-  font-size:1.2rem;
+  font-size:1.1rem;
   font-weight:900;
-  background:linear-gradient(#1e3a8a,#1e40af);
   padding:8px;
-  border-radius:10px;
   margin:10px;
+  border-radius:10px;
+  background:linear-gradient(#1e3a8a,#1e40af);
 }
 
-/* BOTÕES */
+/* ===== BOTÕES ===== */
+.card{
+  background:var(--card);
+  margin:10px;
+  padding:10px;
+  border-radius:12px;
+}
+
 .row{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -103,13 +132,14 @@ body{
 }
 
 button{
-  padding:16px;
-  border-radius:var(--radius);
+  padding:14px;
   border:none;
+  border-radius:12px;
   font-size:1rem;
   font-weight:900;
 }
 
+/* principais */
 #btnAutoCapture,
 #btnVideoRecord{
   grid-column:1/-1;
@@ -117,12 +147,39 @@ button{
 }
 
 #btnAutoCapture{background:#f97316;color:#fff;}
-#btnVideoRecord{background:var(--red);color:#fff;}
-#btnPdf{background:var(--yellow);}
+#btnVideoRecord{background:var(--danger);color:#fff;}
+#btnPdf{background:var(--warn);}
 #btnSharePdf,#btnSharePhotos{background:#25D366;}
-#btnClear{background:var(--red);}
+#btnClear{background:var(--danger);}
 
-/* GALERIA */
+/* ===== FAB ===== */
+#fabCapture{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:85px;
+  height:85px;
+  border-radius:50%;
+  border:none;
+  font-size:2rem;
+  font-weight:900;
+  background:var(--accent);
+  color:#022c22;
+  box-shadow:0 10px 30px rgba(0,0,0,.7);
+  z-index:999;
+}
+
+#fabCapture:active{
+  transform:scale(.9);
+}
+
+/* ===== FOTO ===== */
+#foto{
+  width:100%;
+  border-radius:10px;
+}
+
+/* ===== GALERIA ===== */
 .gallery{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
@@ -134,25 +191,32 @@ button{
   border-radius:10px;
 }
 
-/* CARDS */
-.card{
-  background:var(--card);
-  padding:10px;
-  margin:10px;
-  border-radius:12px;
+/* ===== CLEAN MODE ===== */
+.clean .card,
+.clean #kmPlaque{
+  display:none !important;
 }
 </style>
 </head>
 
 <body>
 
-<!-- câmera -->
+<!-- CAMERA -->
 <div id="camCard">
   <div id="wrap">
     <video id="vid" autoplay playsinline muted></video>
     <canvas id="can"></canvas>
 
+    <!-- HUD -->
+    <div id="hud">
+      <div id="hudKm">KM —</div>
+      <div id="hudStatus">PRONTO</div>
+    </div>
+
+    <!-- overlay original -->
     <div id="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
+
+    <!-- chip -->
     <div id="chip"></div>
   </div>
 </div>
@@ -178,13 +242,53 @@ button{
 
 <!-- FOTO -->
 <div class="card">
-  <img id="foto" style="width:100%;border-radius:10px">
+  <img id="foto">
 </div>
 
 <!-- GALERIA -->
 <div class="card">
   <div id="gal" class="gallery"></div>
 </div>
+
+<!-- FAB -->
+<button id="fabCapture">📸</button>
+
+<script>
+// FAB ação
+fabCapture.onclick = () => {
+  if (isRecordingVideo) stopVideoRecording();
+  else if (isAutoCapturing) stopAutoCapture();
+  else capture();
+};
+
+// HUD
+setInterval(()=>{
+  hudKm.textContent = kmTop.textContent;
+
+  if (isRecordingVideo){
+    hudStatus.textContent='REC';
+    hudStatus.style.color='#f87171';
+  }
+  else if (isAutoCapturing){
+    hudStatus.textContent='AUTO';
+    hudStatus.style.color='#facc15';
+  }
+  else{
+    hudStatus.textContent='PRONTO';
+    hudStatus.style.color='#4ade80';
+  }
+},300);
+
+// modo clean
+let lastTap=0;
+document.addEventListener('touchend',()=>{
+  const now=Date.now();
+  if(now-lastTap<300){
+    document.body.classList.toggle('clean');
+  }
+  lastTap=now;
+});
+</script>
 
 </body>
 </html>
