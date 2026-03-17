@@ -3,82 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relatório Fotográfico PRO</title>
+<title>Relatório de Inspeção PRO</title>
 
 <style>
 :root{
-  --bg:#0b1020;
-  --card:rgba(255,255,255,0.06);
-  --border:rgba(255,255,255,0.15);
+  --bg:#0a0f1f;
+  --panel:#11182f;
+  --glass:rgba(255,255,255,0.04);
+  --border:#1f2a4d;
   --text:#e6ecff;
-  --accent:#22c55e;
+  --muted:#8fa3d6;
+
+  --accent:#00e0ff;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --danger:#ef4444;
 }
 
-*{
-  box-sizing:border-box;
-  transition:all .2s ease;
-}
-
+/* ===== Base ===== */
 body{
   margin:0;
   font-family:system-ui;
-  background:radial-gradient(circle at top,#1a2a5a,#0b1020);
+  background:radial-gradient(circle at top,#162a63,#0a0f1f);
   color:var(--text);
 }
 
-/* ===== Layout ===== */
 .container{
-  max-width:900px;
+  max-width:1000px;
   margin:auto;
   padding:12px;
 }
 
+/* ===== Painel ===== */
 .card{
-  background:var(--card);
-  backdrop-filter:blur(12px) saturate(160%);
+  background:var(--panel);
   border:1px solid var(--border);
   border-radius:14px;
   padding:10px;
   margin-bottom:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
 }
 
-/* ===== Camera ===== */
-#video{
-  width:100%;
-  height:40vh;
-  object-fit:cover;
-  border-radius:12px;
-  background:#000;
-}
-
-/* ===== Buttons ===== */
-button{
-  width:100%;
-  padding:12px;
-  margin:5px 0;
-  border-radius:10px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.05);
-  color:var(--text);
-  font-weight:700;
-}
-
-button:active{
-  transform:scale(.96);
-}
-
-/* ===== Gallery ===== */
-.gallery{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-  gap:6px;
-}
-
-.gallery img{
-  width:100%;
-  border-radius:8px;
-}
-
+/* ===== Status ===== */
 .status{
   display:flex;
   gap:6px;
@@ -86,21 +52,93 @@ button:active{
 }
 
 .badge{
-  padding:4px 8px;
+  padding:6px 10px;
   border-radius:999px;
-  background:#00000055;
   font-size:.8rem;
+  font-weight:700;
+  background:#00000055;
+  border:1px solid var(--border);
 }
+
 .ok{color:#86efac}
 .warn{color:#fde68a}
+.bad{color:#fca5a5}
 
+/* ===== Camera ===== */
+#video{
+  width:100%;
+  height:42vh;
+  object-fit:cover;
+  border-radius:12px;
+  background:#000;
+  border:1px solid var(--border);
+}
+
+/* ===== Botões ===== */
+button{
+  flex:1;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  font-weight:900;
+  letter-spacing:.03em;
+  background:linear-gradient(180deg,#0f1a3a,#0a1128);
+  color:var(--text);
+  box-shadow:0 4px 15px rgba(0,0,0,.5);
+}
+
+button:active{
+  transform:scale(.96);
+}
+
+.primary{
+  background:linear-gradient(180deg,#00e0ff,#0090c0);
+  color:#001018;
+}
+
+.danger{
+  background:linear-gradient(180deg,#ff5c5c,#d93a3a);
+}
+
+.warning{
+  background:linear-gradient(180deg,#ffb347,#d98c1f);
+}
+
+/* ===== Grid botões ===== */
+.row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+/* ===== KM display ===== */
+#kmDisplay{
+  text-align:center;
+  font-size:1.2rem;
+  font-weight:900;
+  color:#00e0ff;
+  padding:8px;
+}
+
+/* ===== Galeria ===== */
+.gallery{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:6px;
+}
+
+.gallery img{
+  width:100%;
+  border-radius:8px;
+  border:1px solid var(--border);
+}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h2>📸 Relatório Fotográfico PRO</h2>
+<h2>📡 Sistema de Inspeção Rodoviária</h2>
 
 <div class="status">
 <span id="stCam" class="badge">Cam</span>
@@ -109,153 +147,162 @@ button:active{
 <span id="stFotos" class="badge">0 fotos</span>
 </div>
 
+<div id="kmDisplay">KM —</div>
+
 <div class="card">
 <video id="video" autoplay playsinline></video>
 </div>
 
-<div class="card">
-<button id="btnCapture">📸 Capturar</button>
-<button id="btnAuto">🎬 Auto</button>
-<button id="btnClear">🧹 Limpar</button>
+<div class="card row">
+<button id="btnCapture" class="primary">📸 FOTO</button>
+<button id="btnAuto" class="warning">🎬 AUTO</button>
+<button id="btnClear" class="danger">🧹 LIMPAR</button>
 </div>
 
 <div class="card">
-<h3>Fotos</h3>
 <div id="gallery" class="gallery"></div>
 </div>
 
 </div>
 
 <script>
-/* ===== Estado ===== */
-let stream=null;
-let gps=null;
-let photos=[];
-let auto=false;
-let lastShot=0;
+/* ===== DADOS ===== */
+let dataset=[];
+let kmPoints=[];
 
-/* ===== Elementos ===== */
-const video=document.getElementById('video');
-const gallery=document.getElementById('gallery');
+/* ===== UTIL ===== */
+function hav(a,b,c,d){
+ const R=6371000;
+ const x=(c-a)*Math.PI/180;
+ const y=(d-b)*Math.PI/180;
+ const u=Math.sin(x/2)**2+
+ Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+ return 2*R*Math.atan2(Math.sqrt(u),Math.sqrt(1-u));
+}
 
-/* ===== Camera ===== */
-async function startCamera(){
-  stream=await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:"environment"}
-  });
-  video.srcObject=stream;
-  stCam("OK");
+/* ===== FILTRO OTIMIZADO ===== */
+function nearest(lat,lon){
+ let best=null,dist=Infinity;
+
+ for(const p of dataset){
+   if(Math.abs(p.lat-lat)>0.01) continue;
+   if(Math.abs(p.lon-lon)>0.01) continue;
+
+   const d=hav(lat,lon,p.lat,p.lon);
+   if(d<dist){dist=d;best=p;}
+ }
+
+ return best;
+}
+
+/* ===== KM ===== */
+function nearestKM(lat,lon){
+ let best=null,dist=Infinity;
+
+ for(const p of kmPoints){
+   if(Math.abs(p.lat-lat)>0.01) continue;
+   if(Math.abs(p.lon-lon)>0.01) continue;
+
+   const d=hav(lat,lon,p.lat,p.lon);
+   if(d<dist){dist=d;best=p;}
+ }
+
+ return best;
+}
+
+/* ===== CAMERA ===== */
+let stream;
+async function startCam(){
+ stream=await navigator.mediaDevices.getUserMedia({
+  video:{facingMode:"environment"}
+ });
+ video.srcObject=stream;
 }
 
 /* ===== GPS ===== */
-function startGPS(){
-  navigator.geolocation.watchPosition(p=>{
-    gps={
-      lat:p.coords.latitude,
-      lon:p.coords.longitude,
-      acc:p.coords.accuracy
-    };
-    stGps("OK");
-  },()=>stGps("ERRO"),{
-    enableHighAccuracy:false,
-    maximumAge:2000
-  });
-}
+let pos=null;
+navigator.geolocation.watchPosition(p=>{
+ pos={lat:p.coords.latitude,lon:p.coords.longitude};
+});
 
-/* ===== Status ===== */
-function stCam(t){setStatus("stCam",t,true)}
-function stGps(t){setStatus("stGps",t,true)}
-function stCsv(t){setStatus("stCsv",t,true)}
-
-function setStatus(id,text,ok){
-  const el=document.getElementById(id);
-  el.textContent=id.replace("st","")+": "+text;
-  el.className="badge "+(ok?"ok":"warn");
-}
-
-/* ===== Capture ===== */
+/* ===== CAPTURA ===== */
 function capture(){
-  if(!gps) return alert("Sem GPS");
+ if(!pos) return;
 
-  const canvas=document.createElement("canvas");
-  const MAX=1280;
+ const canvas=document.createElement("canvas");
+ const ctx=canvas.getContext("2d");
 
-  let w=video.videoWidth;
-  let h=video.videoHeight;
+ let w=video.videoWidth;
+ let h=video.videoHeight;
 
-  if(Math.max(w,h)>MAX){
-    if(w>h){ h=h*(MAX/w); w=MAX }
-    else{ w=w*(MAX/h); h=MAX }
-  }
+ const MAX=1280;
+ if(w>MAX){h*=MAX/w;w=MAX;}
 
-  canvas.width=w;
-  canvas.height=h;
+ canvas.width=w;
+ canvas.height=h;
 
-  const ctx=canvas.getContext("2d");
-  ctx.drawImage(video,0,0,w,h);
+ ctx.drawImage(video,0,0,w,h);
 
-  // overlay
-  ctx.fillStyle="rgba(0,0,0,.6)";
-  ctx.fillRect(0,h-80,w,80);
+ const km=nearestKM(pos.lat,pos.lon);
+ const id=nearest(pos.lat,pos.lon);
 
-  ctx.fillStyle="#22c55e";
-  ctx.font="20px sans-serif";
-  ctx.fillText(`GPS: ${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)}`,10,h-40);
+ ctx.fillStyle="rgba(0,0,0,.6)";
+ ctx.fillRect(0,h-90,w,90);
 
-  const blobURL=canvas.toDataURL("image/jpeg",0.85);
+ ctx.fillStyle="#00e0ff";
+ ctx.font="20px monospace";
+ ctx.fillText(`KM: ${km?.km||'—'}`,10,h-50);
 
-  photos.push(blobURL);
-  render();
+ ctx.fillStyle="#fff";
+ ctx.fillText(`ID: ${id?.id||'—'}`,10,h-20);
 
-  navigator.vibrate?.(50);
+ const url=canvas.toDataURL("image/jpeg",0.85);
+
+ photos.push(url);
+ render();
+
+ navigator.vibrate?.(50);
 }
 
-/* ===== Auto Capture (SUPER OTIMIZADO) ===== */
-function autoLoop(ts){
-  if(!auto) return;
-
-  if(ts-lastShot>600){
-    lastShot=ts;
-    capture();
-  }
-
-  requestAnimationFrame(autoLoop);
+/* ===== AUTO ===== */
+let auto=false,last=0;
+function loop(t){
+ if(auto && t-last>600){
+  last=t;
+  capture();
+ }
+ requestAnimationFrame(loop);
 }
+requestAnimationFrame(loop);
 
-/* ===== Render ===== */
+/* ===== UI ===== */
+let photos=[];
+
 function render(){
-  gallery.innerHTML="";
-  photos.forEach(p=>{
-    const img=document.createElement("img");
-    img.src=p;
-    gallery.appendChild(img);
-  });
-
-  document.getElementById("stFotos").textContent=
-    photos.length+" fotos";
+ gallery.innerHTML="";
+ photos.forEach(p=>{
+  const img=document.createElement("img");
+  img.src=p;
+  gallery.appendChild(img);
+ });
+ stFotos.textContent=photos.length+" fotos";
 }
 
-/* ===== Eventos ===== */
+/* ===== BOTÕES ===== */
 btnCapture.onclick=capture;
 
 btnAuto.onclick=()=>{
-  auto=!auto;
-  btnAuto.textContent=auto?"⏹️ Parar":"🎬 Auto";
-  if(auto){
-    lastShot=0;
-    requestAnimationFrame(autoLoop);
-  }
+ auto=!auto;
+ btnAuto.textContent=auto?"⏹️ PARAR":"🎬 AUTO";
 };
 
 btnClear.onclick=()=>{
-  photos=[];
-  render();
+ photos=[];
+ render();
 };
 
-/* ===== Boot rápido ===== */
-startCamera();
-startGPS();
-
+/* ===== INIT ===== */
+startCam();
 </script>
 </body>
 </html>
