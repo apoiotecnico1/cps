@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Inspeção Fotográfica – Iluminação (v5.3.2 – overlay unificado)</title>
+<style>
+  :root{ --bg:#0b1020; --surface:#101830; --fg:#e6ebff; --muted:#a3b1d1; --border:#1e2647; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --btn:#22c55e; --btn3:#eab308; --btn4:#ef4444; --whatsapp:#25D366; --camH: 42vh }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;padding:12px; line-height:1.35}
+  h1{margin:0 0 10px;text-align:center;font-size:1.1rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px; margin:0 auto 12px; max-width:1100px}
+  .banner{ max-width:1100px; margin:0 auto 8px; padding:10px 12px; border-radius:10px; background:#3b1a00; border:1px solid #6b3d0b; color:#ffedd5; font-weight:800; display:none }
+
+  /* ===== Câmera fixa ===== */
+  #camCard{ position: fixed; left: 50%; top: 0; transform: translateX(-50%); width: calc(100vw - 24px); max-width:1100px; height: var(--camH); z-index: 100; padding: 0; margin: 12px auto; box-shadow: 0 10px 24px rgba(0,0,0,.35); border-radius:12px; overflow:hidden }
+  #wrap{ position: relative; height: 100%; border-radius: 12px; overflow: hidden; background:#000 }
+  #vid{ width: 100%; height: 100%; display: block; object-fit: cover; touch-action:none }
+  #can{display:none}
+  #ovlive{ position:absolute; inset:0; pointer-events:none }
+  #camSpacer{ height: calc(var(--camH) + 24px); max-width:1100px; margin: 0 auto 8px }
+
+  /* Status mínimo */
+  .miniStat{ position:absolute; background:rgba(0,0,0,.6); color:#e6ebff; border:1px solid rgba(255,255,255,.22); padding:4px 8px; border-radius:999px; font-size:.78rem; font-weight:900; display:none; align-items:center; gap:8px; backdrop-filter: blur(4px) }
+  .miniStat.on{ display:inline-flex }
+  .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; background:#9ca3af }
+  .dot.rec{ background:#ef4444 }
+  .dot.auto{ background:#f59e0b }
+
+  /* Gaveta (drawer) */
+  #drawerMask{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; z-index:120 }
+  #drawer{ position:fixed; right:12px; top:12px; width:min(92vw,480px); max-height:calc(100vh - 24px); overflow:auto; background:#0f1533; border:1px solid #263166; border-radius:14px; padding:12px; box-shadow:0 16px 36px rgba(0,0,0,.6); display:none; z-index:130 }
+  #drawer h3{ margin:0 0 8px; font-size:1rem }
+  .opt-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:8px 0 }
+  .opt-col{ display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid #22305a; border-radius:10px; background:#0b1333 }
+  .opt-col label{ display:flex; gap:8px; align-items:center; font-size:.9rem; color:#dfe7ff }
+  select, input[type=range], input[type=text], input[type=number], input[type=color]{ border-radius:10px; border:1px solid var(--border); background:#0d1430; color:#dfe7ff; font-weight:700; padding:8px 10px }
+  .small{ font-size:.88rem; padding:8px 10px }
+
+  /* FAB */
+  .fab{ position:absolute; right:12px; bottom:12px; width:42px; height:42px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(13,20,48,.7); color:#e6ebff; cursor:pointer; display:grid; place-items:center; font-size:1.05rem; box-shadow:0 6px 16px rgba(0,0,0,.35); backdrop-filter: blur(6px) }
+  #btnCfg{ bottom:12px; right:12px }
+  #btnCam{ bottom:60px; right:12px }
+
+  /* Ações */
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{ flex:1 1 180px; padding:11px 12px; font-size:.98rem; border:0; border-radius:10px; cursor:pointer; background:#0d1430; color:#dfe7ff; font-weight:900 }
+  #btnPdf{background:var(--btn3);color:#000}
+  #btnSharePdf,#btnSharePhotos{background:var(--whatsapp);color:#053d19}
+  #btnClear{background:var(--btn4);color:#fff}
+
+  /* Lock simples */
+  #lock{ position:fixed; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.75), rgba(0,0,0,.85)); display:flex; align-items:center; justify-content:center; z-index:9999 }
+  .lock-card{ width:min(92vw,420px); background:#0f1533; border:1px solid #263166; border-radius:14px; padding:18px; box-shadow:0 10px 28px rgba(0,0,0,.6); text-align:center }
+  .lock-row{display:flex; gap:8px; align-items:center; justify-content:center; margin:10px 0}
+  #pwd{ flex:1 1 auto; padding:12px; border:1px solid #2a3a7a; border-radius:10px; background:#0b1130; color:#e6ebff; font-size:1rem; outline:none }
+  #btnEnter{ padding:12px 16px; border:0; border-radius:10px; background:#22c55e; color:#072414; font-weight:900; cursor:pointer }
+  #err{color:#ff9aa2; font-size:.9rem; min-height:1.2em; margin-top:8px}
+
+  .overlayCenter{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center }
+  .startBox{ background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.25); padding:14px; border-radius:12px; text-align:center; display:none }
+  .startBox h3{ margin:0 0 6px; font-size:1rem }
+  .startBox p{ margin:0 0 8px; color:#c9d4ff; font-size:.9rem }
+  .startBox button{ background:#22c55e; color:#072414; font-weight:900; border:0; border-radius:10px; padding:10px 14px; cursor:pointer }
+</style>
+</head>
+<body>
+
+<div id="httpsWarning" class="banner">Abra via <b>HTTPS</b> ou <b>localhost</b> para garantir acesso à câmera.</div>
+
+<!-- Lock (senha: nox) -->
+<div id="lock">
+  <div class="lock-card">
+    <h2>🔒 Acesso restrito</h2>
+    <p>Senha legado: <b>nox</b></p>
+    <div class="lock-row">
+      <input id="pwd" type="password" placeholder="Senha" autocomplete="current-password" />
+      <button id="btnEnter">Entrar</button>
+    </div>
+    <label style="display:flex; align-items:center; gap:8px; justify-content:center; color:#cbd5ff; font-size:.9rem; margin-top:6px">
+      <input id="remember" type="checkbox" /> Lembrar nesta sessão
+    </label>
+    <div id="err"></div>
+  </div>
+</div>
+
+<h1>📸 Inspeção Fotográfica</h1>
+<div id="camSpacer"></div>
+
+<!-- CÂMERA -->
+<div class="card" id="camCard">
+  <div id="wrap">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="ovlive"></canvas>
+    <canvas id="can" width="1280" height="720"></canvas>
+
+    <div class="overlayCenter"><div id="startBox" class="startBox">
+      <h3>Permitir acesso à câmera</h3>
+      <p>Toque em <b>Iniciar câmera</b> e autorize o navegador.</p>
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap">
+        <button id="btnStartCam">Iniciar câmera</button>
+      </div>
+      <small id="camErr" style="display:block; margin-top:6px; color:#ffb4b4"></small>
+    </div></div>
+
+    <!-- status mínimo -->
+    <div id="miniStat" class="miniStat" style="left:12px; top:12px">
+      <span class="dot" id="dotRec"></span>
+      <span class="dot" id="dotAuto"></span>
+      <span id="countLabel" style="display:none">0</span>
+    </div>
+
+    <!-- FABs -->
+    <button id="btnCfg" class="fab" title="Controles">⚙️</button>
+    <button id="btnCam" class="fab" title="Trocar câmera">🎥</button>
+  </div>
+</div>
+
+<!-- Drawer de Controles (campos selecionáveis e unificados) -->
+<div id="drawerMask"></div>
+<div id="drawer">
+  <h3>⚙️ Controles e Overlay (prévia = salva)</h3>
+  <div class="opt-row">
+    <div class="opt-col">
+      <label>🎥 Câmera
+        <select id="cameraSel"></select>
+      </label>
+      <div style="display:flex; gap:6px; flex-wrap:wrap">
+        <button id="btnCycle" class="small" title="Trocar">Trocar</button>
+        <button id="btnRear" class="small" title="Traseira">Traseira</button>
+        <button id="btnFront" class="small" title="Frontal">Frontal</button>
+      </div>
+    </div>
+    <div class="opt-col">
+      <strong>Campos do Overlay (na tela e na foto)</strong>
+      <label><input id="chkOvKm" type="checkbox" checked /> KM</label>
+      <label><input id="chkOvTs" type="checkbox" checked /> Data/Hora</label>
+      <label><input id="chkOvGps" type="checkbox" /> GPS</label>
+      <label><input id="chkOvIds" type="checkbox" /> IDs próximos</label>
+      <label>Cor da faixa <input id="ovColor" type="color" value="#000000" /></label>
+      <label>Opacidade <input id="ovAlpha" type="range" min="30" max="90" step="1" value="62" /></label>
+      <label>Altura faixa (%) <input id="ovBandPct" type="range" min="12" max="22" step="1" value="16" /></label>
+      <label>Tam. fonte (%) <input id="ovFontPct" type="range" min="90" max="130" step="5" value="100" /></label>
+    </div>
+    <div class="opt-col">
+      <strong>Relatório/PDF (mesma seleção)</strong>
+      <label><input id="chkMsgKm" type="checkbox" checked/> KM</label>
+      <label><input id="chkMsgTs" type="checkbox" checked/> Data/Hora</label>
+      <label><input id="chkMsgGps" type="checkbox" /> GPS</label>
+      <label><input id="chkMsgIds" type="checkbox" /> IDs</label>
+      <label>Precisão GPS (decimais)
+        <input id="numGpsDec" type="number" min="3" max="7" step="1" value="6" style="width:90px" />
+      </label>
+      <label>Formato data
+        <select id="selDateFmt">
+          <option value="DD/MM/YYYY HH:mm">DD/MM/YYYY HH:mm</option>
+          <option value="YYYY-MM-DD HH:mm">YYYY-MM-DD HH:mm</option>
+          <option value="DD/MM HH:mm">DD/MM HH:mm</option>
+          <option value="ISO">ISO</option>
+        </select>
+      </label>
+      <label>Formato coord.
+        <select id="selCoordFmt">
+          <option value="dd">Decimal (DD)</option>
+          <option value="dms">Graus/Min/Seg (DMS)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- AÇÕES -->
+<div class="card">
+  <div class="row">
+    <button id="btnAutoCapture" style="background:#ff6b35;color:#fff">🎬 Captura Auto</button>
+    <button id="btnVideoRecord" style="background:#e74c3c;color:#fff">⏺️ Gravar Vídeo</button>
+    <button id="btnPdf" disabled>📄 PDF</button>
+    <button id="btnSharePdf" disabled>WhatsApp (PDF)</button>
+    <button id="btnSharePhotos" disabled>WhatsApp (Fotos)</button>
+    <button id="btnClear" disabled>🧹 Limpar</button>
+  </div>
+</div>
+
+<!-- Prévia + Galeria -->
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Foto mais recente</h2>
+  <img id="foto" alt="Prévia da foto capturada">
+</div>
+<div class="card">
+  <h2 style="margin:0 0 6px;font-size:1rem">Lista de fotos</h2>
+  <div id="gal" class="gallery"></div>
+</div>
+
+<script>
+/* ===== HTTPS aviso ===== */
+if(!window.isSecureContext){ document.getElementById('httpsWarning').style.display='block'; }
+
+/* ===== Lock ===== */
+const LOCK={panel:document.getElementById('lock'),input:document.getElementById('pwd'),btn:document.getElementById('btnEnter'),err:document.getElementById('err'),remember:document.getElementById('remember')};
+const checkPass=v=>(String(v||'').trim().toLowerCase()==='nox');
+LOCK.btn.onclick=()=>{const v=(LOCK.input.value||'').trim();if(checkPass(v)){if(LOCK.remember.checked)sessionStorage.setItem('unlocked_v532','1');LOCK.panel.style.display='none';boot()}else{LOCK.err.textContent='Senha incorreta. (Legado: nox)';LOCK.input.focus();LOCK.input.select()}};
+LOCK.input.addEventListener('keydown',e=>{if(e.key==='Enter')LOCK.btn.click()});
+(()=>{if(sessionStorage.getItem('unlocked_v532')==='1'){LOCK.panel.style.display='none';boot()}else{LOCK.input.focus()}})();
+
+/* ===== Estado ===== */
+let csvReady=true, gpsReady=false, camReady=false; let lastPos=null; let deviceList=[], deviceIndex=0; let currentStream=null, currentTrack=null, currentCap=null; let isRecordingVideo=false, isAutoCapturing=false; let autoTimer=null;
+const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false}); const ovlive=document.getElementById('ovlive'); const ovctx=ovlive.getContext('2d');
+const btnStartCam=document.getElementById('btnStartCam'); const startBox=document.getElementById('startBox'); const camErr=document.getElementById('camErr');
+const btnCfg=document.getElementById('btnCfg'), btnCam=document.getElementById('btnCam'); const drawer=document.getElementById('drawer'), drawerMask=document.getElementById('drawerMask');
+const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnRear=document.getElementById('btnRear'); const btnFront=document.getElementById('btnFront');
+const chkOvKm=document.getElementById('chkOvKm'),chkOvTs=document.getElementById('chkOvTs'),chkOvGps=document.getElementById('chkOvGps'),chkOvIds=document.getElementById('chkOvIds');
+const chkMsgKm=document.getElementById('chkMsgKm'),chkMsgTs=document.getElementById('chkMsgTs'),chkMsgGps=document.getElementById('chkMsgGps'),chkMsgIds=document.getElementById('chkMsgIds');
+const ovColor=document.getElementById('ovColor'); const ovAlpha=document.getElementById('ovAlpha'); const ovBandPct=document.getElementById('ovBandPct'); const ovFontPct=document.getElementById('ovFontPct');
+const numGpsDec=document.getElementById('numGpsDec'); const selDateFmt=document.getElementById('selDateFmt'); const selCoordFmt=document.getElementById('selCoordFmt');
+const miniStat=document.getElementById('miniStat'); const dotRec=document.getElementById('dotRec'); const dotAuto=document.getElementById('dotAuto'); const countLabel=document.getElementById('countLabel');
+const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const btnPdf=document.getElementById('btnPdf'); const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos'); const btnClear=document.getElementById('btnClear');
+const gal=document.getElementById('gal'); const foto=document.getElementById('foto');
+
+/* ===== Drawer ===== */
+function openDrawer(){ drawer.style.display='block'; drawerMask.style.display='block'; }
+function closeDrawer(){ drawer.style.display='none'; drawerMask.style.display='none'; }
+btnCfg.onclick=()=>{ (drawer.style.display==='block')? closeDrawer(): openDrawer(); };
+drawerMask.onclick=closeDrawer; btnCam.onclick=()=>btnCycle.click();
+
+/* ===== GPS ===== */
+function startGPS(){ if(!('geolocation' in navigator)){ gpsReady=false; return; } navigator.geolocation.getCurrentPosition(p=>{ lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}; gpsReady=true; navigator.geolocation.watchPosition(pos=>{ lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy}; },()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000}); },()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000}); }
+
+/* ===== IDs/KM placeholders (exemplo simples) ===== */
+function fmtKm(v){return v?`KM ${Math.floor(v)}+${String(Math.round((v-Math.floor(v))*1000)).padStart(3,'0')}`:'KM —'}
+function nearestKm(){ return fmtKm(null) } // placeholder
+function nearestNIds(){ return ['ID001','ID002','ID003','ID004','ID005'] }
+
+/* ===== Data/GPS ===== */
+function pad2(n){return String(n).padStart(2,'0')}
+function fmtDate(ts,fmt){const d=new Date(ts);if(fmt==='ISO')return d.toISOString().replace('T',' ').slice(0,19);const Y=d.getFullYear();const M=pad2(d.getMonth()+1);const D=pad2(d.getDate());const h=pad2(d.getHours());const m=pad2(d.getMinutes());if(fmt==='YYYY-MM-DD HH:mm')return `${Y}-${M}-${D} ${h}:${m}`;if(fmt==='DD/MM HH:mm')return `${pad2(D)}/${pad2(M)} ${h}:${m}`;return `${pad2(D)}/${pad2(M)}/${Y} ${h}:${m}`}
+function toDMS(val, latlon){const abs=Math.abs(val);const deg=Math.floor(abs);const minFloat=(abs-deg)*60;const min=Math.floor(minFloat);const sec=Math.round((minFloat-min)*60);const hemi=latlon==='lat'?(val>=0?'N':'S'):(val>=0?'E':'W');return `${deg}°${pad2(min)}'${pad2(sec)}"${hemi}`}
+function fmtGps(lat,lon,fmt,dec){if(fmt==='dms'){return `${toDMS(lat,'lat')}, ${toDMS(lon,'lon')}`}const d=Math.min(7,Math.max(3,Number(dec||6)));return `${lat.toFixed(d)}, ${lon.toFixed(d)}`}
+
+/* ===== Câmera ===== */
+function setStartVisible(v){ startBox.style.display=v?'block':'none'; }
+function showCamErr(m){ camErr.textContent=m||''; }
+async function enumerateCameras(){ try{ const devs=await navigator.mediaDevices.enumerateDevices(); deviceList=devs.filter(d=>d.kind==='videoinput'); cameraSel.innerHTML=''; deviceList.forEach((d,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=d.label||`Câmera ${i+1}`; cameraSel.appendChild(o); }); if(deviceList.length){ cameraSel.value='0'; deviceIndex=0; } }catch{} }
+async function startCameraWith(constraints){ try{ if(currentStream) currentStream.getTracks().forEach(t=>t.stop()); const st=await navigator.mediaDevices.getUserMedia(constraints); currentStream=st; vid.srcObject=st; await new Promise(res=>{ if(vid.readyState>=1&&vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,900); }); currentTrack=st.getVideoTracks()[0]; camReady=!!vid.videoWidth; resizeOverlay(); setStartVisible(false); showCamErr(''); return true; }catch(e){ showCamErr((e&&e.name? e.name: e)||'Erro câmera'); setStartVisible(true); return false; } }
+async function startCameraLadder(){ const savedId=localStorage.getItem('camDeviceId'); if(savedId){ if(await startCameraWith({video:{deviceId:{exact:savedId}}})) return true; }
+  if(await startCameraWith({video:{facingMode:{exact:'environment'}}})) return true; if(await startCameraWith({video:{facingMode:{exact:'user'}}})) return true; if(await startCameraWith({video:true})) return true; return false; }
+
+btnStartCam.onclick=async()=>{ await enumerateCameras(); const ok=await startCameraLadder(); if(ok){ setStartVisible(false); }};
+cameraSel.onchange=async()=>{ const i=Number(cameraSel.value||0); const dev=deviceList[i]; localStorage.setItem('camDeviceId', dev?.deviceId||''); await startCameraWith({video:{deviceId:{exact:dev?.deviceId}}}); };
+btnCycle.onclick=async()=>{ if(!deviceList.length) await enumerateCameras(); deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); cameraSel.value=String(deviceIndex); const dev=deviceList[deviceIndex]; localStorage.setItem('camDeviceId', dev?.deviceId||''); await startCameraWith({video:{deviceId:{exact:dev?.deviceId}}}); };
+btnRear.onclick=()=>startCameraWith({video:{facingMode:{exact:'environment'}}});
+btnFront.onclick=()=>startCameraWith({video:{facingMode:{exact:'user'}}});
+
+/* ===== Overlay unificado ===== */
+function resizeOverlay(){ const r=vid.getBoundingClientRect(); const w=vid.videoWidth||1280, h=vid.videoHeight||720; ovlive.width=w; ovlive.height=h; }
+function drawOverlay(ctx,w,h,kmStr,ids,ts){ const pct=Math.min(22,Math.max(12,Number(ovBandPct.value||16)))/100; const bandH=Math.max(90,Math.round(h*pct)); const alpha=Math.min(0.9,Math.max(0.3,Number(ovAlpha.value||62)/100)); const rgb=ovColor.value||'#000000'; ctx.clearRect(0,0,w,h); ctx.fillStyle=hexToRgba(rgb,alpha); ctx.fillRect(0,h-bandH,w,bandH); ctx.fillStyle='#fff'; ctx.textAlign='left'; const scale=Math.min(1.3,Math.max(0.9,Number(ovFontPct.value||100)/100)); let y=h-bandH+Math.round(bandH*0.52);
+  if(chkOvKm.checked){ ctx.font=`900 ${Math.round(h*0.055*scale)}px system-ui`; ctx.fillText(kmStr,20,y) }
+  let y2=h-Math.round(bandH*0.22);
+  if(chkOvTs.checked){ ctx.font=`700 ${Math.round(h*0.032*scale)}px system-ui`; ctx.fillText(ts,20,y2); y2-=Math.round(h*0.036*scale) }
+  if(chkOvGps.checked && Number.isFinite(lastPos?.lat) && Number.isFinite(lastPos?.lon)){
+    ctx.font=`600 ${Math.round(h*0.028*scale)}px system-ui`; ctx.fillText(`GPS: ${fmtGps(lastPos.lat,lastPos.lon, selCoordFmt.value, numGpsDec.value||6)}`,20, h-Math.round(bandH*0.08));
+  }
+  if(chkOvIds.checked){ ctx.textAlign='right'; ctx.font=`600 ${Math.round(h*0.028*scale)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e,w-20,h-bandH+28+i*26)); }
+}
+function hexToRgba(hex,a){ const h=hex.replace('#',''); const n=parseInt(h,16); const r=(n>>16)&255,g=(n>>8)&255,b=n&255; return `rgba(${r},${g},${b},${a})` }
+
+function liveTick(){ if(!(camReady)) { requestAnimationFrame(liveTick); return; } const w=ovlive.width, h=ovlive.height; const kmStr=nearestKm(); const ids=nearestNIds(); const ts=fmtDate(new Date(), selDateFmt.value||'DD/MM/YYYY HH:mm'); drawOverlay(ovctx,w,h,kmStr,ids,ts); requestAnimationFrame(liveTick); }
+
+[chkOvKm,chkOvTs,chkOvGps,chkOvIds,ovColor,ovAlpha,ovBandPct,ovFontPct,selDateFmt,selCoordFmt,numGpsDec].forEach(el=> el.addEventListener('change',()=>{}));
+
+/* ===== Captura ===== */
+const photos=[]; function updateActions(){ const n=photos.length, enabled=n>0; btnPdf.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; btnClear.disabled=!enabled; countLabel.style.display='inline'; countLabel.textContent=String(n); }
+function renderGallery(){ gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb'; const im=document.createElement('img'); im.src=p.url; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`; d.appendChild(im); d.appendChild(meta); gal.appendChild(d); }); updateActions(); }
+function capture(){ if(!(camReady)) return; const W=ovlive.width, H=ovlive.height; // render frame do vídeo + overlay igualzinho
+  can.width=W; can.height=H; const c=can.getContext('2d'); c.drawImage(vid,0,0,W,H); // redesenha overlay por consistência
+  const kmStr=nearestKm(); const ids=nearestNIds(); const ts=fmtDate(new Date(), selDateFmt.value||'DD/MM/YYYY HH:mm'); drawOverlay(c,W,H,kmStr,ids,ts);
+  const url=can.toDataURL('image/jpeg',0.92); foto.src=url; const rec={id:Date.now()+Math.random().toString(36).slice(2), url, ts, kmStr}; photos.push(rec); renderGallery(); }
+
+/* ===== Vídeo/Auto (simplificados) ===== */
+btnVideoRecord.onclick=()=>{ if(isRecordingVideo){ isRecordingVideo=false; dotRec.classList.remove('rec'); btnVideoRecord.textContent='⏺️ Gravar Vídeo'; } else { if(!camReady) return; isRecordingVideo=true; dotRec.classList.add('rec'); btnVideoRecord.textContent='⏹️ Parar'; /* captura real omitida neste snippet */ } };
+btnAutoCapture.onclick=()=>{ if(isAutoCapturing){ clearInterval(autoTimer); autoTimer=null; isAutoCapturing=false; dotAuto.classList.remove('auto'); btnAutoCapture.textContent='🎬 Captura Auto'; } else { if(!camReady) return; isAutoCapturing=true; dotAuto.classList.add('auto'); btnAutoCapture.textContent='⏹️ Parar'; autoTimer=setInterval(capture,700); } };
+
+/* ===== Eventos ===== */
+window.addEventListener('resize', resizeOverlay);
+wrap.addEventListener('click', ()=>{ if(!camReady){ btnStartCam.click(); } else { capture(); } });
+
+/* ===== Boot ===== */
+async function boot(){ setStartVisible(true); startGPS(); resizeOverlay(); requestAnimationFrame(liveTick); }
+
+</script>
+</body>
+</html>
