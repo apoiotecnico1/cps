@@ -68,12 +68,13 @@
   .warn{ background: linear-gradient(180deg, rgba(90,50,17,.8), rgba(77,38,7,.74)); color:#fde68a; border-color:#f59e0b; }
   .danger{ background: linear-gradient(180deg, rgba(127,29,29,.82), rgba(90,14,14,.74)); color:#ffe2e2; border-color:#dc2626; }
   .muted{ background: linear-gradient(180deg, rgba(32,40,68,.72), rgba(18,24,46,.68)); color:#cdd7ff; }
+  .badge.ghost { background: linear-gradient(180deg, rgba(26,34,62,.7), rgba(16,22,44,.66)); color:#c9d4ff; }
 
   /* ===== Câmera: uniforme em qualquer celular ===== */
   #camCard{
     position: fixed; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px);
     width: var(--camW);
-    aspect-ratio: 16 / 9;          /* NEW: garante 16:9 estável */
+    aspect-ratio: 16 / 9;          /* garante 16:9 estável */
     z-index: 100; padding: 0; border-radius: 12px;
     background: linear-gradient(180deg, #0b1230, #07102a);
     border:1px solid #213066; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
@@ -118,7 +119,7 @@
   }
   button:hover{ filter:brightness(1.05) }
   button:active{ transform: translateY(1px); box-shadow: 0 3px 12px rgba(0,0,0,.25) }
-  #btnAutoCapture{ background: linear-gradient(180deg, #d86a30, #b35625); color:#1b0b02 } /* âmbar escuro */
+  #btnAutoCapture{ background: linear-gradient(180deg, #d86a30, #b35625); color:#1b0b02 }
   #btnVideoRecord{ background: linear-gradient(180deg, #d94640, #a7332f); color:#ffecec }
   #btnPdf{ background: linear-gradient(180deg, #e0b93d, #b98f13); color:#231c00 }
   #btnSharePdf,#btnSharePhotos{ background: linear-gradient(180deg, #2fd177, #1cab57); color:#072414 }
@@ -161,7 +162,7 @@
   .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a; outline:1px solid rgba(67,255,155,.05)}
   .thumb img{width:100%;display:block}
   .meta{padding:6px 8px;font-size:.82rem;color:#c7d2fe; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
-  .meta .idx{                    /* NEW: número pequeno e monoespaçado */
+  .meta .idx{                    /* número pequeno e monoespaçado */
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-weight:900; font-size:.74rem; color:#9fe9ff; opacity:.95;
     background:linear-gradient(180deg, rgba(14,27,54,.9), rgba(10,20,44,.9));
@@ -197,6 +198,16 @@
     box-shadow: 0 8px 20px rgba(0,0,0,.35);
   }
   body.compact #fabRestore{ display:inline-flex; }
+
+  /* ===== PATCH: Câmera dockável (4 cantos) ===== */
+  body.cam-top-left  #camCard { left: 12px;  right: auto; top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; }
+  body.cam-top-right #camCard { right: 12px; left: auto;  top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; }
+  body.cam-bot-left  #camCard { left: 12px;  right: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); top: auto; }
+  body.cam-bot-right #camCard { right: 12px; left: auto;  bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); top: auto; }
+
+  /* ===== PATCH: Thumb Bar responsiva à velocidade ===== */
+  body.speed-hi #thumbBar .thumbBtn { padding: 14px 12px; font-size: 1.02rem; }
+  body.speed-hi .tag { display: none; }
 
   /* Splash */
   #splash{ position: fixed; inset: 0; z-index: 2000; background: radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12; display:flex; align-items:center; justify-content:center; overflow:hidden; }
@@ -234,8 +245,11 @@
   <span id="stCSV" class="badge muted">CSV</span>
   <span id="stGPS" class="badge muted">GPS</span>
   <span id="stCAM" class="badge muted">CÂMERA</span>
+  <span id="stBAT" class="badge ghost" title="Bateria">🔋 —%</span>
+  <span id="stSTO" class="badge ghost" title="Armazenamento">💾 —%</span>
   <span id="stREC" class="badge danger" style="display:none">REC</span>
   <span id="stAUTO" class="badge warn" style="display:none">AUTO</span>
+  <button id="btnDock" title="Mover câmera de canto (↖︎ ↗︎ ↙︎ ↘︎)">↗︎</button>
   <button id="btnMinimize" title="Minimizar (compactar sem fechar)">Minimizar</button>
 </div>
 
@@ -275,6 +289,29 @@
       <label class="ppp" title="Evita apagar a tela (quando suportado)" style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="wakeLockEnable" />
         🔒 Anti‑sono
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <!-- AUTO por Distância/Tempo -->
+      <label class="ppp" style="display:flex;align-items:center;gap:8px">
+        AUTO por:
+        <select id="autoModeSel" title="Critério da captura automática">
+          <option value="dist" selected>Distância</option>
+          <option value="time">Tempo</option>
+        </select>
+      </label>
+      <label class="ppp" id="autoDistWrap" style="display:flex;align-items:center;gap:8px">
+        Distância (m):
+        <input type="number" id="autoDist" min="10" step="5" value="50">
+      </label>
+      <label class="ppp" id="autoTimeWrap" style="display:none;align-items:center;gap:8px">
+        Intervalo (s):
+        <input type="number" id="autoTime" min="0.5" step="0.5" value="2">
+      </label>
+      <label class="ppp" title="Entra em modo compacto quando passar ~40 km/h" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="autoCompactSpeed" checked />
+        🏎️ Auto‑Compact por velocidade
       </label>
     </div>
 
@@ -403,10 +440,11 @@ function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([
 
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
-let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
+let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null; // (não mais usado, mas mantido p/ compat.)
 let isRecordingVideo=false; let mediaRecorder=null; let recordedChunks=[];
 let kmUpdateInterval=null;
 let resumePlan = {auto:false, rec:false};
+let lastAutoPos = null, lastAutoTs = 0;
 
 /* ===== Referências ===== */
 const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
@@ -415,11 +453,12 @@ const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRe
 const pppSel=document.getElementById('pppSel');
 const btnPdf=document.getElementById('btnPdf'); const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos'); const btnClear=document.getElementById('btnClear');
 const stCSV=document.getElementById('stCSV'); const stGPS=document.getElementById('stGPS'); const stCAM=document.getElementById('stCAM'); const stREC=document.getElementById('stREC'); const stAUTO=document.getElementById('stAUTO');
+const stBAT=document.getElementById('stBAT'); const stSTO=document.getElementById('stSTO');
 const tagsWrap=document.getElementById('tags');
-const btnMinimize=document.getElementById('btnMinimize'); const fabRestore=document.getElementById('fabRestore');
+const btnMinimize=document.getElementById('btnMinimize'); const fabRestore=document.getElementById('fabRestore'); const btnDock=document.getElementById('btnDock');
 const micEnable=document.getElementById('micEnable'); const tickEnable=document.getElementById('tickEnable'); const tickInterval=document.getElementById('tickInterval'); const tickVol=document.getElementById('tickVol'); const wakeLockEnable=document.getElementById('wakeLockEnable');
-/* Thumb Bar (one-hand) */ // NEW
 const tbShutter=document.getElementById('tbShutter'); const tbAuto=document.getElementById('tbAuto'); const tbRec=document.getElementById('tbRec'); const tbMin=document.getElementById('tbMin');
+const autoModeSel=document.getElementById('autoModeSel'); const autoDist=document.getElementById('autoDist'); const autoTime=document.getElementById('autoTime'); const autoDistWrap=document.getElementById('autoDistWrap'); const autoTimeWrap=document.getElementById('autoTimeWrap'); const autoCompactSpeed=document.getElementById('autoCompactSpeed');
 
 const photos=[];
 
@@ -549,6 +588,24 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
+/* ===== Haptics ===== */
+function vibe(ms=35){ try{ if('vibrate' in navigator) navigator.vibrate(ms); }catch(e){} }
+
+/* ===== Dock (↖︎ ↗︎ ↙︎ ↘︎) ===== */
+const DOCKS = ['cam-top-right','cam-top-left','cam-bot-right','cam-bot-left'];
+function applyCamDock(mode){
+  document.body.classList.remove(...DOCKS);
+  const m = DOCKS.includes(mode) ? mode : 'cam-top-right';
+  document.body.classList.add(m);
+  localStorage.setItem('camDock', m);
+  btnDock.textContent = (m.includes('bot') ? (m.includes('right')?'↘︎':'↙︎') : (m.includes('right')?'↗︎':'↖︎'));
+}
+btnDock.addEventListener('click', ()=>{
+  const cur = DOCKS.findIndex(d=>document.body.classList.contains(d));
+  const next = DOCKS[(cur+1)%DOCKS.length];
+  applyCamDock(next);
+});
+
 /* ===== Câmera ===== */
 let currentStream=null, currentTrack=null;
 async function enumerateCameras(){ try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{} }
@@ -569,10 +626,18 @@ async function startCamera(){
 function startGPS(){
   if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); updateStatusBar(); return; }
   navigator.geolocation.getCurrentPosition(p=>{
-    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, speed:p.coords.speed||null};
     gpsReady=true; setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true); updateStatusBar();
     navigator.geolocation.watchPosition(pos=>{
-      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, speed:pos.coords.speed||null};
+      // velocidade → modo compacto automático
+      const v = typeof pos.coords.speed === 'number' ? pos.coords.speed : null; // m/s
+      if(v!=null && autoCompactSpeed.checked){
+        const kmh = Math.max(0, v*3.6);
+        if(kmh >= 38 && !document.body.classList.contains('compact')) document.body.classList.add('compact');
+        if(kmh < 28 && document.body.classList.contains('compact')) document.body.classList.remove('compact');
+        document.body.classList.toggle('speed-hi', kmh >= 38);
+      }
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
   }, ()=>{ gpsReady=false; setOv('Permita o GPS para usar', true); updateStatusBar(); }, {enableHighAccuracy:true, timeout:12000});
 }
@@ -586,7 +651,7 @@ function updateChip(){
   else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; }
 }
 function statusBadge(el, ok, labelOff='AGUARDANDO'){
-  el.classList.remove('ok','warn','danger','muted');
+  el.classList.remove('ok','warn','danger','muted','ghost');
   if(ok){ el.classList.add('ok'); el.textContent = el.dataset.base || el.textContent; }
   else { el.classList.add('muted'); el.textContent = (el.dataset.base || el.textContent) + ' • ' + labelOff; }
 }
@@ -599,7 +664,7 @@ function updateStatusBar(){
   stAUTO.style.display = isAutoCapturing ? 'inline-flex' : 'none';
 }
 
-/* ===== Thumb Bar ações ===== */ // NEW
+/* ===== Thumb Bar ações ===== */
 tbShutter.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else { capture(); } });
 tbAuto.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 tbRec.addEventListener('click', ()=>{ if(isRecordingVideo) stopVideoRecording(); else startVideoRecording(); });
@@ -619,36 +684,14 @@ document.addEventListener('visibilitychange', async ()=>{ if(document.visibility
 /* ===== Áudio/Metrônomo ===== */
 let audioCtx=null, micStream=null, micSource=null, tickGain=null, mixDest=null, tickTimer=null;
 function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }
-async function getMicStream(){
-  if(micStream) return micStream;
-  micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
-  return micStream;
-}
+async function getMicStream(){ if(micStream) return micStream; micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false}); return micStream; }
 function buildAudioGraph(includeMic, includeTick){
   ensureAudio();
   mixDest = audioCtx.createMediaStreamDestination();
-  if(includeMic && micStream){
-    micSource = audioCtx.createMediaStreamSource(micStream);
-    micSource.connect(mixDest);
-  }
-  if(includeTick){
-    tickGain = audioCtx.createGain(); tickGain.gain.value = Number(tickVol.value||0.35);
-    tickGain.connect(mixDest);
-  }
+  if(includeMic && micStream){ micSource = audioCtx.createMediaStreamSource(micStream); micSource.connect(mixDest); }
+  if(includeTick){ tickGain = audioCtx.createGain(); tickGain.gain.value = Number(tickVol.value||0.35); tickGain.connect(mixDest); }
 }
-function playTickPulse(){
-  if(!audioCtx || !tickGain) return;
-  const osc = audioCtx.createOscillator();
-  const env = audioCtx.createGain();
-  osc.type = 'square'; osc.frequency.value = 1000;
-  env.gain.value = 0.0001;
-  osc.connect(env); env.connect(tickGain);
-  const now = audioCtx.currentTime;
-  env.gain.setValueAtTime(0.0001, now);
-  env.gain.exponentialRampToValueAtTime(1.0, now + 0.005);
-  env.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
-  osc.start(now); osc.stop(now + 0.08);
-}
+function playTickPulse(){ if(!audioCtx || !tickGain) return; const osc = audioCtx.createOscillator(); const env = audioCtx.createGain(); osc.type = 'square'; osc.frequency.value = 1000; env.gain.value = 0.0001; osc.connect(env); env.connect(tickGain); const now = audioCtx.currentTime; env.gain.setValueAtTime(0.0001, now); env.gain.exponentialRampToValueAtTime(1.0, now + 0.005); env.gain.exponentialRampToValueAtTime(0.0001, now + 0.06); osc.start(now); osc.stop(now + 0.08); }
 function startTick(){ stopTick(); const iv = Math.max(0.3, Number(tickInterval.value||2)); playTickPulse(); tickTimer = setInterval(playTickPulse, iv*1000); }
 function stopTick(){ if(tickTimer){ clearInterval(tickTimer); tickTimer=null; } }
 
@@ -660,7 +703,7 @@ function renderGallery(){
     const d=document.createElement('div'); d.className='thumb';
     const im=document.createElement('img'); im.src=p.url;
     const meta=document.createElement('div'); meta.className='meta';
-    const idxSpan=document.createElement('span'); idxSpan.className='idx'; idxSpan.textContent = `#${String(p.idx||idx+1).padStart(2,'0')}`; // NEW
+    const idxSpan=document.createElement('span'); idxSpan.className='idx'; idxSpan.textContent = `#${String(p.idx||idx+1).padStart(2,'0')}`;
     const text=document.createElement('span'); text.textContent = `${p.kmStr} • ${p.ts}${p.tags?.length? ' • '+p.tags.join(' | '):''}`;
     meta.appendChild(idxSpan); meta.appendChild(text);
     d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
@@ -684,7 +727,6 @@ function drawWrapped(ctx, text, x, y, maxWidth, lineHeight){
 function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
 function ready(){ return csvReady && camReady && gpsReady; }
 
-/* Desenha o pequeno índice na tarja (fonte monoespaçada, menor) */ // NEW
 function drawPhotoIndex(ctx, idx, h, bandH){
   const numStr = `#${String(idx).padStart(2,'0')}`;
   ctx.textAlign='left';
@@ -706,24 +748,19 @@ async function capture(){
   const ts=new Date().toLocaleString();
   const tagsText = Array.from(selectedTags).join(' • ');
 
-  // Número da foto (antes de tudo)
-  const photoIndex = photos.length + 1;          // NEW
-  drawPhotoIndex(ctx, photoIndex, h, bandH);     // NEW
+  const photoIndex = photos.length + 1;
+  drawPhotoIndex(ctx, photoIndex, h, bandH);
 
-  // KM
   ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
   ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
   ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
 
-  // TS
   ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`;
   ctx.fillText(ts,20,h-Math.round(bandH*0.22));
 
-  // IDs
   ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
   ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
 
-  // Tags
   if(tagsText){
     ctx.textAlign='left'; ctx.fillStyle='#c8ffdf';
     ctx.font=`700 ${Math.round(h*0.028)}px system-ui`;
@@ -736,40 +773,47 @@ async function capture(){
   await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
 
   setOv('Foto salva', true); setTimeout(()=> setOv('Toque p/ foto', true), 700);
+  vibe(25);
 }
 
 const detailsControls=document.querySelector('details.controls'); let controlsPrevOpen=null;
 function minimizeControls(busy){ if(!detailsControls) return; if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ scrollTo({top:0, behavior:'smooth'}); }catch{} } else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; } }
 
-/* ===== Captura Automática (inclui índice) ===== */
+/* ===== Captura Automática (distância/tempo) ===== */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #e57e3a, #c55f22)';
+  isAutoCapturing=true; vibe(30);
+  btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #e57e3a, #c55f22)';
   setOv('AUTO ligado', true); updateChip(); updateStatusBar(); minimizeControls(true);
-  autoCaptureInterval=setInterval(()=>{
-    if(csvReady && camReady && gpsReady && lastPos){
-      const w=vid.videoWidth||1280, h=vid.videoHeight||720; can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
-      const bandH=Math.max(144,Math.round(h*0.16)); ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
-      const tagsText = Array.from(selectedTags).join(' • ');
-      const photoIndex = photos.length + 1;      // NEW
-      drawPhotoIndex(ctx, photoIndex, h, bandH); // NEW
+  lastAutoPos = {...lastPos}; lastAutoTs = Date.now();
 
-      ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
-      ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
-      ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
-      if(tagsText){ ctx.textAlign='left'; ctx.fillStyle='#c8ffdf'; ctx.font=`700 ${Math.round(h*0.028)}px system-ui`; drawWrapped(ctx, tagsText, 20, h-Math.round(bandH*0.38), Math.round(w*0.6), Math.round(h*0.032)+4); }
-      const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url); foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
-      const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), tags: Array.from(selectedTags), idx: photoIndex, filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
-      dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
+  const loop = async ()=>{
+    if(!isAutoCapturing) return;
+    const mode = autoModeSel.value; const now = Date.now();
+    if(mode==='dist'){
+      if(lastAutoPos && lastPos){
+        const d = hav(lastAutoPos.lat, lastAutoPos.lon, lastPos.lat, lastPos.lon);
+        const need = Math.max(5, Number(autoDist.value||50));   // metros
+        const cooldown = 700;                                   // ms anti-rafa
+        if(d >= need && (now - lastAutoTs) >= cooldown){
+          await capture(); vibe(20);
+          lastAutoPos = {...lastPos}; lastAutoTs = now;
+        }
+      }
+      setTimeout(loop, 300);
+    }else{
+      const interval = Math.max(500, Number(autoTime.value||2)*1000);
+      if((now - lastAutoTs) >= interval){ await capture(); vibe(20); lastAutoTs = now; }
+      setTimeout(loop, 150);
     }
-  }, 500);
+  };
+  loop();
 }
 function stopAutoCapture(){
   if(!isAutoCapturing) return; isAutoCapturing=false;
-  if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
   btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #d86a30, #b35625)';
   setOv('AUTO parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 800); updateChip(); updateStatusBar(); minimizeControls(false);
+  vibe(25);
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 
@@ -833,6 +877,7 @@ btnPdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   a.href=URL.createObjectURL(blob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; document.body.appendChild(a); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); a.remove();
   if (autoClear?.checked) { await clearList(true); }
+  vibe(25);
 };
 
 /* ===== KM em tempo real ===== */
@@ -877,6 +922,7 @@ async function startVideoRecording(){
     };
     mediaRecorder.start();
     isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #a7332f, #7f2623)'; setOv('REC ligado', true); updateChip(); updateStatusBar(); minimizeControls(true);
+    vibe(40);
 
     const drawLoop=()=>{
       if(!isRecordingVideo) return;
@@ -902,6 +948,7 @@ function stopVideoRecording(){
     const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
     setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); updateStatusBar(); minimizeControls(false);
+    vibe(35);
   }, 500);
 }
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
@@ -913,7 +960,7 @@ wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording();
 function buildWhatsAppMessage(isPdf){
   const lines=[]; lines.push('*RELATÓRIO DE INSPEÇÃO*'); lines.push(`Total de fotos: ${photos.length}`); lines.push(`Gerado em: ${new Date().toLocaleString()}`); lines.push('');
   photos.forEach((p,i)=>{ 
-    const idxStr = `#${String(p.idx??(i+1)).padStart(2,'0')}`;   // NEW
+    const idxStr = `#${String(p.idx??(i+1)).padStart(2,'0')}`;
     let L=`${idxStr} • ${p.kmStr} • ${p.ts}`;
     if(p.tags?.length) L+=` • ${p.tags.join(' | ')}`;
     if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; }
@@ -932,6 +979,7 @@ btnSharePdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
       if (autoClear?.checked) { await clearList(true); }
     }
+    vibe(25);
   }catch(e){ alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.'); }
 };
 btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
@@ -940,7 +988,7 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
     window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente. Se preferir, gere e envie o PDF.)'),'_blank');
     alert('Seu navegador não permite enviar várias fotos diretamente. O texto foi aberto no WhatsApp. Anexe as fotos manualmente.'); return;
   }
-  try{ for(let i=0;i<files.length;i+=MAX){ const lote=files.slice(i,i+MAX); const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`; await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'}); } }
+  try{ for(let i=0;i<files.length;i+=MAX){ const lote=files.slice(i,i+MAX); const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`; await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'}); } vibe(25); }
   catch(e){ alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.'); }
 };
 
@@ -956,6 +1004,36 @@ async function restoreSavedPhotos(){
 }
 function bootTick(){ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(bootTick); }
 
+async function monitorBattery(){
+  try{
+    if(!('getBattery' in navigator)) return;
+    const b = await navigator.getBattery();
+    const set = ()=>{
+      const pct = Math.round(b.level*100);
+      stBAT.textContent = `🔋 ${pct}%`;
+      stBAT.classList.toggle('warn', pct<=25 && pct>15);
+      stBAT.classList.toggle('danger', pct<=15);
+      stBAT.classList.toggle('ghost', pct>25);
+    };
+    ['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,set));
+    set();
+  }catch(e){}
+}
+async function monitorStorage(){
+  try{
+    if(!navigator.storage?.estimate) return;
+    const update = async ()=>{
+      const {usage=0, quota=1} = await navigator.storage.estimate();
+      const pct = Math.round((usage/quota)*100);
+      stSTO.textContent = `💾 ${pct}%`;
+      stSTO.classList.toggle('warn', pct>=85 && pct<92);
+      stSTO.classList.toggle('danger', pct>=92);
+      stSTO.classList.toggle('ghost', pct<85);
+    };
+    update(); setInterval(update, 15000);
+  }catch(e){}
+}
+
 async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
   try{
@@ -965,22 +1043,32 @@ async function boot(){
     if(saved.tickInterval) tickInterval.value = saved.tickInterval;
     if(saved.tickVol!=null) tickVol.value = saved.tickVol;
     wakeLockEnable.checked = !!saved.wake;
+    if(saved.autoDist) autoDist.value = saved.autoDist;
+    if(saved.autoTime) autoTime.value = saved.autoTime;
   }catch(e){}
 
   await ensurePersistence(); db=await openDBv3(); buildTags();
+  applyCamDock(localStorage.getItem('camDock')||'cam-top-right');
+  autoModeSel.value = localStorage.getItem('autoMode') || 'dist';
+  autoModeSel.dispatchEvent(new Event('change'));
+
   await Promise.all([loadCSVs(), enumerateCameras()]);
   await startCamera(); startGPS();
   await restoreSavedPhotos();
   startKmUpdate(); bootTick();
+  monitorBattery(); monitorStorage();
 }
 
-/* Preferências de áudio/tick/wake */
-[micEnable, tickEnable, tickInterval, tickVol, wakeLockEnable].forEach(el=>{
+/* Preferências de áudio/tick/wake/auto */
+[micEnable, tickEnable, tickInterval, tickVol, wakeLockEnable, autoDist, autoTime, autoCompactSpeed].forEach(el=>{
   el.addEventListener('change', ()=>{
-    const prefs={ mic:micEnable.checked, tick:tickEnable.checked, tickInterval:Number(tickInterval.value||2), tickVol:Number(tickVol.value||0.35), wake:wakeLockEnable.checked };
+    const prefs=JSON.parse(localStorage.getItem('prefs')||'{}');
+    prefs.mic=micEnable.checked; prefs.tick=tickEnable.checked; prefs.tickInterval=Number(tickInterval.value||2); prefs.tickVol=Number(tickVol.value||0.35); prefs.wake=wakeLockEnable.checked;
+    prefs.autoDist=Number(autoDist.value||50); prefs.autoTime=Number(autoTime.value||2); prefs.autoCompactSpeed=!!autoCompactSpeed.checked;
     localStorage.setItem('prefs', JSON.stringify(prefs));
   });
 });
+autoModeSel.addEventListener('change', ()=>{ const mode=autoModeSel.value; autoDistWrap.style.display=(mode==='dist')? '':'none'; autoTimeWrap.style.display=(mode==='time')? '':'none'; localStorage.setItem('autoMode', mode); });
 
 /* ===== Continuidade (chamada / app em segundo plano) ===== */
 document.addEventListener('visibilitychange', async ()=>{
