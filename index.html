@@ -3,136 +3,112 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0b1020" />
+<meta name="theme-color" content="#070a12" />
 <title>Relatório Fotográfico – Iluminação</title>
 <style>
-  /* ========= THEME inspirado Motiva (sem nome) =========
-     Paleta digital: Anil/Violeta/Turquesa/Laranja/Neutros (guia de marca).
-  */
   :root{
-    --anil:#5E22F3; --violeta:#BA39E4; --turquesa:#2FC8E3; --laranja:#DD511A;
-    --preto:#000; --branco:#FFF;
-    --n10:#FFFFFF; --n20:#F5F5FF; --n30:#D6D5EB; --n40:#A5A5B9; --n60:#6B6B8A; --n80:#3B3C44; --n90:#29292F;
-    --ok-60:#2AFC3F; --warn-60:#FFFB00; --err-60:#FF1D68;
+    /* ===== Paleta (noite, alto contraste sem ofuscar) ===== */
+    --bg:#070a12; 
+    --surface:#0b1226cc;
+    --fg:#e4ebff;              /* off-white */
+    --muted:#a9b7df;
+    --border:#1e2a4d;
 
-    --bg: radial-gradient(1200px 600px at 10% -10%, #3A2B8A33, transparent 70%),
-          radial-gradient(1000px 600px at 120% 10%, #153B6A55, transparent 70%),
-          #0B0F22;
-    --surface:#11173AEE; --border:#1E2B55; --fg:#EAF0FF; --muted:#A7B3D8;
-    --btn-primary:linear-gradient(180deg, var(--anil), #4310CF);
-    --btn-accent: linear-gradient(180deg, var(--turquesa), #1DA8C1);
-    --btn-warning:linear-gradient(180deg, var(--laranja), #BB3E0C);
-    --btn-danger: linear-gradient(180deg, var(--err-60), #BE003F);
-    --cam-bg: linear-gradient(180deg, #1C1348, #0D1235);
+    --ok:#22c55e;              /* verde status */
+    --warn:#f59e0b;            /* âmbar, mais escuro */
+    --danger:#ef4444;          /* vermelho REC */
+    --accent:#35eb85;          /* ações positivas */
 
-    /* Altura da câmera (ajustada dinamicamente por JS) */
-    --camH: 42vh;
+    --shadow: 0 10px 28px rgba(0,0,0,.38);
+    --radius: 14px;
+
+    /* ===== Câmera uniforme ===== */
+    /* largura responsiva, coerente em vários celulares */
+    --camW: clamp(240px, 34vw, 340px);
   }
 
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; color:var(--fg); background: var(--bg);
+    margin:0; color:var(--fg);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #19306a2b, transparent 70%),
+      radial-gradient(1000px 600px at 120% 10%, #0b44332e, transparent 70%),
+      var(--bg);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
     padding:12px; line-height:1.35; overflow-x:hidden;
   }
-  h1{margin:0 0 10px;text-align:center;font-size:1.28rem; letter-spacing:.02em}
+  h1{margin:0 0 10px;text-align:center;font-size:1.24rem; letter-spacing:.02em}
 
   .card{
-    background: linear-gradient(180deg, var(--surface), rgba(17,23,58,.72));
-    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    background: linear-gradient(180deg, var(--surface), rgba(10,16,36,.7));
     backdrop-filter: saturate(140%) blur(6px);
-    border:1px solid var(--border); border-radius:14px;
-    padding:12px; margin:0 auto 12px; max-width:980px; box-shadow: 0 10px 28px rgba(0,0,0,.38);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    border: 1px solid #263568;
+    outline: 1px solid rgba(67,255,155,.06);
+    border-radius: var(--radius);
+    padding:12px; margin:0 auto 12px;
+    max-width:980px; box-shadow: var(--shadow);
   }
 
-  /* Controles recolhíveis */
-  details.controls > summary{
-    cursor:pointer; list-style:none; outline:none; user-select:none;
-    font-weight:900; color:#E3E8FF; display:flex; align-items:center; gap:8px;
+  /* ===== Barra de status (alto contraste) ===== */
+  #statusBar{
+    position: fixed; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px);
+    z-index: 110; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.45));
+    border:1px solid rgba(255,255,255,.18);
+    padding:8px 10px; border-radius:12px; box-shadow: var(--shadow);
+    font-weight:900; letter-spacing:.02em;
   }
-  details.controls > summary::before{ content:'⚙️'; display:inline-block; transform:translateY(1px) }
-  details.controls > summary::-webkit-details-marker{display:none}
-  details.controls[open] > summary{ color:#C8D4FF }
-  .ctrlGrid{display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:8px}
-  select, input[type=range], button.small{
-    border-radius:12px; border:1px solid var(--border);
-    background:#0c1431; color:#e7edff; font-weight:800; padding:9px 11px;
+  .badge{
+    padding:6px 10px; border-radius:999px; font-size:.82rem; user-select:none;
+    border:1px solid rgba(255,255,255,.25);
   }
-  button.small{font-size:.9rem}
+  .ok{ background: linear-gradient(180deg, rgba(14,71,38,.82), rgba(10,52,29,.72)); color:#b7ffcf; border-color:#1a7a4a; }
+  .warn{ background: linear-gradient(180deg, rgba(90,50,17,.8), rgba(77,38,7,.74)); color:#fde68a; border-color:#f59e0b; }
+  .danger{ background: linear-gradient(180deg, rgba(127,29,29,.82), rgba(90,14,14,.74)); color:#ffe2e2; border-color:#dc2626; }
+  .muted{ background: linear-gradient(180deg, rgba(32,40,68,.72), rgba(18,24,46,.68)); color:#cdd7ff; }
 
-  /* ===== Câmera fixa no topo (split) ===== */
+  /* ===== Câmera: uniforme em qualquer celular ===== */
   #camCard{
-    position: fixed; left: 50%; top: calc(env(safe-area-inset-top,0px) + 0px); transform: translateX(-50%);
-    width: calc(100vw - 24px); max-width:980px; height: var(--camH);
-    z-index: 100; padding: 0; margin: 12px auto; border-radius: 14px;
-    background: var(--cam-bg); border:1px solid #22306A; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
+    position: fixed; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px);
+    width: var(--camW);
+    aspect-ratio: 16 / 9;          /* NEW: garante 16:9 estável */
+    z-index: 100; padding: 0; border-radius: 12px;
+    background: linear-gradient(180deg, #0b1230, #07102a);
+    border:1px solid #213066; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
   }
-  /* empurra conteúdo para baixo da câmera fixa */
-  #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top,0px)); max-width:980px; margin:0 auto 8px }
+  #wrap{ position: relative; width: 100%; height: 100%; border-radius: 12px; overflow: hidden }
+  #vid{
+    width: 100%; height: 100%; display: block; background:#000; border-radius: 12px;
+    object-fit: cover; object-position:center; touch-action:none;
+    image-rendering: auto;
+  }
+  #can{display:none}
 
-  /* Split: vídeo + últimas capturas */
-  #camSplit{
-    position:relative; height:100%;
-    display:grid; grid-template-columns: 1fr; gap:10px; padding:10px;
-  }
-  #wrap{ height:100%; border-radius:12px; overflow:hidden; position:relative }
-  #vid{ width:100%; height:100%; display:block; background:#000; border-radius:12px; object-fit:contain; object-position:center; touch-action:none }
-  #can{ display:none }
-
-  /* Sidebar (desktop) de últimas capturas */
-  #sideDock{
-    display:none; height:100%;
-    border-left:1px solid #21306655; padding-left:10px;
-  }
-  #sideDock h3{ margin:0 0 6px; font-size:.9rem; color:#CFE3FF; letter-spacing:.02em }
-  #dockList{
-    height: calc(100% - 22px);
-    overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px;
-  }
-  .dock-item{
-    display:flex; gap:8px; align-items:center;
-    background:#0A132C; border:1px solid #223066; border-radius:10px; padding:6px 8px; cursor:pointer;
-  }
-  .dock-item:hover{ filter:brightness(1.06) }
-  .dock-thumb{ width:74px; height:46px; object-fit:cover; border-radius:6px; border:1px solid #2A3C70 }
-  .dock-meta{ font-size:.78rem; color:#C7D2FE; line-height:1.2 }
-
-  /* Dock inferior (mobile) */
-  #dockBar{
-    position:absolute; left:0; right:0; bottom:6px; padding:6px 8px;
-    background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55));
-    border-top:1px solid rgba(255,255,255,.12); border-radius:12px;
-  }
-  #dockRail{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none }
-  #dockRail::-webkit-scrollbar{ display:none }
-  .dock-pill{ flex:0 0 auto; width:76px; height:48px; border-radius:8px; border:1px solid #2A3C70; background:#0A132C; overflow:hidden }
-  .dock-pill img{ width:100%; height:100%; object-fit:cover }
-
-  @media (min-width: 860px){
-    #camSplit{ grid-template-columns: 2fr 1fr; }
-    #sideDock{ display:block }
-    #dockBar{ display:none }
-  }
-
-  /* Overlay mensagem + chip */
-  .ov{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:flex-start; pointer-events:none; padding:10px }
+  /* Overlay “toque p/ foto” */
+  .ov{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:flex-start; pointer-events:none; padding:8px; }
   .ov .msg{
-    background:linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.55));
-    border:1px solid rgba(255,255,255,.18); color:#e6ebff; padding:6px 10px; border-radius:10px;
-    font-size:.8rem; font-weight:900; letter-spacing:.02em; text-shadow:0 1px 0 rgba(0,0,0,.4);
+    background:linear-gradient(180deg, rgba(0,0,0,.62), rgba(0,0,0,.56));
+    border:1px solid rgba(255,255,255,.18);
+    color:#e6ebff; padding:6px 10px; border-radius:10px;
+    font-size:.78rem; font-weight:900; letter-spacing:.02em; text-shadow:0 1px 0 rgba(0,0,0,.4);
   }
-  .chip{
-    position: absolute; right: 12px; top: 12px;
-    background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.55));
-    border: 1px solid rgba(255,255,255,.25); color: #e6ebff; padding: 6px 10px; border-radius: 999px;
-    font-size: .8rem; font-weight: 900; letter-spacing: .03em; display: none; user-select: none; box-shadow: 0 10px 28px rgba(0,0,0,.3);
-  }
-  .chip.on{ display:inline-flex; align-items:center; gap:8px }
-  .chip.rec{  background: linear-gradient(180deg, rgba(127,29,29,.85), rgba(90,14,14,.78));  border-color:#BE003F }
-  .chip.auto{ background: linear-gradient(180deg, rgba(90,50,17,.8),  rgba(77,38,7,.74));   border-color:#BB3E0C }
 
-  /* Botões */
+  /* Chip REC/AUTO na câmera */
+  .chip{
+    position: absolute; right: 10px; top: 10px;
+    background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.55));
+    border: 1px solid rgba(255,255,255,.25);
+    color: #e6ebff; padding: 6px 10px; border-radius: 999px;
+    font-size: .78rem; font-weight: 900; letter-spacing: .03em;
+    display: none; user-select: none; box-shadow: var(--shadow);
+  }
+  .chip.on{ display: inline-flex; align-items: center; gap: 8px }
+  .chip.rec{ background: linear-gradient(180deg, rgba(127,29,29,.82), rgba(90,14,14,.72)); border-color:#dc2626; color:#ffe2e2; }
+  .chip.auto{ background: linear-gradient(180deg, rgba(90,50,17,.8), rgba(77,38,7,.72)); border-color:#f59e0b; color:#fde68a; }
+
+  /* Ações e botões */
   .row{display:flex;gap:8px;flex-wrap:wrap}
   button{
     flex:1 1 180px; padding:12px 14px; font-size:.98rem; border:0; border-radius:12px; cursor:pointer;
@@ -142,84 +118,106 @@
   }
   button:hover{ filter:brightness(1.05) }
   button:active{ transform: translateY(1px); box-shadow: 0 3px 12px rgba(0,0,0,.25) }
-  #btnAutoCapture{ background: var(--btn-warning); color:#1A0B03 }
-  #btnVideoRecord{ background: var(--btn-danger);  color:#fff }
-  #btnPdf{ background: linear-gradient(180deg, #FFD952, #EAB308); color:#221A00 }
-  #btnSharePdf,#btnSharePhotos{ background: var(--btn-accent); color:#062A30 }
-  #btnClear{ background: var(--btn-danger); color:#fff }
+  #btnAutoCapture{ background: linear-gradient(180deg, #d86a30, #b35625); color:#1b0b02 } /* âmbar escuro */
+  #btnVideoRecord{ background: linear-gradient(180deg, #d94640, #a7332f); color:#ffecec }
+  #btnPdf{ background: linear-gradient(180deg, #e0b93d, #b98f13); color:#231c00 }
+  #btnSharePdf,#btnSharePhotos{ background: linear-gradient(180deg, #2fd177, #1cab57); color:#072414 }
+  #btnClear{ background: linear-gradient(180deg, #e35757, #c03232); color:#fff }
   button:disabled{opacity:.5;cursor:not-allowed; filter:grayscale(.2)}
-  @media (max-width:420px){ button{flex:1 1 140px;font-size:.95rem} }
+  @media (max-width:420px){
+    button{flex:1 1 140px;font-size:.95rem}
+  }
 
   .btn-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
   label.ppp{
-    display:flex; align-items:center; gap:8px; border:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--border);
     background: linear-gradient(180deg, #0c1431, #09102a);
     padding:8px 10px; border-radius:12px; font-weight:800; color:#dfe7ff; font-size:.9rem
   }
-  label.ppp select{
+  label.ppp select, label.ppp input{
     margin:0; padding:6px 8px; border-radius:10px; border:1px solid #243053; background:#0a122a; color:#dfe7ff
   }
 
-  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: 0 10px 28px rgba(0,0,0,.3)}
-  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a}
-  .thumb img{width:100%;display:block}
-  .meta{padding:6px 8px;font-size:.78rem;color:#c7d2fe}
-
-  /* Placa KM */
+  /* KM */
   #kmPlaque{
-    text-align:center; padding:8px 12px; background:linear-gradient(180deg, #1D3C8F,#122A6B);
+    text-align:center; padding:8px 12px;
+    background: linear-gradient(180deg, #0d3b8e, #0a2e6d);
     border:2px solid #e6ecff; border-radius:12px; margin:0 auto 8px; max-width:980px;
-    font-weight:900; font-size:1rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28); text-shadow:0 1px 0 rgba(0,0,0,.35);
+    font-weight:900; font-size:1rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28);
+    text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
-  #kmPlaque span{ letter-spacing:.02em }
-  small.hint{display:block;color:#9fb4fc;margin-top:6px}
 
-  /* ===== Splash (Matrix) ===== */
-  #splash{ position: fixed; inset: 0; z-index: 2000; background: radial-gradient(1200px 600px at 50% -10%, #142F56, transparent 65%), #060A12; display:flex; align-items:center; justify-content:center; overflow:hidden }
-  #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
-  .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px }
-  .title{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
-    letter-spacing: .06em; color: #CFE3FF;
-    text-shadow: 0 0 10px #5E22F355, 0 0 22px #BA39E477, 0 0 34px #5E22F355;
-    white-space: nowrap; overflow: hidden; border-right: 2px solid #5E22F3;
-    margin: 0 auto 10px; width: 0;
+  /* Legendas (tags) */
+  .tags{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
+  .tag{ padding:6px 10px; border-radius:999px; font-size:.86rem; font-weight:800; cursor:pointer; user-select:none;
+    background: linear-gradient(180deg, #0d1430, #0a1028); color:#dfe7ff;
+    border:1px solid #2a3b70; outline:1px solid rgba(67,255,155,.05); }
+  .tag.on{ background: linear-gradient(180deg, #154d2f, #0e3923); color:#b7ffcf; border-color:#1a7a4a }
+
+  /* Foto + galeria */
+  #foto{width:100%;display:block;border:1px solid #2a335a;border-radius:12px;margin-top:8px; box-shadow: var(--shadow)}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .thumb{border:1px solid #243053;border-radius:10px;overflow:hidden;background:#0a122a; outline:1px solid rgba(67,255,155,.05)}
+  .thumb img{width:100%;display:block}
+  .meta{padding:6px 8px;font-size:.82rem;color:#c7d2fe; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+  .meta .idx{                    /* NEW: número pequeno e monoespaçado */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight:900; font-size:.74rem; color:#9fe9ff; opacity:.95;
+    background:linear-gradient(180deg, rgba(14,27,54,.9), rgba(10,20,44,.9));
+    border:1px solid #28407a; border-radius:999px; padding:2px 8px;
   }
+
+  /* ===== Barra de polegar (one-hand) ===== */
+  #thumbBar{
+    position: fixed; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 120; display:flex; gap:8px; justify-content:space-between;
+    padding:10px 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.7));
+    border-top:1px solid rgba(255,255,255,.15);
+    backdrop-filter: blur(4px);
+  }
+  .thumbBtn{
+    flex:1 1 auto; padding:12px 10px; border-radius:12px; border:1px solid #2a3b70;
+    font-weight:900; color:#e6f0ff; background: linear-gradient(180deg, #0e1736, #0a1128);
+    box-shadow: 0 6px 18px rgba(0,0,0,.25); text-align:center; cursor:pointer;
+  }
+  .thumbBtn.primary{ background: linear-gradient(180deg, #1b4c3b, #123c2e); color:#c8ffdf; border-color:#1b3b32 }
+  .thumbBtn.warn{ background: linear-gradient(180deg, #8e5a1a, #6c4312); color:#fde3a6; border-color:#6d4a15 }
+  .thumbBtn.danger{ background: linear-gradient(180deg, #8e2420, #6d1a18); color:#ffe2e2; border-color:#6d1f1c }
+
+  /* Compacto */
+  body.compact .card:not(#camCard){ display:none !important; }
+  body.compact #statusBar{ opacity:.95; }
+  #btnMinimize{ margin-left: 6px; font-size:.88rem; padding:8px 10px; }
+  #fabRestore{
+    position: fixed; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); z-index:121;
+    display:none; padding:12px 14px; border-radius:999px; border:1px solid #1b3b32;
+    background: linear-gradient(180deg, #1b4c3b, #123c2e); color:#c8ffdf; font-weight:900; cursor:pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,.35);
+  }
+  body.compact #fabRestore{ display:inline-flex; }
+
+  /* Splash */
+  #splash{ position: fixed; inset: 0; z-index: 2000; background: radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
+  .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px; }
+  .title{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 900; font-size: clamp(1.2rem, 4vw, 2.4rem);
+    letter-spacing: .06em; color: #b7ffcf; text-shadow: 0 0 10px #22c55e55, 0 0 22px #22c55e77, 0 0 40px #22c55e55, 0 1px 0 #0b1d14;
+    white-space: nowrap; overflow: hidden; border-right: 2px solid #43ff9b; margin: 0 auto 10px; width: 0; }
   .subtitle{ font-weight:700; color:#9fe9ff; letter-spacing:.04em; opacity:.9 }
   .splash-actions{ margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
-  .splash-btn{ padding:10px 14px; border-radius:12px; border:1px solid #1b3b32; background: var(--btn-accent); color:#062A30; font-weight:900; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,.35) }
+  .splash-btn{ padding:10px 14px; border-radius:12px; border:1px solid #1b3b32; background: linear-gradient(180deg, #1b4c3b, #123c2e); color:#c8ffdf; font-weight:900; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,.35); }
   .splash-btn:hover{ filter: brightness(1.08) }
   .splash-fade{ animation: splashout .6s ease forwards }
   @keyframes splashout{ to{ opacity:0; transform: scale(1.01) } }
   @keyframes typing { from { width: 0 } to { width: 24ch } }
-  @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #5E22F3 } }
-
-  /* Ícone de ondas (sem nome) */
-  .brand-dot{ position:fixed; left:14px; top:14px; z-index:120; opacity:.98; pointer-events:none }
-  @media (max-width:420px){ h1{font-size:1.12rem} }
+  @keyframes caret { 0%, 100% { border-right-color: transparent } 50% { border-right-color: #43ff9b } }
 </style>
 </head>
 <body>
 
-<!-- Ícone “ondas” autoral (evoca o conceito, sem nome) -->
-<div class="brand-dot" aria-hidden="true">
-  <svg id="ico-ondas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="56" height="56">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%"  stop-color="#5E22F3"/>
-        <stop offset="100%" stop-color="#BA39E4"/>
-      </linearGradient>
-    </defs>
-    <circle cx="64" cy="64" r="60" fill="url(#g)" opacity="0.14"/>
-    <path d="M18,46 C34,36 54,38 74,48 C94,58 110,58 118,54" fill="none" stroke="#5E22F3" stroke-opacity=".85" stroke-width="8" stroke-linecap="round"/>
-    <path d="M18,64 C36,52 56,54 76,64 C96,74 110,74 118,70"  fill="none" stroke="#BA39E4" stroke-opacity=".95" stroke-width="8" stroke-linecap="round"/>
-    <path d="M18,82 C36,70 56,72 78,82 C100,92 112,92 118,88" fill="none" stroke="#2FC8E3" stroke-opacity=".95" stroke-width="8" stroke-linecap="round"/>
-  </svg>
-</div>
-
-<!-- ===== SPLASH ===== -->
+<!-- SPLASH -->
 <div id="splash" aria-label="Tela de abertura do relatório fotográfico">
   <canvas id="rainCanvas"></canvas>
   <div class="splash-inner">
@@ -231,94 +229,106 @@
   </div>
 </div>
 
+<!-- Barra de status -->
+<div id="statusBar" role="status" aria-live="polite" aria-atomic="true">
+  <span id="stCSV" class="badge muted">CSV</span>
+  <span id="stGPS" class="badge muted">GPS</span>
+  <span id="stCAM" class="badge muted">CÂMERA</span>
+  <span id="stREC" class="badge danger" style="display:none">REC</span>
+  <span id="stAUTO" class="badge warn" style="display:none">AUTO</span>
+  <button id="btnMinimize" title="Minimizar (compactar sem fechar)">Minimizar</button>
+</div>
+
 <h1>📸 Relatório Fotográfico</h1>
 
-<!-- Espaçador para o card fixo -->
-<div id="camSpacer"></div>
-
-<!-- KM ATUAL -->
+<!-- KM -->
 <div id="kmPlaque"><span id="kmTop">KM —</span></div>
 
 <!-- CONTROLES -->
 <div class="card">
-  <details class="controls">
-    <summary>Controles (toque para abrir)</summary>
-    <div class="ctrlGrid">
-      <label>🎥 Câmera:
-        <select id="cameraSel"></select>
+  <details class="controls" open>
+    <summary style="cursor:pointer;list-style:none;outline:none;user-select:none;font-weight:900;color:#dfe7ff;display:flex;align-items:center;gap:8px">
+      ⚙️ Controles
+    </summary>
+
+    <div class="row" style="margin-top:8px">
+      <button id="btnAutoCapture">🎬 Captura Auto</button>
+      <button id="btnVideoRecord">⏺️ Gravar Vídeo</button>
+
+      <!-- Áudio e Tick -->
+      <label class="ppp" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="micEnable" />
+        🎙️ Áudio (microfone)
       </label>
-      <button id="btnCycle" class="small" title="Trocar Câmera">Trocar</button>
-      <button id="btnUltra" class="small" title="Ultra‑wide (0.5×)">0.5×</button>
-      <button id="btnWide"  class="small" title="Wide (1×)">1×</button>
-      <button id="btnTele"  class="small" title="Tele (2×+)">2×</button>
-      <label id="zoomWrap" style="display:none">🔍 Zoom:
-        <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" />
-        <span id="zoomVal" style="margin-left:6px">1.0×</span>
+      <label class="ppp" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="tickEnable" />
+        ⏱️ Tick
       </label>
-      <span style="color:#9fe9ff;font-size:.85rem">💾 Salvamento automático (anti‑perda): ATIVO</span>
+      <label class="ppp" title="Intervalo do tick em segundos" style="display:flex;align-items:center;gap:8px">
+        Intervalo (s):
+        <input type="number" id="tickInterval" min="0.5" step="0.5" value="2">
+      </label>
+      <label class="ppp" title="Volume do tick" style="display:flex;align-items:center;gap:8px">
+        Vol. Tick:
+        <input type="range" id="tickVol" min="0" max="1" step="0.05" value="0.35" />
+      </label>
+      <label class="ppp" title="Evita apagar a tela (quando suportado)" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="wakeLockEnable" />
+        🔒 Anti‑sono
+      </label>
     </div>
+
+    <div class="row" style="margin-top:8px">
+      <div class="btn-group">
+        <button id="btnPdf" disabled>📄 PDF</button>
+        <label class="ppp">
+          Fotos/página:
+          <select id="pppSel">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="8">8</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="btnSharePdf" disabled>Enviar por WhatsApp (PDF)</button>
+      <button id="btnSharePhotos" disabled>Enviar por WhatsApp (Fotos)</button>
+      <button id="btnClear" disabled>🧹 Limpar</button>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
+      <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
+      Limpar automaticamente a lista depois de salvar/enviar o PDF
+    </label>
+
+    <small class="hint" style="color:#9fb4fc;display:block;margin-top:6px">
+      Toque na prévia da câmera para capturar. O PDF pode ser 1, 2, 4 ou 8 fotos por página.
+    </small>
   </details>
 </div>
 
-<!-- CÂMERA + ÚLTIMAS CAPTURAS (split) -->
-<div class="card" id="camCard">
-  <div id="camSplit">
-    <!-- Vídeo ao vivo -->
-    <div id="wrap">
-      <video id="vid" autoplay playsinline muted></video>
-      <canvas id="can" width="1280" height="720"></canvas>
-      <div id="ov" class="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
-      <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
-
-      <!-- Dock inferior (mobile) -->
-      <div id="dockBar" aria-label="Últimas capturas (mobile)">
-        <div id="dockRail"></div>
-      </div>
-    </div>
-
-    <!-- Sidebar (desktop) -->
-    <aside id="sideDock" aria-label="Últimas capturas (desktop)">
-      <h3>Últimas capturas</h3>
-      <div id="dockList"></div>
-    </aside>
-  </div>
-</div>
-
-<!-- AÇÕES -->
+<!-- Legendas -->
 <div class="card">
-  <div class="row">
-    <button id="btnAutoCapture">🎬 Captura Auto</button>
-    <button id="btnVideoRecord">⏺️ Gravar Vídeo</button>
-
-    <div class="btn-group">
-      <button id="btnPdf" disabled>📄 PDF</button>
-      <label class="ppp">
-        Fotos/página:
-        <select id="pppSel">
-          <option value="1" selected>1</option>
-          <option value="2">2</option>
-          <option value="4">4</option>
-          <option value="8">8</option>
-        </select>
-      </label>
-    </div>
-
-    <button id="btnSharePdf" disabled>Enviar por WhatsApp (PDF)</button>
-    <button id="btnSharePhotos" disabled>Enviar por WhatsApp (Fotos)</button>
-    <button id="btnClear" disabled>🧹 Limpar</button>
-  </div>
-
-  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#cbd5ff;font-size:.95rem">
-    <input id="autoClear" type="checkbox" style="transform:scale(1.2)" />
-    Limpar automaticamente a lista depois de salvar/enviar o PDF
-  </label>
-
-  <small class="hint">
-    Toque no vídeo para capturar. O PDF pode ser 1, 2, 4 ou 8 fotos por página.
-  </small>
+  <h2 style="margin:0 0 6px;font-size:1rem">Legendas opcionais</h2>
+  <div id="tags" class="tags" aria-label="Selecione legendas opcionais para gravar na tarja da foto"></div>
+  <small class="hint" style="color:#9fb4fc">Toque para ativar/desativar. As legendas selecionadas vão para a tarja da foto e para o texto de compartilhamento.</small>
 </div>
 
-<!-- Foto mais recente + Galeria -->
+<!-- Câmera -->
+<div class="card" id="camCard" aria-label="Prévia da câmera (referência)">
+  <div id="wrap">
+    <video id="vid" autoplay playsinline muted></video>
+    <canvas id="can" width="1280" height="720"></canvas>
+    <div id="ov" class="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
+    <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
+  </div>
+</div>
+
+<!-- Botão para sair do modo compacto -->
+<button id="fabRestore" title="Restaurar controles">Restaurar</button>
+
+<!-- Foto + galeria -->
 <div class="card">
   <h2 style="margin:0 0 6px;font-size:1rem">Foto mais recente</h2>
   <img id="foto" alt="Prévia da foto capturada">
@@ -327,6 +337,14 @@
 <div class="card">
   <h2 style="margin:0 0 6px;font-size:1rem">Lista de fotos (sessão atual)</h2>
   <div id="gal" class="gallery"></div>
+</div>
+
+<!-- ===== Barra de polegar (one-hand) ===== -->
+<div id="thumbBar" aria-label="Atalhos de polegar (captura/auto/rec)">
+  <button id="tbShutter" class="thumbBtn primary" title="Capturar foto (shutter)">📸 Capturar</button>
+  <button id="tbAuto" class="thumbBtn warn" title="Auto captura ON/OFF">🎬 Auto</button>
+  <button id="tbRec" class="thumbBtn danger" title="Gravar/Parar vídeo">⏺️ REC</button>
+  <button id="tbMin" class="thumbBtn" title="Minimizar (compactar)">⬇️ Mini</button>
 </div>
 
 <script>
@@ -340,14 +358,12 @@
 
   let W, H, columns, fontSize = 16, drops = [], raf = null, started = false;
 
-  function resize(){
-    canvas.width = W = window.innerWidth;
-    canvas.height = H = window.innerHeight;
+  function resize(){ canvas.width = W = innerWidth; canvas.height = H = innerHeight;
     fontSize = Math.max(14, Math.min(24, Math.floor(W / 64)));
     columns = Math.floor(W / fontSize);
     drops = new Array(columns).fill(1);
   }
-  window.addEventListener('resize', resize);
+  addEventListener('resize', resize, {passive:true});
 
   function draw(){
     ctx.fillStyle = 'rgba(6,10,18,0.08)'; ctx.fillRect(0,0,W,H);
@@ -361,16 +377,14 @@
     }
     raf = requestAnimationFrame(draw);
   }
-  function typeIn(){
-    title.style.animation = `typing 1200ms steps(24, end) forwards, caret 650ms step-end 6`;
-  }
+  function typeIn(){ title.style.animation = `typing 1200ms steps(24, end) forwards, caret 650ms step-end 6`; }
   function start(){
     if(started) return; started = true;
     splash.classList.add('splash-fade');
     setTimeout(()=>{ splash.style.display='none'; boot(); }, 580);
   }
   resize(); draw(); typeIn();
-  const auto = setTimeout(start, 2600);
+  const auto = setTimeout(start, 2400);
   btnStart.addEventListener('click', ()=>{ clearTimeout(auto); start(); });
   document.addEventListener('visibilitychange', ()=>{
     if(document.hidden && raf){ cancelAnimationFrame(raf); raf = null; }
@@ -378,7 +392,7 @@
   }, {passive:true});
 })();
 
-/* ===== Utilitários ===== */
+/* ===== Utils ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
 function fmtKm(v){ let K=Math.floor(v), m=Math.round((v-K)*1000); if(m>=1000){m-=1000;K+=1} return `KM ${K}+${String(m).padStart(3,'0')}`; }
@@ -392,19 +406,43 @@ let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
 let isRecordingVideo=false; let mediaRecorder=null; let recordedChunks=[];
 let kmUpdateInterval=null;
+let resumePlan = {auto:false, rec:false};
 
+/* ===== Referências ===== */
 const vid=document.getElementById('vid'); const can=document.getElementById('can'); const ctx=can.getContext('2d',{alpha:false});
 const foto=document.getElementById('foto'); const wrap=document.getElementById('wrap'); const ov=document.getElementById('ov'); const ovMsg=document.getElementById('ovMsg'); const chip=document.getElementById('chip');
 const btnAutoCapture=document.getElementById('btnAutoCapture'); const btnVideoRecord=document.getElementById('btnVideoRecord'); const autoClear=document.getElementById('autoClear'); const kmTop=document.getElementById('kmTop'); const gal=document.getElementById('gal');
-const cameraSel=document.getElementById('cameraSel'); const btnCycle=document.getElementById('btnCycle'); const btnUltra=document.getElementById('btnUltra'); const btnWide =document.getElementById('btnWide'); const btnTele =document.getElementById('btnTele'); const zoomWrap=document.getElementById('zoomWrap'); const zoomRange=document.getElementById('zoomRange'); const zoomVal=document.getElementById('zoomVal'); const pppSel=document.getElementById('pppSel');
-const dockList = document.getElementById('dockList'); const dockRail = document.getElementById('dockRail');
-const photos=[]; // {id,url,blob,w,h,ts,kmStr,idsTxt,filename,lat,lon,acc}
+const pppSel=document.getElementById('pppSel');
+const btnPdf=document.getElementById('btnPdf'); const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos'); const btnClear=document.getElementById('btnClear');
+const stCSV=document.getElementById('stCSV'); const stGPS=document.getElementById('stGPS'); const stCAM=document.getElementById('stCAM'); const stREC=document.getElementById('stREC'); const stAUTO=document.getElementById('stAUTO');
+const tagsWrap=document.getElementById('tags');
+const btnMinimize=document.getElementById('btnMinimize'); const fabRestore=document.getElementById('fabRestore');
+const micEnable=document.getElementById('micEnable'); const tickEnable=document.getElementById('tickEnable'); const tickInterval=document.getElementById('tickInterval'); const tickVol=document.getElementById('tickVol'); const wakeLockEnable=document.getElementById('wakeLockEnable');
+/* Thumb Bar (one-hand) */ // NEW
+const tbShutter=document.getElementById('tbShutter'); const tbAuto=document.getElementById('tbAuto'); const tbRec=document.getElementById('tbRec'); const tbMin=document.getElementById('tbMin');
 
-/* ===== IndexedDB + Persistência + WAL ===== */
-const DB_NAME='inspecaoDB', DB_VER=3;
-const STORES = ['photos','edits','reports','wal','snapshots','photos_mirror'];
-let db=null;
+const photos=[];
 
+/* ===== Tags ===== */
+const TAGS_DEFAULT = [
+  'Luminária apagada','Oscilando','Braço danificado','Base oxidada','Cabo rompido',
+  'Driver/Reator','Fotocélula','Poste danificado','Caixa de passagem','Aterramento',
+  'Queda de fase','PMV','CFTV','Fibra óptica','Vandalismo'
+];
+const selectedTags = new Set();
+function buildTags(){
+  tagsWrap.innerHTML='';
+  TAGS_DEFAULT.forEach(t=>{
+    const el=document.createElement('span');
+    el.className='tag'; el.textContent=t; el.tabIndex=0; el.role='button';
+    el.onclick=()=>{ if(selectedTags.has(t)){ selectedTags.delete(t); el.classList.remove('on'); } else { selectedTags.add(t); el.classList.add('on'); } };
+    el.onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); } };
+    tagsWrap.appendChild(el);
+  });
+}
+
+/* ===== IndexedDB ===== */
+const DB_NAME='inspecaoDB', DB_VER=3; const STORES = ['photos','edits','reports','wal','snapshots','photos_mirror']; let db=null;
 function openDBv3(){ return new Promise((resolve,reject)=>{ const req=indexedDB.open(DB_NAME, DB_VER);
   req.onupgradeneeded=(e)=>{ const db=e.target.result;
     STORES.forEach(s=>{ if(!db.objectStoreNames.contains(s)){ const st=db.createObjectStore(s,{keyPath:'id'});
@@ -414,100 +452,34 @@ function openDBv3(){ return new Promise((resolve,reject)=>{ const req=indexedDB.
   };
   req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
 });}
-
-async function ensurePersistence(){
-  try{ if (navigator.storage?.persist) {
-    const already = await navigator.storage.persisted();
-    if (!already) await navigator.storage.persist();
-  } }catch(e){}
-}
-
-/* WAL + espelho */
+async function ensurePersistence(){ try{ if (navigator.storage?.persist) { const already = await navigator.storage.persisted(); if (!already) await navigator.storage.persist(); } }catch(e){} }
 async function dbPutPhoto(rec){
   if(!db) db=await openDBv3();
-  // 1) WAL append (uncommitted)
-  await new Promise((res,rej)=>{
-    const tx=db.transaction('wal','readwrite');
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['photos','photos_mirror','wal'],'readwrite');
     tx.objectStore('wal').put({id:'wal_'+rec.id, ts:Date.now(), action:'PUT_PHOTO', payload:{id:rec.id}, committed:false});
-    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
-  });
-  // 2) Grava foto + espelho
-  await new Promise((res,rej)=>{
-    const tx=db.transaction(['photos','photos_mirror'],'readwrite');
     tx.objectStore('photos').put(rec);
     tx.objectStore('photos_mirror').put({id:rec.id, blob:rec.blob});
     tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
-  });
-  // 3) Commit WAL
-  await new Promise((res,rej)=>{
-    const tx=db.transaction('wal','readwrite'); const st=tx.objectStore('wal');
-    const rq=st.get('wal_'+rec.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); };
-    rq.onerror=()=>rej(rq.error);
-  });
+  }).then(async()=>{ const d=db; await new Promise((res,rej)=>{ const tx=d.transaction('wal','readwrite'); const st=tx.objectStore('wal'); const rq=st.get('wal_'+rec.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); }; rq.onerror=()=>rej(rq.error); }); });
 }
-
 async function dbGetAllPhotos(){ if(!db) db=await openDBv3();
-  return new Promise((res,rej)=>{ const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').index('ts').getAll();
-    rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
-  });
+  return new Promise((res,rej)=>{ const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').index('ts').getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); });
 }
 async function dbClearAll(){ if(!db) db=await openDBv3();
   return new Promise((res,rej)=>{ const tx=db.transaction(['photos','wal','photos_mirror'],'readwrite'); tx.objectStore('photos').clear(); tx.objectStore('wal').clear(); tx.objectStore('photos_mirror').clear(); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
 }
-
-/* Snapshot leve do estado (ponteiros) */
 async function snapshotNow(){
   try{
     if(!db) db=await openDBv3();
-    const state = { id:'last', ts: Date.now(), count: photos.length, last: photos[photos.length-1]?.id||null };
-    await new Promise((res,rej)=>{ const tx=db.transaction('snapshots','readwrite'); tx.objectStore('snapshots').put(state); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+    const state = { ts: Date.now(), count: photos.length, last: photos[photos.length-1]?.id||null, auto:isAutoCapturing, rec:isRecordingVideo };
+    await new Promise((res,rej)=>{ const tx=db.transaction('snapshots','readwrite'); tx.objectStore('snapshots').put({id:'last', ...state}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
   }catch(e){}
 }
-function snapshotSoon(){ clearTimeout(window.__snap_timer); window.__snap_timer = setTimeout(() => snapshotNow(), 1000); }
-
-/* Eventos críticos + periódicos */
-window.addEventListener('pagehide', snapshotNow);
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) snapshotNow(); });
-document.addEventListener('freeze', snapshotNow);
-setInterval(snapshotNow, 45000);
-
-/* WAL replay no boot */
-async function walReplay(){
-  if(!db) db = await openDBv3();
-  const pending = await new Promise((res,rej)=>{
-    const tx=db.transaction('wal','readonly'); const st=tx.objectStore('wal').index('ts');
-    const rq=st.getAll(); rq.onsuccess=()=>res((rq.result||[]).filter(r=>!r.committed)); rq.onerror=()=>rej(rq.error);
-  });
-  if(!pending.length) return;
-  for(const r of pending){
-    if(r.action === 'PUT_PHOTO' && r.payload?.id){
-      const photoId = r.payload.id;
-      // verifica se já existe
-      const has = await new Promise((res)=>{
-        const tx=db.transaction('photos','readonly'); const rq=tx.objectStore('photos').get(photoId);
-        rq.onsuccess=()=>res(!!rq.result); rq.onerror=()=>res(false);
-      });
-      if(!has){
-        // tenta restaurar do espelho
-        await new Promise((res)=>{
-          const tx=db.transaction(['photos','photos_mirror'],'readwrite');
-          const stP=tx.objectStore('photos'); const stM=tx.objectStore('photos_mirror');
-          const rq=stM.get(photoId);
-          rq.onsuccess=()=>{ const rm=rq.result;
-            if(rm?.blob){ stP.put({ id: photoId, blob: rm.blob, ts: Date.now() }); }
-            res();
-          };
-          rq.onerror=()=>res();
-        });
-      }
-      // marca como committed
-      await new Promise((res)=>{
-        const tx=db.transaction('wal','readwrite'); const st=tx.objectStore('wal');
-        const rq=st.get(r.id); rq.onsuccess=()=>{ const row=rq.result; if(row){ row.committed=true; st.put(row); } res(); }; rq.onerror=()=>res();
-      });
-    }
-  }
-}
+function fastCheckpoint(){ snapshotNow(); }
+addEventListener('pagehide', fastCheckpoint);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) fastCheckpoint(); }, {passive:true});
+addEventListener('beforeunload', fastCheckpoint);
 
 /* ===== CSVs (IDs + KM) ===== */
 const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
@@ -562,9 +534,9 @@ async function loadKM(){
   }
   kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
 }
-async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; } catch{ csvReady=false; } setOv(csvReady ? 'Toque p/ foto' : 'Erro ao carregar CSVs', true); }
+async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; } catch{ csvReady=false; } setOv(csvReady ? 'Toque p/ foto' : 'Erro ao carregar CSVs', true); updateStatusBar(); }
 
-/* ===== Vizinho/KM ===== */
+/* ===== Vizinhos/KM ===== */
 function nearestN(lat,lon,n=5){
   if(!dataset.length) return [];
   const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20));
@@ -577,151 +549,148 @@ function nearestKM(lat,lon){
   let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best;
 }
 
-/* ===== Câmera / Zoom ===== */
-let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
-function lensHint(label=''){ const s=String(label).toLowerCase();
-  if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele';
-  if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra';
-  if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide'; return '';
-}
-function saveCamPrefs(){
-  const dev=deviceList[deviceIndex]; if(dev){
-    localStorage.setItem('camDeviceId',dev.deviceId);
-    const z=Number(zoomRange.value||1);
-    if(currentCap?.zoom) localStorage.setItem('camZoom_'+dev.deviceId,z);
-  }
-}
-function loadCamPrefsFor(id){ const z=localStorage.getItem('camZoom_'+id); return z?Number(z):null; }
-async function enumerateCameras(){
-  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{}
-  const devices=await navigator.mediaDevices.enumerateDevices();
-  deviceList=devices.filter(d=>d.kind==='videoinput');
-  deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); });
-  cameraSel.innerHTML='';
-  deviceList.forEach((d,i)=>{ const o=document.createElement('option'); const tag=lensHint(d.label);
-    o.value=String(i); o.textContent=d.label? `${d.label}${tag?` (${tag})`:''}` : `Câmera ${i+1}${tag?` (${tag})`:''}`; cameraSel.appendChild(o);
-  });
-  const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId));
-  deviceIndex=idx>=0?idx:0; cameraSel.value=String(deviceIndex);
-}
-async function startCamera(deviceIdx=deviceIndex){
+/* ===== Câmera ===== */
+let currentStream=null, currentTrack=null;
+async function enumerateCameras(){ try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{} }
+async function startCamera(){
   try{
     if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
-    currentStream=currentTrack=currentCap=null;
-    const dev=deviceList[deviceIdx];
-    const constraints=dev? {video:{deviceId:{exact:dev.deviceId}},audio:false} : {video:{facingMode:{ideal:'environment'}},audio:false};
+    const constraints={video:{facingMode:{ideal:'environment'}},audio:false};
     const st=await navigator.mediaDevices.getUserMedia(constraints);
     currentStream=st; vid.srcObject=st;
     await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
     currentTrack=st.getVideoTracks()[0];
-    currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
-
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; cameraSel.value=String(deviceIndex);
-    saveCamPrefs();
+    camReady=!!vid.videoWidth;
   }catch(e){ camReady=false; }
-  setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
+  setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true); updateStatusBar();
 }
-async function applyZoom(val, noSave=false){
-  if(!(currentTrack && currentCap && currentCap.zoom)) return;
-  const z=Number(val);
-  try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }
-  catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch(e){} }
-  zoomRange.value=z; zoomVal.textContent=`${Number(z).toFixed(1)}×`; if(!noSave) saveCamPrefs();
-}
-cameraSel.addEventListener('change', async ()=>{ deviceIndex=Number(cameraSel.value||0); await startCamera(deviceIndex); });
-btnCycle.addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
-async function switchLens(target){
-  const idx=deviceList.findIndex(d=>lensHint(d.label)===target && /back|rear|environment/i.test(d.label));
-  if(idx>=0){ await startCamera(idx); return; }
-  if(currentCap?.zoom){
-    const mn=Number(zoomRange.min||1), mx=Number(zoomRange.max||1);
-    if(target==='ultra') await applyZoom(mn);
-    else if(target==='wide') await applyZoom(Math.min(Math.max(1,mn),mx));
-    else await applyZoom(Math.min(Math.max(2,mn),mx));
-    return;
-  }
-  const rearIdxs=deviceList.map((d,i)=>({d,i})).filter(x=>/back|rear|environment/i.test(x.d.label)).map(x=>x.i);
-  if(rearIdxs.length>1){ const next=rearIdxs.find(i=>i!==deviceIndex) ?? rearIdxs[0]; await startCamera(next); }
-}
-btnUltra.addEventListener('click', ()=>switchLens('ultra'));
-btnWide .addEventListener('click', ()=>switchLens('wide'));
-btnTele .addEventListener('click', ()=>switchLens('tele'));
-zoomRange.addEventListener('input', ()=>applyZoom(zoomRange.value));
-
-/* Pinch‑to‑zoom */
-let pinchBase=null;
-wrap.addEventListener('touchstart', (ev)=>{ if(ev.touches.length===2 && currentCap?.zoom){ const dx=ev.touches[0].clientX-ev.touches[1].clientX; const dy=ev.touches[0].clientY-ev.touches[1].clientY; pinchBase={dist:Math.hypot(dx,dy), zoom:Number(zoomRange.value)}; } },{passive:true});
-wrap.addEventListener('touchmove', (ev)=>{ if(pinchBase && ev.touches.length===2 && currentCap?.zoom){ const dx=ev.touches[0].clientX-ev.touches[1].clientX; const dy=ev.touches[0].clientY-ev.touches[1].clientY; const dist=Math.hypot(dx,dy); const scale=dist/pinchBase.dist; const target=Math.min(zoomRange.max, Math.max(zoomRange.min, pinchBase.zoom*scale)); applyZoom(target); } },{passive:true});
-wrap.addEventListener('touchend', ()=>{ pinchBase=null; });
 
 /* ===== GPS ===== */
 function startGPS(){
-  if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); return; }
+  if(!('geolocation' in navigator)){ gpsReady=false; setOv('GPS não disponível', true); updateStatusBar(); return; }
   navigator.geolocation.getCurrentPosition(p=>{
     lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    gpsReady=true; setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true);
+    gpsReady=true; setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true); updateStatusBar();
     navigator.geolocation.watchPosition(pos=>{
       lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
     }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000});
-  }, ()=>{
-    gpsReady=false; setOv('Permita o GPS para usar', true);
-  }, {enableHighAccuracy:true, timeout:12000});
+  }, ()=>{ gpsReady=false; setOv('Permita o GPS para usar', true); updateStatusBar(); }, {enableHighAccuracy:true, timeout:12000});
 }
 
-/* ===== Dock de últimas capturas (sidebar + mobile) ===== */
-function renderDock(){
-  if(!dockList || !dockRail) return;
-  const MAX_SIDE = 12;  // quantas no painel lateral
-  const MAX_MOB  = 10;  // quantas no dock inferior
-
-  const arr = photos.slice().reverse(); // recentes primeiro
-
-  // Sidebar (desktop)
-  dockList.innerHTML = '';
-  arr.slice(0, MAX_SIDE).forEach((p)=>{
-    const it = document.createElement('div');
-    it.className = 'dock-item';
-    it.title = `${p.kmStr} • ${p.ts}`;
-    it.addEventListener('click', ()=>{
-      foto.src = p.url;
-      foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg';
-    });
-
-    const im = document.createElement('img');
-    im.className='dock-thumb';
-    im.src=p.url;
-
-    const meta = document.createElement('div');
-    meta.className='dock-meta';
-    meta.textContent = `${p.kmStr} • ${p.ts}`;
-
-    it.appendChild(im); it.appendChild(meta);
-    dockList.appendChild(it);
-  });
-
-  // Dock inferior (mobile)
-  dockRail.innerHTML = '';
-  arr.slice(0, MAX_MOB).forEach(p=>{
-    const pill = document.createElement('div');
-    pill.className='dock-pill';
-    pill.title = `${p.kmStr} • ${p.ts}`;
-    pill.addEventListener('click', ()=>{
-      foto.src = p.url;
-      foto.dataset.filename = p.filename || 'INSPECAO_FOTO.jpg';
-    });
-    const im = document.createElement('img');
-    im.src = p.url;
-    pill.appendChild(im);
-    dockRail.appendChild(pill);
-  });
+/* ===== Status/Chip ===== */
+function updateChip(){
+  const labels=[]; let cls=['chip','on'];
+  if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); }
+  if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
+  if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; }
+  else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; }
+}
+function statusBadge(el, ok, labelOff='AGUARDANDO'){
+  el.classList.remove('ok','warn','danger','muted');
+  if(ok){ el.classList.add('ok'); el.textContent = el.dataset.base || el.textContent; }
+  else { el.classList.add('muted'); el.textContent = (el.dataset.base || el.textContent) + ' • ' + labelOff; }
+}
+function updateStatusBar(){
+  stCSV.dataset.base='CSV'; stGPS.dataset.base='GPS'; stCAM.dataset.base='CÂMERA';
+  statusBadge(stCSV, csvReady);
+  statusBadge(stGPS, gpsReady);
+  statusBadge(stCAM, camReady);
+  stREC.style.display = isRecordingVideo ? 'inline-flex' : 'none';
+  stAUTO.style.display = isAutoCapturing ? 'inline-flex' : 'none';
 }
 
-/* ===== Captura ===== */
+/* ===== Thumb Bar ações ===== */ // NEW
+tbShutter.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else { capture(); } });
+tbAuto.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
+tbRec.addEventListener('click', ()=>{ if(isRecordingVideo) stopVideoRecording(); else startVideoRecording(); });
+tbMin.addEventListener('click', ()=>{ document.body.classList.add('compact'); });
+
+/* ===== Compacto ===== */
+btnMinimize.addEventListener('click', ()=>{ document.body.classList.add('compact'); });
+fabRestore.addEventListener('click', ()=>{ document.body.classList.remove('compact'); });
+
+/* ===== Wake Lock (anti-sono) ===== */
+let wakeLock=null;
+async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', ()=>{}); } }catch(e){} }
+async function releaseWakeLock(){ try{ await wakeLock?.release(); wakeLock=null; }catch(e){} }
+wakeLockEnable.addEventListener('change', async ()=>{ if(wakeLockEnable.checked) await requestWakeLock(); else await releaseWakeLock(); });
+document.addEventListener('visibilitychange', async ()=>{ if(document.visibilityState==='visible' && wakeLockEnable.checked){ await requestWakeLock(); }}, {passive:true});
+
+/* ===== Áudio/Metrônomo ===== */
+let audioCtx=null, micStream=null, micSource=null, tickGain=null, mixDest=null, tickTimer=null;
+function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }
+async function getMicStream(){
+  if(micStream) return micStream;
+  micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+  return micStream;
+}
+function buildAudioGraph(includeMic, includeTick){
+  ensureAudio();
+  mixDest = audioCtx.createMediaStreamDestination();
+  if(includeMic && micStream){
+    micSource = audioCtx.createMediaStreamSource(micStream);
+    micSource.connect(mixDest);
+  }
+  if(includeTick){
+    tickGain = audioCtx.createGain(); tickGain.gain.value = Number(tickVol.value||0.35);
+    tickGain.connect(mixDest);
+  }
+}
+function playTickPulse(){
+  if(!audioCtx || !tickGain) return;
+  const osc = audioCtx.createOscillator();
+  const env = audioCtx.createGain();
+  osc.type = 'square'; osc.frequency.value = 1000;
+  env.gain.value = 0.0001;
+  osc.connect(env); env.connect(tickGain);
+  const now = audioCtx.currentTime;
+  env.gain.setValueAtTime(0.0001, now);
+  env.gain.exponentialRampToValueAtTime(1.0, now + 0.005);
+  env.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+  osc.start(now); osc.stop(now + 0.08);
+}
+function startTick(){ stopTick(); const iv = Math.max(0.3, Number(tickInterval.value||2)); playTickPulse(); tickTimer = setInterval(playTickPulse, iv*1000); }
+function stopTick(){ if(tickTimer){ clearInterval(tickTimer); tickTimer=null; } }
+
+/* ===== Galeria/Ações ===== */
 function updateActions(){ const n=photos.length, enabled=n>0; btnPdf.disabled=!enabled; btnClear.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; }
 function renderGallery(){
-  gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb'; const im=document.createElement('img'); im.src=p.url;
-    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`; d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
-  }); updateActions(); renderDock();
+  gal.innerHTML='';
+  photos.forEach((p,idx)=>{
+    const d=document.createElement('div'); d.className='thumb';
+    const im=document.createElement('img'); im.src=p.url;
+    const meta=document.createElement('div'); meta.className='meta';
+    const idxSpan=document.createElement('span'); idxSpan.className='idx'; idxSpan.textContent = `#${String(p.idx||idx+1).padStart(2,'0')}`; // NEW
+    const text=document.createElement('span'); text.textContent = `${p.kmStr} • ${p.ts}${p.tags?.length? ' • '+p.tags.join(' | '):''}`;
+    meta.appendChild(idxSpan); meta.appendChild(text);
+    d.appendChild(im); d.appendChild(meta); gal.appendChild(d);
+  });
+  updateActions();
+}
+
+/* ===== Texto com quebra simples ===== */
+function drawWrapped(ctx, text, x, y, maxWidth, lineHeight){
+  if(!text) return;
+  const words=text.split(' '); let line='';
+  for(let n=0;n<words.length;n++){
+    const test=line + words[n] + ' ';
+    if(ctx.measureText(test).width > maxWidth && n>0){ ctx.fillText(line, x, y); y += lineHeight; line = words[n] + ' '; }
+    else { line = test; }
+  }
+  ctx.fillText(line.trim(), x, y);
+}
+
+/* ===== Captura (com número menor e monoespaçado) ===== */
+function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
+function ready(){ return csvReady && camReady && gpsReady; }
+
+/* Desenha o pequeno índice na tarja (fonte monoespaçada, menor) */ // NEW
+function drawPhotoIndex(ctx, idx, h, bandH){
+  const numStr = `#${String(idx).padStart(2,'0')}`;
+  ctx.textAlign='left';
+  ctx.fillStyle='#9fe9ff';
+  ctx.font = `900 ${Math.round(h*0.026)}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+  ctx.fillText(numStr, 20, h - bandH + Math.round(bandH*0.22));
 }
 
 async function capture(){
@@ -735,61 +704,76 @@ async function capture(){
   const kmStr=kmObj? fmtKm(kmObj.km): 'KM —';
   const ids=nearestN(lastPos.lat,lastPos.lon,5);
   const ts=new Date().toLocaleString();
+  const tagsText = Array.from(selectedTags).join(' • ');
 
+  // Número da foto (antes de tudo)
+  const photoIndex = photos.length + 1;          // NEW
+  drawPhotoIndex(ctx, photoIndex, h, bandH);     // NEW
+
+  // KM
   ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`;
   ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16;
   ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
 
+  // TS
   ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`;
   ctx.fillText(ts,20,h-Math.round(bandH*0.22));
 
+  // IDs
   ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`;
   ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
 
+  // Tags
+  if(tagsText){
+    ctx.textAlign='left'; ctx.fillStyle='#c8ffdf';
+    ctx.font=`700 ${Math.round(h*0.028)}px system-ui`;
+    drawWrapped(ctx, tagsText, 20, h-Math.round(bandH*0.38), Math.round(w*0.6), Math.round(h*0.032)+4);
+  }
+
   const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url);
   foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
-
-  const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
-  await dbPutPhoto({...rec, url: undefined});    // salva 100% antes de exibir
-  photos.push(rec); renderGallery(); snapshotSoon();
+  const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), tags: Array.from(selectedTags), idx: photoIndex, filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
+  await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
 
   setOv('Foto salva', true); setTimeout(()=> setOv('Toque p/ foto', true), 700);
 }
 
-/* Chip + controles */
 const detailsControls=document.querySelector('details.controls'); let controlsPrevOpen=null;
-function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); } if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
-  if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; } else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; } }
-function minimizeControls(busy){ if(!detailsControls) return; if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{} } else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; } }
+function minimizeControls(busy){ if(!detailsControls) return; if(busy){ controlsPrevOpen = detailsControls.open; detailsControls.open = false; try{ scrollTo({top:0, behavior:'smooth'}); }catch{} } else { if(controlsPrevOpen===true){ detailsControls.open = true; } controlsPrevOpen=null; } }
 
-/* Captura Automática (salva antes de exibir) */
+/* ===== Captura Automática (inclui índice) ===== */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
-  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b7b, #ef4444)';
-  setOv('AUTO ligado', true); updateChip(); minimizeControls(true);
-  autoCaptureInterval=setInterval(async ()=>{
-    if(!(csvReady && camReady && gpsReady && lastPos)) return;
+  isAutoCapturing=true; btnAutoCapture.textContent='⏹️ Parar'; btnAutoCapture.style.background='linear-gradient(180deg, #e57e3a, #c55f22)';
+  setOv('AUTO ligado', true); updateChip(); updateStatusBar(); minimizeControls(true);
+  autoCaptureInterval=setInterval(()=>{
+    if(csvReady && camReady && gpsReady && lastPos){
+      const w=vid.videoWidth||1280, h=vid.videoHeight||720; can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
+      const bandH=Math.max(144,Math.round(h*0.16)); ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
+      const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
+      const tagsText = Array.from(selectedTags).join(' • ');
+      const photoIndex = photos.length + 1;      // NEW
+      drawPhotoIndex(ctx, photoIndex, h, bandH); // NEW
 
-    const w=vid.videoWidth||1280, h=vid.videoHeight||720; can.width=w; can.height=h; ctx.drawImage(vid,0,0,w,h);
-    const bandH=Math.max(144,Math.round(h*0.16)); ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(0,h-bandH,w,bandH);
-    const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; const ids=nearestN(lastPos.lat,lastPos.lon,5); const ts=new Date().toLocaleString();
-    ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
-    ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
-    ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
-    const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url); foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
-    const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
-    await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery(); snapshotSoon();
-  }, 600); // 0,6s; dá tempo para escrita no IDB
+      ctx.fillStyle='#b7ffcf'; ctx.textAlign='left'; ctx.font=`900 ${Math.round(h*0.055)}px system-ui`; ctx.shadowColor='rgba(34,197,94,.45)'; ctx.shadowBlur=16; ctx.fillText(kmStr,20,h-bandH+Math.round(bandH*0.52)); ctx.shadowBlur=0;
+      ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(h*0.032)}px system-ui`; ctx.fillText(ts,20,h-Math.round(bandH*0.22));
+      ctx.textAlign='right'; ctx.fillStyle='#d7e5ff'; ctx.font=`600 ${Math.round(h*0.028)}px system-ui`; ids.forEach((e,i)=>ctx.fillText(e.id,w-20,h-bandH+28+i*26));
+      if(tagsText){ ctx.textAlign='left'; ctx.fillStyle='#c8ffdf'; ctx.font=`700 ${Math.round(h*0.028)}px system-ui`; drawWrapped(ctx, tagsText, 20, h-Math.round(bandH*0.38), Math.round(w*0.6), Math.round(h*0.032)+4); }
+      const url=can.toDataURL('image/jpeg',0.92); const blob=dataURLtoBlob(url); foto.src=url; const safeKm=kmStr.replace('KM ','').replace('+','_'); const fname=`KM_${safeKm}.jpg`; foto.dataset.filename=fname;
+      const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), tags: Array.from(selectedTags), idx: photoIndex, filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
+      dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
+    }
+  }, 500);
 }
 function stopAutoCapture(){
   if(!isAutoCapturing) return; isAutoCapturing=false;
   if(autoCaptureInterval){ clearInterval(autoCaptureInterval); autoCaptureInterval=null; }
-  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #ff7b45, #e5612e)';
-  setOv('AUTO parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 800); updateChip(); minimizeControls(false);
+  btnAutoCapture.textContent='🎬 Captura Auto'; btnAutoCapture.style.background='linear-gradient(180deg, #d86a30, #b35625)';
+  setOv('AUTO parado', true); setTimeout(()=> setOv('Toque p/ foto', true), 800); updateChip(); updateStatusBar(); minimizeControls(false);
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
 
-/* Limpeza */
+/* ===== Limpeza ===== */
 async function clearList(silent=false){
   if(!photos.length) return;
   if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return;
@@ -797,7 +781,7 @@ async function clearList(silent=false){
 }
 btnClear.onclick = () => { clearList(false); };
 
-/* PDF */
+/* ===== PDF ===== */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   return new Promise((resolve)=>{ const img=new Image();
     img.onload=()=>{ const W=img.width,H=img.height; let w=W,h=H;
@@ -842,7 +826,6 @@ async function makePdfGrid(arr, perPage=1){
   parts.push(enc.encode(`trailer\n<< /Size ${xref.length} /Root ${catalogNum} 0 R >>\nstartxref\n${sx}\n%%EOF`));
   return new Blob(parts,{type:'application/pdf'});
 }
-const btnPdf=document.getElementById('btnPdf');
 btnPdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
@@ -852,23 +835,48 @@ btnPdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   if (autoClear?.checked) { await clearList(true); }
 };
 
-/* KM em tempo real */
+/* ===== KM em tempo real ===== */
 function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(updateKmDisplay, 300); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* Vídeo (gravação com overlay) */
+/* ===== Gravação (vídeo + mic + tick) ===== */
 async function startVideoRecording(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   try{
     const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
+
+    // Áudio (mic + tick), se habilitado
+    let audioTrack = null;
+    if(micEnable.checked || tickEnable.checked){
+      ensureAudio();
+      if(micEnable.checked){
+        try{ await getMicStream(); }catch(e){ alert('Permita o microfone para gravar áudio. Continuando sem áudio.'); }
+      }
+      buildAudioGraph(micEnable.checked && !!micStream, tickEnable.checked);
+      if(tickEnable.checked){ startTick(); }
+      if(mixDest?.stream?.getAudioTracks().length){ audioTrack = mixDest.stream.getAudioTracks()[0]; }
+    }
+
+    // Canvas overlay
     const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
-    const canvasStream=overlayCanvas.captureStream(30); const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 }; if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
-    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[]; mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop=()=>{ isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false); };
+    const canvasStream=overlayCanvas.captureStream(30);
+    if(audioTrack){ canvasStream.addTrack(audioTrack); }
+
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+    if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
+    mediaRecorder=new MediaRecorder(canvasStream, options);
+    recordedChunks=[];
+    mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop=()=>{
+      isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #d94640, #a7332f)';
+      updateChip(); updateStatusBar(); minimizeControls(false);
+      stopKmUpdate(); stopTick();
+      try{ micStream?.getTracks().forEach(t=>t.stop()); }catch(e){}
+      micStream=null; micSource=null; mixDest=null;
+    };
     mediaRecorder.start();
-    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #cc3e36, #a12b25)'; setOv('REC ligado', true); updateChip(); minimizeControls(true);
+    isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #a7332f, #7f2623)'; setOv('REC ligado', true); updateChip(); updateStatusBar(); minimizeControls(true);
 
     const drawLoop=()=>{
       if(!isRecordingVideo) return;
@@ -878,54 +886,54 @@ async function startVideoRecording(){
       overlayCtx.fillStyle='rgba(0,0,0,.62)'; overlayCtx.fillRect(0, overlayCanvas.height-bandH, overlayCanvas.width, bandH);
       overlayCtx.fillStyle='#b7ffcf'; overlayCtx.textAlign='left'; overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.055)}px system-ui`; overlayCtx.shadowColor='rgba(34,197,94,.45)'; overlayCtx.shadowBlur=16; overlayCtx.fillText(kmStr, 20, overlayCanvas.height-bandH+Math.round(bandH*0.52)); overlayCtx.shadowBlur=0;
       const ts=new Date().toLocaleString(); overlayCtx.fillStyle='#fff'; overlayCtx.font=`700 ${Math.round(overlayCanvas.height*0.032)}px system-ui`; overlayCtx.fillText(ts, 20, overlayCanvas.height-Math.round(bandH*0.22));
+      // Indicador REC
+      overlayCtx.fillStyle='rgba(239,68,68,0.85)'; overlayCtx.strokeStyle='rgba(0,0,0,0.6)'; overlayCtx.lineWidth=2; overlayCtx.beginPath(); overlayCtx.arc(38, 38, 10, 0, Math.PI*2); overlayCtx.fill(); overlayCtx.stroke();
+      overlayCtx.fillStyle='#ffe2e2'; overlayCtx.font=`900 ${Math.round(overlayCanvas.height*0.032)}px system-ui`; overlayCtx.fillText('REC', 58, 46);
       requestAnimationFrame(drawLoop);
     };
     drawLoop(); startKmUpdate();
-  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); minimizeControls(false); }
+  }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); updateStatusBar(); minimizeControls(false); stopTick(); }
 }
 function stopVideoRecording(){
   if(!isRecordingVideo || !mediaRecorder) return;
-  isRecordingVideo=false; mediaRecorder.stop(); stopKmUpdate();
+  isRecordingVideo=false; mediaRecorder.stop();
   setTimeout(()=>{ if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
     const blob=new Blob(recordedChunks, {type: 'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
     const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
-    setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); minimizeControls(false);
+    setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); updateStatusBar(); minimizeControls(false);
   }, 500);
 }
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
 
-/* Tap no vídeo: parar/alternar/capturar */
+/* Clique na prévia */
 wrap.addEventListener('click', ()=>{ if(isRecordingVideo){ stopVideoRecording(); } else if(isAutoCapturing){ stopAutoCapture(); } else if(csvReady && camReady && gpsReady){ capture(); } });
 
-/* WhatsApp */
+/* ===== Compartilhamento ===== */
 function buildWhatsAppMessage(isPdf){
   const lines=[]; lines.push('*RELATÓRIO DE INSPEÇÃO*'); lines.push(`Total de fotos: ${photos.length}`); lines.push(`Gerado em: ${new Date().toLocaleString()}`); lines.push('');
-  photos.forEach((p,i)=>{ let L=`${i+1}) ${p.kmStr} • ${p.ts}`; if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; } lines.push(L); });
+  photos.forEach((p,i)=>{ 
+    const idxStr = `#${String(p.idx??(i+1)).padStart(2,'0')}`;   // NEW
+    let L=`${idxStr} • ${p.kmStr} • ${p.ts}`;
+    if(p.tags?.length) L+=` • ${p.tags.join(' | ')}`;
+    if(Number.isFinite(p.lat) && Number.isFinite(p.lon)){ L+=` • GPS: ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} • https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}`; }
+    lines.push(L);
+  });
   if(isPdf) lines.push('Anexo: RELATORIO_INSPECAO.pdf'); return lines.join('\n');
 }
-const btnSharePdf=document.getElementById('btnSharePdf');
 btnSharePdf.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const perPage = Number((pppSel||{value:1}).value) || 1;
   const scaled=[]; for(const p of photos){ const s=await downscaleDataURL(p.url,800,0.85); scaled.push({url:s.dataUrl,w:s.w,h:s.h}); }
-  const pdfBlob=await makePdfGrid(scaled, perPage);
-  const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'});
-  const text=buildWhatsAppMessage(true);
+  const pdfBlob=await makePdfGrid(scaled, perPage); const pdfFile=new File([pdfBlob],`RELATORIO_INSPECAO_${perPage}ppg.pdf`,{type:'application/pdf'}); const text=buildWhatsAppMessage(true);
   try{
-    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){
-      await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'});
-      if (autoClear?.checked) { await clearList(true); }
-    }else{
-      const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; a.click();
+    if(navigator.canShare && navigator.canShare({files:[pdfFile]})){ await navigator.share({files:[pdfFile],text,title:'Relatório de Inspeção'}); if (autoClear?.checked) { await clearList(true); } }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(pdfBlob); a.download=`RELATORIO_INSPECAO_${perPage}ppg.pdf`; a.click();
       window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe o PDF baixado agora.)'),'_blank');
       alert('Seu navegador não permite enviar arquivos diretamente. Baixei o PDF e abri o WhatsApp com o texto pronto; anexe o arquivo.');
       if (autoClear?.checked) { await clearList(true); }
     }
-  }catch(e){
-    alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.');
-  }
+  }catch(e){ alert('Compartilhamento cancelado/indisponível. Baixe o PDF e envie manualmente.'); }
 };
-const btnSharePhotos=document.getElementById('btnSharePhotos');
 btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   const files=photos.map(p=>dataURLtoFile(p.url,p.filename||'INSPECAO_FOTO.jpg')); const text=buildWhatsAppMessage(false); const MAX=10;
   if(!(navigator.canShare && navigator.canShare({files:files.slice(0,Math.min(files.length,MAX))}))){
@@ -936,32 +944,59 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   catch(e){ alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.'); }
 };
 
-/* Restauração + OV + Boot */
+/* ===== Restauração + Boot ===== */
 async function restoreSavedPhotos(){
   const rows=await dbGetAllPhotos(); if(!rows.length) return;
   for(const r of rows){
     const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(r.blob); });
-    photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc });
+    photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, tags:r.tags||[], idx:r.idx, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc });
   }
   if(photos.length){ foto.src=photos[photos.length-1].url; foto.dataset.filename=photos[photos.length-1].filename; }
-  renderGallery(); renderDock();
+  renderGallery();
 }
-function setOv(text,show=true){ ovMsg.textContent=text; ov.style.display=show?'flex':'none'; }
-function ready(){ return csvReady && camReady && gpsReady; }
+function bootTick(){ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(bootTick); }
 
 async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
-  await ensurePersistence();
-  db=await openDBv3();
-  await walReplay();                    // reconstrói se caiu no meio da escrita
-  await Promise.all([loadCSVs(), enumerateCameras()]);
-  await startCamera(deviceIndex);
-  startGPS();
-  await restoreSavedPhotos();
-  startKmUpdate();
+  try{
+    const saved = JSON.parse(localStorage.getItem('prefs')||'{}');
+    micEnable.checked = !!saved.mic;
+    tickEnable.checked = !!saved.tick;
+    if(saved.tickInterval) tickInterval.value = saved.tickInterval;
+    if(saved.tickVol!=null) tickVol.value = saved.tickVol;
+    wakeLockEnable.checked = !!saved.wake;
+  }catch(e){}
 
-  const tick=()=>{ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); }; tick();
+  await ensurePersistence(); db=await openDBv3(); buildTags();
+  await Promise.all([loadCSVs(), enumerateCameras()]);
+  await startCamera(); startGPS();
+  await restoreSavedPhotos();
+  startKmUpdate(); bootTick();
 }
+
+/* Preferências de áudio/tick/wake */
+[micEnable, tickEnable, tickInterval, tickVol, wakeLockEnable].forEach(el=>{
+  el.addEventListener('change', ()=>{
+    const prefs={ mic:micEnable.checked, tick:tickEnable.checked, tickInterval:Number(tickInterval.value||2), tickVol:Number(tickVol.value||0.35), wake:wakeLockEnable.checked };
+    localStorage.setItem('prefs', JSON.stringify(prefs));
+  });
+});
+
+/* ===== Continuidade (chamada / app em segundo plano) ===== */
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.visibilityState==='hidden'){
+    resumePlan.auto = isAutoCapturing;
+    resumePlan.rec  = isRecordingVideo;
+    if(isRecordingVideo){ try{ stopVideoRecording(); }catch(e){} }
+    if(isAutoCapturing){ try{ stopAutoCapture(); }catch(e){} }
+    snapshotNow();
+  } else {
+    if(!camReady){ try{ await startCamera(); }catch(e){} }
+    updateStatusBar();
+    if(resumePlan.rec){ setTimeout(()=>{ if(confirm('Retomar gravação?')) btnVideoRecord.click(); resumePlan.rec=false; }, 400); }
+    if(resumePlan.auto){ setTimeout(()=>{ if(confirm('Retomar captura automática?')) btnAutoCapture.click(); resumePlan.auto=false; }, 600); }
+  }
+}, {passive:false});
 </script>
 
 </body>
