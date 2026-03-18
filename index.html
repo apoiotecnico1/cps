@@ -22,8 +22,7 @@
     --shadow: 0 10px 28px rgba(0,0,0,.38);
     --radius: 14px;
 
-    /* ===== Câmera uniforme ===== */
-    /* largura responsiva, coerente em vários celulares */
+    /* (Mantido para compat., mas não usado como tamanho principal) */
     --camW: clamp(240px, 34vw, 340px);
   }
 
@@ -70,20 +69,22 @@
   .muted{ background: linear-gradient(180deg, rgba(32,40,68,.72), rgba(18,24,46,.68)); color:#cdd7ff; }
   .badge.ghost { background: linear-gradient(180deg, rgba(26,34,62,.7), rgba(16,22,44,.66)); color:#c9d4ff; }
 
-  /* ===== Câmera: uniforme em qualquer celular ===== */
+  /* ===== Câmera: ~40% da tela (altura), 16:9 ===== */
   #camCard{
     position: fixed; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px);
-    width: var(--camW);
-    aspect-ratio: 16 / 9;          /* garante 16:9 estável */
     z-index: 100; padding: 0; border-radius: 12px;
     background: linear-gradient(180deg, #0b1230, #07102a);
     border:1px solid #213066; box-shadow: 0 14px 36px rgba(0,0,0,.45), inset 0 0 0 1px #0d1b4e;
+
+    height: 40vh;              /* ocupa ~40% da altura da tela */
+    aspect-ratio: 16 / 9;      /* mantém 16:9 sem distorcer */
+    width: auto;               /* largura acompanha o aspecto */
+    max-width: 90vw;           /* não estoura a largura da tela */
   }
   #wrap{ position: relative; width: 100%; height: 100%; border-radius: 12px; overflow: hidden }
   #vid{
     width: 100%; height: 100%; display: block; background:#000; border-radius: 12px;
-    object-fit: cover; object-position:center; touch-action:none;
-    image-rendering: auto;
+    object-fit: cover; object-position:center; touch-action:none; image-rendering: auto;
   }
   #can{display:none}
 
@@ -127,6 +128,9 @@
   button:disabled{opacity:.5;cursor:not-allowed; filter:grayscale(.2)}
   @media (max-width:420px){
     button{flex:1 1 140px;font-size:.95rem}
+  }
+  @media (max-height: 620px){
+    #camCard{ height: 45vh; }
   }
 
   .btn-group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
@@ -199,13 +203,13 @@
   }
   body.compact #fabRestore{ display:inline-flex; }
 
-  /* ===== PATCH: Câmera dockável (4 cantos) ===== */
+  /* Dock em 4 cantos (mantido) */
   body.cam-top-left  #camCard { left: 12px;  right: auto; top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; }
   body.cam-top-right #camCard { right: 12px; left: auto;  top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; }
   body.cam-bot-left  #camCard { left: 12px;  right: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); top: auto; }
   body.cam-bot-right #camCard { right: 12px; left: auto;  bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); top: auto; }
 
-  /* ===== PATCH: Thumb Bar responsiva à velocidade ===== */
+  /* Thumb Bar responsiva à velocidade */
   body.speed-hi #thumbBar .thumbBtn { padding: 14px 12px; font-size: 1.02rem; }
   body.speed-hi .tag { display: none; }
 
@@ -440,7 +444,7 @@ function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([
 
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
-let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null; // (não mais usado, mas mantido p/ compat.)
+let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null; // compat.
 let isRecordingVideo=false; let mediaRecorder=null; let recordedChunks=[];
 let kmUpdateInterval=null;
 let resumePlan = {auto:false, rec:false};
@@ -630,7 +634,6 @@ function startGPS(){
     gpsReady=true; setOv(ready()? 'Toque p/ foto' : 'Aguardando recursos…', true); updateStatusBar();
     navigator.geolocation.watchPosition(pos=>{
       lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, speed:pos.coords.speed||null};
-      // velocidade → modo compacto automático
       const v = typeof pos.coords.speed === 'number' ? pos.coords.speed : null; // m/s
       if(v!=null && autoCompactSpeed.checked){
         const kmh = Math.max(0, v*3.6);
@@ -793,8 +796,8 @@ function startAutoCapture(){
     if(mode==='dist'){
       if(lastAutoPos && lastPos){
         const d = hav(lastAutoPos.lat, lastAutoPos.lon, lastPos.lat, lastPos.lon);
-        const need = Math.max(5, Number(autoDist.value||50));   // metros
-        const cooldown = 700;                                   // ms anti-rafa
+        const need = Math.max(5, Number(autoDist.value||50));
+        const cooldown = 700;
         if(d >= need && (now - lastAutoTs) >= cooldown){
           await capture(); vibe(20);
           lastAutoPos = {...lastPos}; lastAutoTs = now;
@@ -1059,7 +1062,7 @@ async function boot(){
   monitorBattery(); monitorStorage();
 }
 
-/* Preferências de áudio/tick/wake/auto */
+/* Preferências */
 [micEnable, tickEnable, tickInterval, tickVol, wakeLockEnable, autoDist, autoTime, autoCompactSpeed].forEach(el=>{
   el.addEventListener('change', ()=>{
     const prefs=JSON.parse(localStorage.getItem('prefs')||'{}');
