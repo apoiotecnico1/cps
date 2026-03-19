@@ -41,6 +41,8 @@
       var(--bg);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
     padding:12px; line-height:1.35; overflow-x:hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
   h1{margin:0 0 10px;text-align:center;font-size:1.28rem; letter-spacing:.02em}
 
@@ -95,7 +97,9 @@
   #wrap{ position: relative; height: 100%; border-radius: var(--radius); overflow: hidden }
   #vid{
     width: 100%; height: 100%; display: block; background:#000; border-radius: var(--radius);
-    object-fit: contain; object-position: center; touch-action:none;
+    object-fit: contain; object-position: center;
+    /* Antes era 'none', o que travava a rolagem; agora permite scroll vertical sobre o vídeo */
+    touch-action: pan-y;
   }
   #can{display:none}
   #camSpacer{ height: calc(var(--camH) + 24px + env(safe-area-inset-top, 0px)); max-width:980px; margin: 0 auto 8px; }
@@ -270,6 +274,28 @@
         <label style="margin-right:10px"><input type="checkbox" id="optGps"> GPS (lat,lon)</label>
       </fieldset>
 
+      <!-- NOVO: Controles de gravação longa -->
+      <fieldset style="border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
+        <legend style="padding:0 6px; font-weight:900; color:#dfe7ff">Vídeo (gravação longa)</legend>
+        <label style="margin-right:10px">Duração por arquivo:
+          <select id="segSel">
+            <option value="300000">5 min</option>
+            <option value="600000" selected>10 min</option>
+            <option value="1800000">30 min</option>
+            <option value="3600000">60 min</option>
+            <option value="0">Único arquivo (quando suportado)</option>
+          </select>
+        </label>
+        <label style="margin-right:10px">Bitrate vídeo:
+          <select id="brSel">
+            <option value="1800000">1.8 Mb/s</option>
+            <option value="2500000" selected>2.5 Mb/s</option>
+            <option value="4000000">4 Mb/s</option>
+            <option value="6000000">6 Mb/s</option>
+          </select>
+        </label>
+      </fieldset>
+
       <span style="color:#9fe9ff;font-size:.85rem">💾 Salvamento automático (anti‑perda): ATIVO</span>
     </div>
   </details>
@@ -283,6 +309,11 @@
     <div id="ov" class="ov"><div class="msg" id="ovMsg">Toque p/ foto</div></div>
     <div id="chip" class="chip" aria-live="polite" aria-atomic="true"></div>
   </div>
+</div>
+
+<!-- Botão de pular a câmera (facilitar rolagem) -->
+<div style="max-width:980px;margin:8px auto 0;text-align:center">
+  <button class="small" id="btnSkipDown" title="Ir para os controles abaixo">↓ Continuar</button>
 </div>
 
 <!-- AÇÕES -->
@@ -378,7 +409,9 @@
     else if(!raf){ raf = requestAnimationFrame(draw); }
   }, {passive:true});
 })();
+</script>
 
+<script>
 /* ===== Utilitários ===== */
 function parsePt(v){ if(v==null) return NaN; const s=String(v).trim(); return /,\d+$/.test(s)? Number(s.replace(/\./g,'').replace(',','.')): Number(s); }
 function hav(a,b,c,d){ const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180; const u=Math.sin(x/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2; return 2*R*Math.atan2(Math.sqrt(u), Math.sqrt(1-u)); }
@@ -408,6 +441,10 @@ const fitModeSel=document.getElementById('fitModeSel'); const themeSel=document.
 const stCsv=document.getElementById('stCsv'); const stCam=document.getElementById('stCam'); const stGps=document.getElementById('stGps'); const stFotos=document.getElementById('stFotos'); const stPersist=document.getElementById('stPersist');
 const optKm=document.getElementById('optKm'); const optTs=document.getElementById('optTs'); const optIds=document.getElementById('optIds'); const optGps=document.getElementById('optGps');
 const photos=[];
+
+/* NOVOS controles de vídeo longo */
+const segSel = document.getElementById('segSel');
+const brSel  = document.getElementById('brSel');
 
 /* ===== IndexedDB (anti-perda) + Persistência ===== */
 const DB_NAME='inspecaoDB', DB_VER=3;
@@ -832,17 +869,97 @@ function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.l
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 300); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
-/* ===== Vídeo ===== */
+/* ===== GRAVAÇÃO DE VÍDEO – MODO LONGO (segmentação + arquivo único quando suportado) ===== */
+
+/* Preferências de vídeo longo */
+let segmentMs = 600000;       // default 10 min
+let videoBitrate = 2500000;   // default 2.5 Mb/s
+
+// Segmentação
+let segIndex = 0;
+let segStartTs = 0;
+let chunkBuffer = [];
+
+// Arquivo único (File System Access API)
+let fileHandle = null;
+let fileWritable = null;
+let writeAsSingleFile = false;
+
+function bindVideoPrefs(){
+  try {
+    const s = localStorage.getItem('segMs'); if (s) segmentMs = Number(s);
+    const b = localStorage.getItem('videoBitrate'); if (b) videoBitrate = Number(b);
+  } catch {}
+  if (segSel) segSel.value = String(segmentMs);
+  if (brSel)  brSel.value  = String(videoBitrate);
+
+  segSel?.addEventListener('change', ()=>{
+    segmentMs = Number(segSel.value||600000);
+    localStorage.setItem('segMs', String(segmentMs));
+  });
+  brSel?.addEventListener('change', ()=>{
+    videoBitrate = Number(brSel.value||2500000);
+    localStorage.setItem('videoBitrate', String(videoBitrate));
+  });
+}
+
 async function startVideoRecording(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
   try{
     const videoStream=vid.srcObject; if(!videoStream){ alert('Câmera não disponível'); return; }
+    // Canvas com overlay
     const overlayCanvas=document.createElement('canvas'); overlayCanvas.width=vid.videoWidth||1280; overlayCanvas.height=vid.videoHeight||720; const overlayCtx=overlayCanvas.getContext('2d');
     const canvasStream=overlayCanvas.captureStream(30); const audioTracks=videoStream.getAudioTracks(); if(audioTracks.length>0){ canvasStream.addTrack(audioTracks[0]); }
-    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 }; if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
-    mediaRecorder=new MediaRecorder(canvasStream, options); recordedChunks=[]; mediaRecorder.ondataavailable=(e)=>{ if(e.data.size>0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop=()=>{ isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false); };
-    mediaRecorder.start();
+
+    // Seleção de modo: arquivo único quando value=0
+    writeAsSingleFile = (Number(segSel?.value||600000) === 0);
+
+    const options={ mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: Number(brSel?.value || videoBitrate) || 2500000 };
+    if(!MediaRecorder.isTypeSupported(options.mimeType)){ options.mimeType='video/webm'; }
+
+    mediaRecorder=new MediaRecorder(canvasStream, options);
+    recordedChunks=[]; chunkBuffer=[]; segIndex=0; segStartTs=Date.now();
+    fileHandle = null; fileWritable = null;
+
+    // Tenta gravar em arquivo único quando suportado
+    if (writeAsSingleFile && 'showSaveFilePicker' in window) {
+      try {
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: `VIDEO_INSPECAO_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.webm`,
+          types: [{ description:'Vídeo WebM', accept: {'video/webm':['.webm']}}]
+        });
+        fileWritable = await fileHandle.createWritable();
+      } catch(e){
+        // Fallback: segmentação 10 min
+        writeAsSingleFile = false;
+        segmentMs = 600000;
+        if (segSel) segSel.value = String(segmentMs);
+      }
+    }
+
+    mediaRecorder.ondataavailable = async (e) => {
+      if(e.data && e.data.size > 0){
+        if (writeAsSingleFile && fileWritable) {
+          try { await fileWritable.write(e.data); } catch(err){ console.error('write chunk fail', err); }
+        } else {
+          chunkBuffer.push(e.data);
+          const elapsed = Date.now() - segStartTs;
+          if (elapsed >= segmentMs) { await finalizeCurrentSegment(); }
+        }
+      }
+    };
+
+    mediaRecorder.onstop=async()=>{
+      if (writeAsSingleFile && fileWritable) {
+        try { await fileWritable.close(); } catch {}
+      } else {
+        if (chunkBuffer.length > 0) { await finalizeCurrentSegment(); }
+      }
+      isRecordingVideo=false; btnVideoRecord.textContent='⏺️ Gravar Vídeo'; btnVideoRecord.style.background='linear-gradient(180deg, #f2544b, #cc3e36)'; updateChip(); minimizeControls(false);
+    };
+
+    // Dispara chunks a cada 1s para manter memória estável
+    mediaRecorder.start(1000);
     isRecordingVideo=true; btnVideoRecord.textContent='⏹️ Parar'; btnVideoRecord.style.background='linear-gradient(180deg, #cc3e36, #a12b25)'; setOv('REC ligado', true); updateChip(); minimizeControls(true);
 
     const drawLoop=()=>{
@@ -858,15 +975,20 @@ async function startVideoRecording(){
     drawLoop(); startKmUpdate();
   }catch(e){ console.error('Erro ao iniciar gravação:', e); alert('Erro ao iniciar gravação: '+e.message); isRecordingVideo=false; updateChip(); minimizeControls(false); }
 }
+async function finalizeCurrentSegment(){
+  try{
+    const blob=new Blob(chunkBuffer, {type: 'video/webm'}); chunkBuffer.length=0;
+    const url=URL.createObjectURL(blob); const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); const label=String(segIndex+1).padStart(3,'0');
+    const a=document.createElement('a'); a.href=url; a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}_seg${label}.webm`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+    segIndex++; segStartTs=Date.now(); setOv(`Segmento ${segIndex} salvo`, true);
+  }catch(err){ console.error('Erro ao finalizar segmento:', err); }
+}
 function stopVideoRecording(){
   if(!isRecordingVideo || !mediaRecorder) return;
-  isRecordingVideo=false; mediaRecorder.stop(); stopKmUpdate();
-  setTimeout(()=>{ if(recordedChunks.length===0){ alert('Erro: Nenhum dado foi gravado. Tente novamente.'); return; }
-    const blob=new Blob(recordedChunks, {type: 'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
-    const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}.webm`;
-    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
-    setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); minimizeControls(false);
-  }, 500);
+  isRecordingVideo=false; stopKmUpdate();
+  try{ mediaRecorder.stop(); }catch{}
+  setTimeout(()=>{ setOv('Vídeo salvo', true); setTimeout(()=>setOv('Toque p/ foto', true), 1500); updateChip(); minimizeControls(false); }, 500);
 }
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 1000); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
 
@@ -902,6 +1024,20 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   catch(e){ alert('Compartilhamento cancelado/indisponível. Tente o PDF ou envio manual.'); }
 };
 
+/* Botão de pular a câmera (facilitar rolagem) */
+(function(){
+  const btnSkipDown = document.getElementById('btnSkipDown');
+  const camSpacer = document.getElementById('camSpacer');
+  btnSkipDown?.addEventListener('click', () => {
+    try {
+      const y = (camSpacer?.offsetHeight || 0) + 20;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    } catch {
+      window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+    }
+  });
+})();
+
 /* ===== Restauração + OV + Boot ===== */
 async function restoreSavedPhotos(){
   const rows=await dbGetAllPhotos(); if(!rows.length) return;
@@ -934,6 +1070,7 @@ async function boot(){
   setOv('Carregando CSV, câmera e GPS…', true);
   applyTheme();                 // carrega tema salvo
   bindOverlayOpts();            // aplica opções salvas
+  bindVideoPrefs();             // NOVO: preferências de gravação longa
   await ensurePersistence();    // tenta persistência
   db=await openDBv3();
   await Promise.all([loadCSVs(), enumerateCameras()]);
@@ -959,15 +1096,16 @@ async function boot(){
 
   const tick=()=>{ setOv(ready()? 'Toque p/ foto' : 'Aguardando CSV/Câmera/GPS…', true); requestAnimationFrame(tick); }; tick();
 }
-
-/* ===== Start (pós-splash) ===== */
 </script>
+
 <script>
 document.getElementById('btnStart').addEventListener('click', ()=>{/* placeholder to avoid FOUC */});
 </script>
+
 <script>
 /* Inicia quando o splash some */
 </script>
+
 <script>
 (function(){
   const splash = document.getElementById('splash');
