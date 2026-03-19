@@ -11,7 +11,6 @@
     --bg:#0d1117; --bg2:#0f141c;
     --surface:#0f1726ee; --surface-strong:#192238;
     --fg:#e6edf3; --muted:#a9b1bb; --border:#1f2a3b;
-    --glow:#9dd3b3; --glow2:#8fd3e3; --warn:#d6b34d; --danger:#d95454; --ok:#28b864; --wa:#22c35e;
     --shadow: 0 10px 28px rgba(0,0,0,.38);
     --radius: 14px;
     --camH: 42vh; /* altura da câmera (ajustada via JS) */
@@ -158,7 +157,7 @@
     font-weight:900; font-size:.96rem; color:#ffffff; box-shadow:0 6px 16px rgba(0,0,0,.28); text-shadow: 0 1px 0 rgba(0,0,0,.35);
   }
 
-  /* Splash (igual) */
+  /* Splash */
   #splash{ position: fixed; inset: 0; z-index: 2000; background: radial-gradient(1200px 600px at 50% -10%, #0c2a3f, transparent 65%), #060a12; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   #rainCanvas{ position:absolute; inset:0; width:100%; height:100% }
   .splash-inner{ position: relative; z-index: 2; text-align: center; padding: 24px 18px; }
@@ -384,15 +383,54 @@ const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
 function gridInsert(grid,p){ const k=cellKey(p.lat,p.lon); const a=grid.get(k); a?a.push(p):grid.set(k,[p]); }
 function gridCands(grid,lat,lon,minCount=60,maxR=5){ const ky=Math.floor(lat/CELL), kx=Math.floor(lon/CELL); const out=[]; for(let r=0;r<=maxR && out.length<minCount;r++){ for(let dy=-r;dy<=r;dy++){ const y=ky+dy; for(let dx=-r;dx<=r;dx++){ if(r>0 && Math.abs(dx)!==r && Math.abs(dy)!==r) continue; const a=grid.get(`${y},${kx+dx}`); if(a) out.push(...a); } } } return out.length?out:[]; }
-async function loadIDs(){ const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); const head=lines[0].split(';').map(h=>h.toLowerCase()); const iId=head.findIndex(h=>h.includes('id')&&!h.includes('lat')&&!h.includes('long')); const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon')); dataset=[]; for(let i=1;i<lines.length;i++){ const c=lines[i].split(';'); const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]); if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue; if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue; dataset.push({id,lat,lon}); } idGrid.clear(); for(const p of dataset) gridInsert(idGrid,p); }
-function pickTrio(c){ const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])}; if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1; const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])}; if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2; return null; }
-async function loadKM(){ const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text()); const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean); kmPoints=[]; let lastKeep=null; const MIN_STEP=5; for(let i=0;i<lines.length;i++){ const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue; const t=pickTrio(c); if(!t) continue; if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue; if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else { const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon); if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; } } } kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p); }
-async function loadCSVs(){ try{ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; } catch{ csvReady=false; } }
+async function loadIDs(){
+  try{
+    const txt=await fetch('./Dados_Completos_Grupo_2_all.csv',{cache:'no-store'}).then(r=>r.text());
+    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+    const head=lines[0].split(';').map(h=>h.toLowerCase());
+    const iId=head.findIndex(h=>h.includes('id')&&!h.includes('lat')&&!h.includes('long'));
+    const iLat=head.findIndex(h=>h.includes('lat')); const iLon=head.findIndex(h=>h.includes('lon'));
+    dataset=[];
+    for(let i=1;i<lines.length;i++){
+      const c=lines[i].split(';');
+      const id=String(c[iId]||'').trim(), lat=parsePt(c[iLat]), lon=parsePt(c[iLon]);
+      if(!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      if(lat===0 && lon===0) continue; if(Math.abs(lat)>90 || Math.abs(lon)>180) continue;
+      dataset.push({id,lat,lon});
+    }
+    idGrid.clear(); for(const p of dataset) gridInsert(idGrid,p);
+  }catch(e){ dataset=[]; }
+}
+function pickTrio(c){
+  const t1={km:parsePt(c[0]),lat:parsePt(c[1]),lon:parsePt(c[2])};
+  if(Number.isFinite(t1.km)&&Number.isFinite(t1.lat)&&Number.isFinite(t1.lon)) return t1;
+  const t2={km:parsePt(c[7]),lat:parsePt(c[8]),lon:parsePt(c[9])};
+  if(Number.isFinite(t2.km)&&Number.isFinite(t2.lat)&&Number.isFinite(t2.lon)) return t2;
+  return null;
+}
+async function loadKM(){
+  try{
+    const txt=await fetch('./SNVBR116SPRJ.csv',{cache:'no-store'}).then(r=>r.text());
+    const lines=txt.split(/\r?\n/).map(cleanLine).filter(Boolean);
+    kmPoints=[]; let lastKeep=null; const MIN_STEP=5;
+    for(let i=0;i<lines.length;i++){
+      const c=lines[i].split(';'); if(isNaN(parsePt(c[0])) && isNaN(parsePt(c[7]||''))) continue;
+      const t=pickTrio(c); if(!t) continue;
+      if(!Number.isFinite(t.km)||!Number.isFinite(t.lat)||!Number.isFinite(t.lon)) continue;
+      if(!lastKeep){ kmPoints.push(t); lastKeep=t; } else {
+        const d=hav(lastKeep.lat,lastKeep.lon,t.lat,t.lon);
+        if(d>=MIN_STEP){ kmPoints.push(t); lastKeep=t; }
+      }
+    }
+    kmGrid.clear(); for(const p of kmPoints) gridInsert(kmGrid,p);
+  }catch(e){ kmPoints=[]; }
+}
+async function loadCSVs(){ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }
 
 /* ===== KM em tempo real ===== */
 function nearestN(lat,lon,n=5){ if(!dataset.length) return []; const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20)); const arr=cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0,n); }
 function nearestKM(lat,lon){ if(!kmPoints.length) return null; const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null; let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best; }
-function updateKmDisplay(){ if(!lastPos) return; const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
+function updateKmDisplay(){ if(!lastPos){ kmTop.textContent='KM —'; return; } const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 300); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
 
@@ -401,26 +439,40 @@ let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], d
 let videoAR=16/9; let hasTrackZoom=false; let digitalZoom=1; const DIGITAL_ZOOM_MAX=8;
 
 function computeAvailableW(){ const pad=24; return Math.min(window.innerWidth - pad, 980); }
-function computeMaxH(){ const reserve = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ctrlH'))||64) + 120; const vv=window.visualViewport; const safeTop=vv?vv.offsetTop:0; return Math.max(220, (vv?vv.height:window.innerHeight) - reserve - safeTop); }
-function applyFit(){ const w=computeAvailableW(); const idealH=Math.round(w/(videoAR||(16/9))); const maxH=computeMaxH(); const objectFit = (idealH<=maxH)?'contain':'cover'; const targetH=(idealH<=maxH)?idealH:maxH; document.documentElement.style.setProperty('--camH', targetH+'px'); vid.style.objectFit=objectFit; updateControlBarTop(); }
-window.addEventListener('resize', applyFit); if(window.visualViewport){ visualViewport.addEventListener('resize', applyFit); visualViewport.addEventListener('scroll', applyFit); }
+function computeMaxH(){
+  const ctrlH = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ctrlH'))||64);
+  const reserve = ctrlH + 120;
+  const vv=window.visualViewport; const safeTop=vv?vv.offsetTop:0;
+  return Math.max(220, (vv?vv.height:window.innerHeight) - reserve - safeTop);
+}
+function applyFit(){
+  const w=computeAvailableW();
+  const idealH=Math.round(w/(videoAR||(16/9)));
+  const maxH=computeMaxH();
+  const objectFit = (idealH<=maxH)?'contain':'cover';
+  const targetH=(idealH<=maxH)?idealH:maxH;
+  document.documentElement.style.setProperty('--camH', targetH+'px');
+  vid.style.objectFit=objectFit;
+  updateControlBarTop();
+}
+window.addEventListener('resize', applyFit);
+if(window.visualViewport){
+  visualViewport.addEventListener('resize', applyFit);
+  visualViewport.addEventListener('scroll', applyFit);
+}
 
-/* Ajusta a posição da barra de controles e o espaçador */
+/* Ajusta posição da barra de controles e o espaçador */
 function updateControlBarTop(){
   const root = getComputedStyle(document.documentElement);
   const camH = parseInt(root.getPropertyValue('--camH'))||300;
   const ctrlH= parseInt(root.getPropertyValue('--ctrlH'))||64;
   const cb = document.getElementById('controlBar');
   const camSpacer = document.getElementById('camSpacer');
-  if(cb){
-    cb.style.top = `calc(env(safe-area-inset-top, 0px) + ${camH}px + 24px)`;
-  }
-  if(camSpacer){
-    camSpacer.style.height = `calc(${camH}px + ${ctrlH}px + 36px + env(safe-area-inset-top, 0px))`;
-  }
+  if(cb){ cb.style.top = `calc(env(safe-area-inset-top, 0px) + ${camH}px + 24px)`; }
+  if(camSpacer){ camSpacer.style.height = `calc(${camH}px + ${ctrlH}px + 36px + env(safe-area-inset-top, 0px))`; }
 }
 
-/* Economia de espaço (resolução/bitrate) */
+/* Eco (resolução/bitrate) */
 let econMode = (localStorage.getItem('econMode')==='1') || false;
 econToggle.checked = econMode;
 econToggle.addEventListener('change', async ()=>{ econMode = econToggle.checked; localStorage.setItem('econMode', econMode?'1':'0'); await startCamera(deviceIndex); });
@@ -508,13 +560,11 @@ async function capture(){
 }
 
 /* ===== Chip + STOP overlay ===== */
-const detailsControls=null; let controlsPrevOpen=null;
 function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); } if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
   const chip=document.getElementById('chip');
   if(!labels.length){ chip.className='chip'; chip.style.display='none'; chip.textContent=''; } else { chip.textContent=labels.join(' • '); chip.className=cls.join(' '); chip.style.display='inline-flex'; }
   btnOverlayStop.style.display = (isRecordingVideo || isAutoCapturing) ? 'flex' : 'none';
 }
-function minimizeControls(busy){ /* barra já é fixa; nada a fazer */ }
 btnOverlayStop.addEventListener('click', ()=>{ if(isRecordingVideo) stopVideoRecording(); else if(isAutoCapturing) stopAutoCapture(); });
 
 /* ===== Captura Automática ===== */
@@ -643,8 +693,10 @@ function stopVideoRecording(){ if(!isRecordingVideo || !mediaRecorder) return; i
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 500); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
 
 /* ===== Interações ===== */
-wrap.addEventListener('click', ()=>{ /* clique no vídeo não dispara captura para evitar toques acidentais */ });
-document.addEventListener('keydown', (e)=>{ if(e.key===' '){ e.preventDefault(); capture(); } }); // atalho: espaço para foto
+/* Clique no vídeo: tirar foto (sem texto na tela) */
+wrap.addEventListener('click', ()=>{ capture(); });
+/* Atalho: barra de espaço tira foto */
+document.addEventListener('keydown', (e)=>{ if(e.key===' '){ e.preventDefault(); capture(); } });
 
 /* ===== Voltar ao topo ===== */
 btnTop.addEventListener('click', ()=>{ try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{ window.scrollTo(0,0); } });
