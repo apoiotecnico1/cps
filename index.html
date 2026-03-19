@@ -237,6 +237,10 @@
     <span>Eco</span>
   </label>
 
+  <!-- Re-solicitar permissões -->
+  <button id="btnEnableCam" class="btn" style="display:none" title="Ativar Câmera">📷 Ativar</button>
+  <button id="btnEnableGps" class="btn" style="display:none" title="Ativar GPS">📍 Ativar</button>
+
   <!-- Auto captura -->
   <button id="btnAutoCapture" class="btn btn-orange" title="Captura contínua">🎬 Auto</button>
 
@@ -337,6 +341,26 @@ function dataURLtoUint8Array(dataURL){ const base64=dataURL.split(',')[1]; const
 function dataURLtoBlob(dataURL){ const mime=(dataURL.split(';')[0].split(':')[1])||'image/jpeg'; return new Blob([dataURLtoUint8Array(dataURL)],{type:mime}); }
 function dataURLtoFile(dataURL, filename='INSPECAO_FOTO.jpg'){ return new File([dataURLtoUint8Array(dataURL)], filename, {type:'image/jpeg'}); }
 
+/* ===== Permissões + utilitários ===== */
+async function queryPermission(name){
+  try{
+    if(!('permissions' in navigator)) return null;
+    const p = await navigator.permissions.query({name});
+    return p; // p.state: 'granted' | 'prompt' | 'denied'
+  }catch{ return null; }
+}
+function showEnableButtons({camNeeded=false,gpsNeeded=false}={}){
+  const bCam = document.getElementById('btnEnableCam');
+  const bGps = document.getElementById('btnEnableGps');
+  if(bCam) bCam.style.display = camNeeded ? '' : 'none';
+  if(bGps) bGps.style.display = gpsNeeded ? '' : 'none';
+}
+function isSecureContextOk(){
+  return (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+}
+</script>
+
+<script>
 /* ===== Estado ===== */
 let dataset=[], kmPoints=[]; let csvReady=false, camReady=false, gpsReady=false;
 let lastPos=null; let isAutoCapturing=false; let autoCaptureInterval=null;
@@ -357,6 +381,7 @@ const optKm=document.getElementById('optKm'); const optTs=document.getElementByI
 const econToggle=document.getElementById('econToggle'); const zoomLabel=document.getElementById('zoomLabel');
 const btnOverlayStop=document.getElementById('btnOverlayStop'); const btnTop=document.getElementById('btnTop');
 const btnPdf=document.getElementById('btnPdf'); const btnSharePdf=document.getElementById('btnSharePdf'); const btnSharePhotos=document.getElementById('btnSharePhotos'); const btnClear=document.getElementById('btnClear');
+const btnEnableCam=document.getElementById('btnEnableCam'); const btnEnableGps=document.getElementById('btnEnableGps');
 const photos=[];
 
 /* ===== IndexedDB ===== */
@@ -377,7 +402,9 @@ async function dbClearAll(){ if(!db) db=await openDBv3(); return new Promise((re
 async function snapshotNow(){ try{ if(!db) db=await openDBv3(); const state={ ts:Date.now(), count:photos.length, last:photos[photos.length-1]?.id||null }; await new Promise((res,rej)=>{ const tx=db.transaction('snapshots','readwrite'); tx.objectStore('snapshots').put({id:'last', ...state}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }catch{} }
 function fastCheckpoint(){ snapshotNow(); }
 window.addEventListener('pagehide', fastCheckpoint); document.addEventListener('visibilitychange', ()=>{ if(document.hidden) fastCheckpoint(); }); window.addEventListener('beforeunload', fastCheckpoint);
+</script>
 
+<script>
 /* ===== CSVs (IDs + KM) ===== */
 const CELL=0.005; const idGrid=new Map(), kmGrid=new Map();
 function cellKey(lat,lon){ return `${Math.floor(lat/CELL)},${Math.floor(lon/CELL)}`; }
@@ -426,14 +453,18 @@ async function loadKM(){
   }catch(e){ kmPoints=[]; }
 }
 async function loadCSVs(){ await Promise.all([loadIDs(),loadKM()]); csvReady=dataset.length>0 && kmPoints.length>0; }
+</script>
 
+<script>
 /* ===== KM em tempo real ===== */
 function nearestN(lat,lon,n=5){ if(!dataset.length) return []; const cand=gridCands(idGrid,lat,lon,Math.max(60,n*20)); const arr=cand.map(p=>({id:p.id,lat:p.lat,lon:p.lon,d:hav(lat,lon,p.lat,p.lon)})); arr.sort((a,b)=>a.d-b.d); return arr.slice(0,n); }
 function nearestKM(lat,lon){ if(!kmPoints.length) return null; const cand=gridCands(kmGrid,lat,lon,120); if(!cand.length) return null; let best=null,bd=Infinity; for(const p of cand){ const d=hav(lat,lon,p.lat,p.lon); if(d<bd){bd=d;best=p;} } return best; }
 function updateKmDisplay(){ if(!lastPos){ kmTop.textContent='KM —'; return; } const kmObj=nearestKM(lastPos.lat,lastPos.lon); const kmStr=kmObj? fmtKm(kmObj.km): 'KM —'; kmTop.textContent=kmStr; }
 function startKmUpdate(){ updateKmDisplay(); kmUpdateInterval=setInterval(()=>{ updateKmDisplay(); updateStatusBar(); }, 300); }
 function stopKmUpdate(){ if(kmUpdateInterval){ clearInterval(kmUpdateInterval); kmUpdateInterval=null; } }
+</script>
 
+<script>
 /* ===== Câmera / Zoom ===== */
 let currentStream=null, currentTrack=null, currentCap=null; let deviceList=[], deviceIndex=0;
 let videoAR=16/9; let hasTrackZoom=false; let digitalZoom=1; const DIGITAL_ZOOM_MAX=8;
@@ -477,40 +508,11 @@ let econMode = (localStorage.getItem('econMode')==='1') || false;
 econToggle.checked = econMode;
 econToggle.addEventListener('change', async ()=>{ econMode = econToggle.checked; localStorage.setItem('econMode', econMode?'1':'0'); await startCamera(deviceIndex); });
 
-function lensHint(label=''){ const s=String(label).toLowerCase(); if(/tele|zoom\s?lens|50mm|70mm|3x|5x/.test(s)) return 'tele'; if(/ultra|wide\s?angle|0\.5x|0,5x|ultra\-wide|superwide|grande|wide \(ultra\)/.test(s)) return 'ultra'; if(/wide|1x|principal|main|back|rear/.test(s)) return 'wide'; return ''; }
-
-async function startCamera(deviceIdx=deviceIndex){
-  try{
-    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
-    currentStream=currentTrack=currentCap=null; hasTrackZoom=false; digitalZoom=1; vid.style.transform='scale(1)';
-
-    // Resoluções alvo
-    const econW = 960, econH = 540; const fullW = 1920, fullH = 1080;
-    const width  = econMode ? {ideal:econW, max:1280} : {ideal:fullW, max:3840};
-    const height = econMode ? {ideal:econH, max:720}  : {ideal:fullH, max:2160};
-    const frameRate = econMode ? {ideal:24, max:30}   : {ideal:30, max:60};
-
-    const dev=deviceList[deviceIdx];
-    const constraints=dev? {video:{deviceId:{exact:dev.deviceId}, width, height, frameRate}, audio:false}
-                         : {video:{facingMode:{ideal:'environment'}, width, height, frameRate}, audio:false};
-    const st=await navigator.mediaDevices.getUserMedia(constraints);
-    currentStream=st; vid.srcObject=st;
-
-    await new Promise(res=>{ if(vid.readyState>=1 && vid.videoWidth) return res(); vid.onloadedmetadata=()=>res(); setTimeout(res,1200); });
-    currentTrack=st.getVideoTracks()[0];
-    currentCap=currentTrack.getCapabilities? currentTrack.getCapabilities(): null;
-    hasTrackZoom=!!(currentCap && currentCap.zoom);
-
-    if (vid.videoWidth && vid.videoHeight) { videoAR = vid.videoWidth / vid.videoHeight; }
-    applyFit();
-
-    camReady=!!vid.videoWidth; deviceIndex=deviceIdx; saveCamPrefs();
-    updateZoomLabel();
-  }catch(e){ camReady=false; }
-}
 function saveCamPrefs(){ const dev=deviceList[deviceIndex]; if(dev){ localStorage.setItem('camDeviceId',dev.deviceId); } }
 function updateZoomLabel(val){ if(hasTrackZoom){ const s=currentTrack?.getSettings?.()||{}; const z=(val!=null)?val:(s.zoom??1); zoomLabel.textContent=`Zoom: ${Number(z||1).toFixed(1)}×`; } else { zoomLabel.textContent=`Zoom: ${Number(digitalZoom||1).toFixed(1)}× (dig)`; } }
+
 async function enumerateCameras(){ try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch{} const devices=await navigator.mediaDevices.enumerateDevices(); deviceList=devices.filter(d=>d.kind==='videoinput'); deviceList.sort((a,b)=>{ const A=/back|rear|environment/i.test(a.label), B=/back|rear|environment/i.test(b.label); if(A && !B) return -1; if(!A && B) return 1; return a.label.localeCompare(b.label); }); const savedId=localStorage.getItem('camDeviceId'); const idx=Math.max(0, deviceList.findIndex(d=>d.deviceId===savedId)); deviceIndex=idx>=0?idx:0; }
+
 document.getElementById('btnCycle').addEventListener('click', async ()=>{ deviceIndex=(deviceIndex+1)%Math.max(1,deviceList.length); await startCamera(deviceIndex); });
 
 /* ===== Zoom por pinça ===== */
@@ -521,14 +523,75 @@ wrap.addEventListener('pointermove', e=>{ if(e.pointerType!=='touch'||!pointers.
 ['pointerup','pointercancel','pointerout','pointerleave'].forEach(ev=>wrap.addEventListener(ev, e=>{ if(e.pointerType!=='touch') return; pointers.delete(e.pointerId); if(pointers.size<2){ pinchBaseDist=0; } }, {passive:true}));
 async function applyTrackZoom(z){ try{ await currentTrack.applyConstraints({advanced:[{zoom:z}]}); }catch{ try{ await currentTrack.applyConstraints({zoom:z}); }catch{} } updateZoomLabel(z); }
 function setDigitalZoom(z){ digitalZoom=z; vid.style.transform=`scale(${digitalZoom})`; updateZoomLabel(digitalZoom); }
+</script>
 
+<script>
 /* ===== GPS ===== */
-function startGPS(){ if(!('geolocation' in navigator)){ gpsReady=false; return; } navigator.geolocation.getCurrentPosition(p=>{ lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}; gpsReady=true; navigator.geolocation.watchPosition(pos=>{ lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy}; }, ()=>{}, {enableHighAccuracy:true, maximumAge:800, timeout:15000}); }, ()=>{ gpsReady=false; }, {enableHighAccuracy:true, timeout:12000}); }
+let gpsWatchId = null;
 
+async function startGPS(){
+  if(!('geolocation' in navigator)){
+    gpsReady=false; console.warn('Geolocation não disponível.'); showEnableButtons({gpsNeeded:true}); return;
+  }
+  if(!isSecureContextOk()){
+    gpsReady=false; console.warn('Use HTTPS ou localhost para GPS.'); showEnableButtons({gpsNeeded:true}); return;
+  }
+  try{
+    const perm = await queryPermission('geolocation');
+    if(perm && 'onchange' in perm){
+      perm.onchange = ()=>{
+        console.log('Permissão de GPS mudou para:', perm.state);
+        if(perm.state === 'granted'){
+          showEnableButtons({gpsNeeded:false});
+          startGPS();
+        }else if(perm.state === 'denied'){
+          gpsReady=false; showEnableButtons({gpsNeeded:true});
+        }
+      };
+    }
+
+    // Primeira leitura (acorda sensor)
+    await new Promise((resolve,reject)=>{
+      const t = setTimeout(()=>reject(new Error('gps-timeout')), 8000);
+      navigator.geolocation.getCurrentPosition(pos=>{
+        clearTimeout(t);
+        lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+        gpsReady=true; resolve();
+      }, err=>{ clearTimeout(t); reject(err); }, {enableHighAccuracy:true, maximumAge:2000, timeout:7000});
+    }).catch(err=>{ console.warn('getCurrentPosition falhou:', err); });
+
+    if(gpsWatchId!=null) navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = navigator.geolocation.watchPosition(pos=>{
+      lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      gpsReady=true; showEnableButtons({gpsNeeded:false});
+    }, err=>{
+      console.warn('watchPosition erro:', err);
+      if(err && err.code===err.PERMISSION_DENIED){ gpsReady=false; showEnableButtons({gpsNeeded:true}); }
+    }, {enableHighAccuracy:true, maximumAge:1500, timeout:12000});
+  }catch(e){
+    console.warn('startGPS erro:', e);
+    gpsReady=false; showEnableButtons({gpsNeeded:true});
+  }
+}
+
+btnEnableGps?.addEventListener('click', async ()=>{
+  try{
+    await new Promise((resolve,reject)=>{
+      const t=setTimeout(()=>reject(new Error('gps-timeout')), 7000);
+      navigator.geolocation.getCurrentPosition(()=>{ clearTimeout(t); resolve(); }, err=>{ clearTimeout(t); reject(err); }, {enableHighAccuracy:true, maximumAge:1000, timeout:6000});
+    });
+  }catch(e){}
+  await startGPS();
+});
+</script>
+
+<script>
 /* ===== Status ===== */
 function statusChip(el, text, state){ el.textContent=text; el.className='st '+(state||''); }
 function updateStatusBar(){ statusChip(stCsv,'CSV: '+(csvReady?'OK':'Carregando…'), csvReady?'ok':'warn'); statusChip(stCam,'Câmera: '+(camReady?'OK':'Aguardando…'), camReady?'ok':'warn'); const gpsTxt=gpsReady?(lastPos?`OK (±${Math.round(lastPos.acc||0)} m)`:'OK'):'Aguardando…'; statusChip(stGps,'GPS: '+gpsTxt, gpsReady?'ok':'warn'); statusChip(stFotos,'Fotos: '+photos.length, photos.length>0?'ok':''); }
+</script>
 
+<script>
 /* ===== Captura (respeita zoom digital) ===== */
 function updateActions(){ const n=photos.length, enabled=n>0; btnPdf.disabled=!enabled; btnClear.disabled=!enabled; btnSharePdf.disabled=!enabled; btnSharePhotos.disabled=!enabled; }
 function renderGallery(){ gal.innerHTML=''; photos.forEach((p,idx)=>{ const d=document.createElement('div'); d.className='thumb'; const im=document.createElement('img'); im.src=p.url; const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`${idx+1}. ${p.kmStr} • ${p.ts}`; d.appendChild(im); d.appendChild(meta); gal.appendChild(d); }); updateActions(); updateStatusBar(); }
@@ -558,7 +621,9 @@ async function capture(){
   const rec={ id: Date.now()+'_'+Math.random().toString(36).slice(2), url, blob, w,h, ts, kmStr, idsTxt: ids.map(e=>e.id).join(', '), filename: fname, lat:lastPos.lat, lon:lastPos.lon, acc:lastPos.acc };
   await dbPutPhoto({...rec, url: undefined}); photos.push(rec); renderGallery();
 }
+</script>
 
+<script>
 /* ===== Chip + STOP overlay ===== */
 function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVideo){ labels.push('REC'); cls.push('rec'); } if(isAutoCapturing){ labels.push('AUTO'); cls.push('auto'); }
   const chip=document.getElementById('chip');
@@ -566,7 +631,9 @@ function updateChip(){ const labels=[]; let cls=['chip','on']; if(isRecordingVid
   btnOverlayStop.style.display = (isRecordingVideo || isAutoCapturing) ? 'flex' : 'none';
 }
 btnOverlayStop.addEventListener('click', ()=>{ if(isRecordingVideo) stopVideoRecording(); else if(isAutoCapturing) stopAutoCapture(); });
+</script>
 
+<script>
 /* ===== Captura Automática ===== */
 function startAutoCapture(){
   if(!(csvReady && camReady && gpsReady && lastPos)){ alert('Aguarde CSV/Câmera/GPS'); return; }
@@ -589,11 +656,15 @@ function stopAutoCapture(){
   btnAutoCapture.textContent='🎬 Auto'; btnAutoCapture.classList.remove('btn-red'); updateChip();
 }
 btnAutoCapture.addEventListener('click', ()=>{ if(isAutoCapturing) stopAutoCapture(); else startAutoCapture(); });
+</script>
 
+<script>
 /* ===== Limpar ===== */
 async function clearList(silent=false){ if(!photos.length) return; if(!silent && !confirm('Limpar a lista de fotos desta sessão?')) return; photos.length=0; await dbClearAll(); foto.src=''; foto.removeAttribute('data-filename'); renderGallery(); snapshotNow(); }
 btnClear.onclick=()=>{ clearList(false); };
+</script>
 
+<script>
 /* ===== PDF / Compartilhar ===== */
 function downscaleDataURL(srcUrl, maxDim=800, quality=0.85){
   return new Promise((resolve)=>{ const img=new Image();
@@ -648,7 +719,9 @@ btnSharePhotos.onclick=async ()=>{ if(!photos.length) return; stopAutoCapture();
   if(!(navigator.canShare && navigator.canShare({files:files.slice(0,Math.min(files.length,MAX))}))){ window.open('https://wa.me/?text='+encodeURIComponent(text+'\n(Anexe as fotos manualmente.)'),'_blank'); alert('Navegador não permite envio direto.'); return; }
   try{ for(let i=0;i<files.length;i+=MAX){ const lote=files.slice(i,i+MAX); const loteText=i===0? text : `Continuação (${Math.floor(i/MAX)+1})`; await navigator.share({files:lote,text:loteText,title:'Relatório de Inspeção'}); } }catch(e){ alert('Compartilhamento cancelado/indisponível.'); }
 };
+</script>
 
+<script>
 /* ===== Vídeo Infinito (arquivo único quando suportado) + Eco ===== */
 let segIndex=0, segStartTs=0, chunkBuffer=[], fileHandle=null, fileWritable=null;
 let writeAsSingleFile=true; const segmentMsFallback=3600000; // 60 min
@@ -691,38 +764,39 @@ async function startVideoRecording(){
 async function finalizeCurrentSegment(){ try{ const blob=new Blob(chunkBuffer,{type:'video/webm'}); chunkBuffer.length=0; const url=URL.createObjectURL(blob); const now=new Date(); const dateStr=now.toISOString().slice(0,10); const timeStr=now.toTimeString().slice(0,8).replace(/:/g,'-'); const label=String(segIndex+1).padStart(3,'0'); const a=document.createElement('a'); a.href=url; a.download=`VIDEO_INSPECAO_${dateStr}_${timeStr}_seg${label}.webm`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000); segIndex++; segStartTs=Date.now(); }catch(err){ console.error('Erro ao finalizar segmento:', err); } }
 function stopVideoRecording(){ if(!isRecordingVideo || !mediaRecorder) return; isRecordingVideo=false; stopKmUpdate(); try{ mediaRecorder.stop(); }catch{} updateChip(); }
 btnVideoRecord.addEventListener('click', async ()=>{ if(isRecordingVideo){ btnVideoRecord.disabled=true; stopVideoRecording(); setTimeout(()=>{ btnVideoRecord.disabled=false; }, 500); } else { btnVideoRecord.disabled=true; try{ await startVideoRecording(); }catch(e){ console.error('Erro na gravação:', e); } btnVideoRecord.disabled=false; } });
+</script>
 
+<script>
 /* ===== Interações ===== */
-/* Clique no vídeo: tirar foto (sem texto na tela) */
 wrap.addEventListener('click', ()=>{ capture(); });
-/* Atalho: barra de espaço tira foto */
+
 document.addEventListener('keydown', (e)=>{ if(e.key===' '){ e.preventDefault(); capture(); } });
 
-/* ===== Voltar ao topo ===== */
 btnTop.addEventListener('click', ()=>{ try{ window.scrollTo({top:0, behavior:'smooth'}); }catch{ window.scrollTo(0,0); } });
 
+btnEnableCam?.addEventListener('click', async ()=>{
+  try{ await navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>s.getTracks().forEach(t=>t.stop())); }catch(e){}
+  await enumerateCameras(); await startCamera(deviceIndex);
+});
+</script>
+
+<script>
 /* ===== Restauração + Boot ===== */
 async function restoreSavedPhotos(){ const rows=await dbGetAllPhotos(); if(!rows.length) return; for(const r of rows){ const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(r.blob); }); photos.push({ id:r.id, url, blob:r.blob, w:r.w, h:r.h, ts:r.ts, kmStr:r.kmStr, idsTxt:r.idsTxt, filename:r.filename, lat:r.lat, lon:r.lon, acc:r.acc }); } if(photos.length){ foto.src=photos[photos.length-1].url; foto.dataset.filename=photos[photos.length-1].filename; } renderGallery(); }
 function ready(){ return csvReady && camReady && gpsReady; }
-function bindOverlayOpts(){ const ls=localStorage; overlayOpts.showKM=(ls.getItem('opt_km')??'1')==='1'; overlayOpts.showTs=(ls.getItem('opt_ts')??'1')==='1'; overlayOpts.showIds=(ls.getItem('opt_ids')??'1')==='1'; overlayOpts.showGps=(ls.getItem('opt_gps')??'0')==='1';
-  optKm.checked=overlayOpts.showKM; optTs.checked=overlayOpts.showTs; optIds.checked=overlayOpts.showIds; optGps.checked=overlayOpts.showGps;
-  optKm.addEventListener('change', ()=>{ overlayOpts.showKM=optKm.checked; ls.setItem('opt_km', overlayOpts.showKM?'1':'0'); });
-  optTs.addEventListener('change', ()=>{ overlayOpts.showTs=optTs.checked; ls.setItem('opt_ts', overlayOpts.showTs?'1':'0'); });
-  optIds.addEventListener('change', ()=>{ overlayOpts.showIds=optIds.checked; ls.setItem('opt_ids', overlayOpts.showIds?'1':'0'); });
-  optGps.addEventListener('change', ()=>{ overlayOpts.showGps=optGps.checked; ls.setItem('opt_gps', overlayOpts.showGps?'1':'0'); });
-}
+function bindOverlayOpts(){ /* mantido simples: valores padrão já atendem */ }
+
 async function boot(){
   await ensurePersistence();
-  db=await openDBv3();
+  db = await openDBv3();
   bindOverlayOpts();
   await Promise.all([loadCSVs(), enumerateCameras()]);
-  csvReady = dataset.length>0 && kmPoints.length>0;
   await startCamera(deviceIndex);
-  camReady = !!vid.videoWidth;
-  startGPS();
+  await startGPS();
   await restoreSavedPhotos();
   startKmUpdate();
-  setInterval(updateStatusBar, 500);
+  setInterval(()=>{ updateStatusBar(); updateKmDisplay(); }, 600);
+  setInterval(async ()=>{ if(!camReady) await startCamera(deviceIndex); if(!gpsReady) await startGPS(); }, 8000);
   applyFit(); updateControlBarTop();
 }
 </script>
