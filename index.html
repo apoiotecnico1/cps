@@ -3,180 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Telemetria AI</title>
-
+<title>Telemetria CSV</title>
 <style>
-body {
-    margin: 0;
-    font-family: system-ui;
-    background: #0f172a;
-    color: #fff;
-}
-
-header {
-    padding: 12px;
-    text-align: center;
-    background: #020617;
-    font-weight: bold;
-}
-
-.top-bar {
-    display: flex;
-    gap: 10px;
-    padding: 10px;
-    flex-wrap: wrap;
-}
-
-input, button {
-    padding: 8px;
-    border-radius: 6px;
-    border: none;
-}
-
-button {
-    background: #22c55e;
-    color: #000;
-    cursor: pointer;
-}
-
-.container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    padding: 10px;
-}
-
-.card {
-    background: #1e293b;
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.value {
-    font-size: 20px;
-    font-weight: bold;
-}
-
-.chart {
-    padding: 10px;
-    font-size: 12px;
-    max-height: 150px;
-    overflow: auto;
-}
-
+body { font-family: Arial, sans-serif; background: #111; color: #fff; margin:0; padding:0;}
+header { text-align:center; padding:10px; background:#222; font-weight:bold;}
+#camera { width:100%; max-height:400px; background:#333;}
+.panel { padding:10px;}
+input,button { padding:8px; margin:2px; border-radius:4px; border:none;}
+button { background:#4caf50; color:#000; cursor:pointer;}
+#log { background:#000; padding:10px; height:200px; overflow-y:auto; font-size:12px; margin-top:10px;}
 </style>
 </head>
-
 <body>
-
-<header>🚀 Telemetria AI (Next Level)</header>
-
-<div class="top-bar">
-    <input type="file" id="csvFile">
-    <input type="text" id="buscarId" placeholder="Buscar ID">
-    <button onclick="filtrar()">Buscar</button>
+<header>Telemetria CSV</header>
+<main>
+<video id="camera" autoplay playsinline></video>
+<div class="panel">
+<input type="file" id="csvFile">
+<input type="text" id="buscarId" placeholder="Buscar ID">
+<button onclick="filtrar()">Buscar</button>
+<div>Total Registros: <span id="total">0</span></div>
+<div>KM Médio: <span id="kmMedio">0</span></div>
+<div>Vel Média: <span id="velMedia">0</span></div>
+<div>ID Ativo: <span id="idAtivo">--</span></div>
+<div id="log"></div>
 </div>
-
-<div class="container">
-    <div class="card"><div>Total Registros</div><div class="value" id="total">0</div></div>
-    <div class="card"><div>KM Médio</div><div class="value" id="kmMedio">0</div></div>
-    <div class="card"><div>Vel Média</div><div class="value" id="velMedia">0</div></div>
-    <div class="card"><div>ID Ativo</div><div class="value" id="idAtivo">--</div></div>
-</div>
-
-<div class="chart" id="log"></div>
-
+</main>
 <script>
-
 let dados = [];
-
-// ===== CARREGAR CSV =====
-document.getElementById("csvFile").addEventListener("change", e => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(evt) {
-        processarCSV(evt.target.result);
-    };
-
-    reader.readAsText(file);
+document.getElementById("csvFile").addEventListener("change", e=>{
+const file = e.target.files[0];
+const reader = new FileReader();
+reader.onload = evt => processarCSV(evt.target.result);
+reader.readAsText(file);
 });
-
-// ===== PROCESSAMENTO INTELIGENTE =====
-function processarCSV(texto) {
-    const linhas = texto.split("\n");
-    dados = linhas.slice(1).map(l => {
-        const [id, km, vel] = l.split(",");
-        return {
-            id: id,
-            km: parseFloat(km),
-            velocidade: parseFloat(vel)
-        };
-    }).filter(d => d.id);
-
-    analisar();
-    salvarCache();
+function processarCSV(texto){
+const linhas = texto.split("\n");
+dados = linhas.slice(1).map(l=>{
+const [id, km, vel] = l.split(",");
+return {id:id, km:parseFloat(km), velocidade:parseFloat(vel)};
+}).filter(d=>d.id);
+analisar();
+salvarCache();
 }
-
-// ===== ANALISE =====
-function analisar() {
-
-    const total = dados.length;
-
-    const kmMedio = media(dados.map(d => d.km));
-    const velMedia = media(dados.map(d => d.velocidade));
-
-    document.getElementById("total").textContent = total;
-    document.getElementById("kmMedio").textContent = kmMedio.toFixed(1);
-    document.getElementById("velMedia").textContent = velMedia.toFixed(1);
-
-    log("📊 Dados processados: " + total);
+function analisar(){
+const total = dados.length;
+const kmMedio = media(dados.map(d=>d.km));
+const velMedia = media(dados.map(d=>d.velocidade));
+document.getElementById("total").textContent = total;
+document.getElementById("kmMedio").textContent = kmMedio.toFixed(1);
+document.getElementById("velMedia").textContent = velMedia.toFixed(1);
+log("Dados processados: "+total);
 }
-
-// ===== MEDIA =====
-function media(arr) {
-    return arr.reduce((a,b)=>a+b,0) / (arr.length || 1);
+function media(arr){ return arr.reduce((a,b)=>a+b,0)/(arr.length||1);}
+function filtrar(){
+const idBusca = document.getElementById("buscarId").value;
+const item = dados.find(d=>d.id==idBusca);
+if(item){
+document.getElementById("idAtivo").textContent=item.id;
+log("ID encontrado: "+item.id+" | KM: "+item.km);
+}else log("ID não encontrado");
 }
-
-// ===== BUSCA =====
-function filtrar() {
-    const idBusca = document.getElementById("buscarId").value;
-
-    const item = dados.find(d => d.id == idBusca);
-
-    if (item) {
-        document.getElementById("idAtivo").textContent = item.id;
-        log("🔍 ID encontrado: " + item.id + " | KM:" + item.km);
-    } else {
-        log("❌ ID não encontrado");
-    }
+function log(msg){
+const el=document.getElementById("log");
+el.innerHTML=msg+"<br>"+el.innerHTML;
 }
-
-// ===== LOG =====
-function log(msg) {
-    const el = document.getElementById("log");
-    el.innerHTML = msg + "<br>" + el.innerHTML;
+function salvarCache(){
+localStorage.setItem("telemetria", JSON.stringify(dados));
 }
-
-// ===== CACHE LOCAL =====
-function salvarCache() {
-    localStorage.setItem("telemetria", JSON.stringify(dados));
-}
-
-// ===== CARREGAR CACHE =====
-function carregarCache() {
-    const cache = localStorage.getItem("telemetria");
-    if (cache) {
-        dados = JSON.parse(cache);
-        analisar();
-        log("⚡ Dados carregados do cache");
-    }
-}
-
+function carregarCache(){
+const cache = localStorage.getItem("telemetria");
+if(cache){
+dados=JSON.parse(cache);
+analisar();
+log("Dados carregados do cache");
+}}
 carregarCache();
-
+async function iniciarCamera(){
+try{
+const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+document.getElementById("camera").srcObject=stream;
+}catch(err){ log("Erro ao acessar câmera: "+err);}
+}
+iniciarCamera();
 </script>
-
 </body>
 </html>
